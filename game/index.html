@@ -878,7 +878,6 @@ const DIFF={
 const diffCfg=()=>({...DIFF[DIFFN]||DIFF['簡單'],...(window.__DIFF&&window.__DIFF[DIFFN]||{})});
 /* 開局時寫進存檔的難度設定；舊存檔沒有這份資料，維持舊版規則 */
 const BAL0={job:0,tipMin:.2,scam:1,yearPop:0,cm:1,warn:.65,fake:.004};
-const balOf=k=>(S&&S.bal?S.bal:BAL0)[k];
 const CFG={debt:1e7,cash:5e5,rent:3000,living:5000,vol:.7,drift:0,trend:.8,rate:.003,legend:1e8};
 
 /* ===== 股票 ===== */
@@ -897,6 +896,7 @@ const MKN={tw:'台股',us:'美股',cr:'加密幣'};
 const REG={bull:{n:'晴・多頭',mu:.0018},normal:{n:'陰・盤整',mu:.0005},bear:{n:'雨・空頭',mu:-.0014}};
 let S=null,ST=[],TL=[],CH=avChar();
 const stock=id=>ST.find(s=>s.id===id);
+const limitLocked=(st,dir)=>{const b=st.hist[st.hist.length-1];return st.limit===dir&&b.h===b.l};
 const fxOf=st=>st.mk==='us'?FX:1;
 const pf=(p,st)=>st.mk==='us'?'$'+p.toFixed(2):p>=1e5?fmt(p):p>=1000?p.toFixed(0):p>=100?p.toFixed(1):p.toFixed(2);
 const taxRate=st=>st.mk==='tw'?(st.etf?.001:.003):0;
@@ -1037,11 +1037,12 @@ function genWorld(days,seed,bad=1,vm=1){
     if(ev.then)sched.push({day:d+ev.then.after,ev:ev.then.ev});
     if(ev.blind)sched.push({day:d+5,ev:MR()<.45?BLIND_OK:BLIND_NG});
   };
+  const NW=bad!==1?NEWS.map(e=>({...e,w:(e.w||1)*(e.cat==='bad'?bad:1)})):NEWS;
   for(let d=1;d<=days;d++){
     const sh={},sS={},evs=[];
     if(MR()<.008*K){const RW=diffCfg().rw||[1,1,1],R0=MR()*(RW[0]+RW[1]+RW[2]);regime=R0<RW[0]?'bull':R0<RW[0]+RW[1]?'normal':'bear'}
     sched.filter(x=>x.day===d).forEach(x=>{apply(x.ev,sh,sS,d);evs.push(x.ev)});sched=sched.filter(x=>x.day!==d);
-    if(MR()<(bad>1?.14:.12)*K*.15){/* 新聞頻率：約一個月一則，每則都會跳出來 */const ev=pick(bad!==1?NEWS.map(e=>({...e,w:(e.w||1)*(e.cat==='bad'?bad:1)})):NEWS,MR);apply(ev,sh,sS,d);evs.push(ev)}
+    if(MR()<(bad>1?.14:.12)*K*.15){/* 新聞頻率：約一個月一則，每則都會跳出來 */const ev=pick(NW,MR);apply(ev,sh,sS,d);evs.push(ev)}
     st.forEach(x=>{if(x.etf||x.bars.length<61||d-(x.la||-999)<42)return;const r60=x.price/x.bars[x.bars.length-61].c-1;
       if(r60>.9&&MR()<.006){x.la=d;const P=Math.round(r60*100),T=[[`${x.name}漲幅太大，市場質疑是泡沫！`,'主力趁利多大量出貨，股價急轉直下。'],[`${x.name}三個月狂飆 ${P}%，主力趁機出貨`,'高檔爆量，籌碼開始鬆動。'],[`連菜市場都在聊${x.name}，老手：該下車了`,'散戶瘋狂追價，聰明錢悄悄離場。'],[`分析師示警：${x.name}估值嚴重偏高`,'報告一出，獲利了結賣壓湧現。']][ri(4,MR)];const ev={i:'crash',big:1,cat:'bad',h:T[0],b:T[1],s:{[x.id]:-.08},q:{[x.id]:[-.05,-.03]}};apply(ev,sh,sS,d);evs.push(ev)}
       else if(r60<-.35&&MR()<.015){x.la=d;const P=Math.round(-r60*100),T=[[`${x.name}跌到超跌，法人進場撿便宜`,'跌深反彈，買盤湧入。'],[`${x.name}三個月重挫 ${P}%，抄底買盤湧入`,'有人覺得跌夠了，開始進場撿便宜。'],[`外資點名${x.name}「跌過頭了」`,'報告調升評等，股價止跌回升。'],[`${x.name}跌深反彈！套牢散戶：終於看到希望`,'恐慌賣壓消化完，買盤慢慢回來。']][ri(4,MR)];const ev={i:'up',big:1,cat:'good',h:T[0],b:T[1],s:{[x.id]:.06},q:{[x.id]:[.04,.03]}};apply(ev,sh,sS,d);evs.push(ev)}});
@@ -1093,7 +1094,7 @@ function saveGame(){if(!S||S.ended||S.tut>=0)return;if(S.moments.length>60)S.mom
 function loadGame(){
   const d=lsGet(SAVE_KEY);if(!d||(d.v!==1&&d.v!==2))return false;
   if(d.v===2){const w=lsGet(WORLD_KEY);if(!w||w.wid!==d.S.wid)return false;d.TL=w.TL;d.ST.forEach(x=>{const f=w.fut.find(y=>y.id===x.id);x.fut=f?f.fut:[]})}
-  CH=d.CH;AV=d.AV;S=d.S;if(S.sharkRate==null)S.sharkRate=.03;if(DIFF[S.dn]){DIFFN=S.dn;SHARK=S.dn==='困難'}S.date=new Date(S.date);S.modal=false;S.ended=false;S.tut=-1;S.speed=0;
+  CH=d.CH;AV=d.AV;S=d.S;if(S.sharkRate==null)S.sharkRate=.03;if(!S.bal)S.bal={...BAL0};if(DIFF[S.dn]){DIFFN=S.dn;SHARK=!!DIFF[S.dn].shark}S.date=new Date(S.date);S.modal=false;S.ended=false;S.tut=-1;S.speed=0;
   ST=BASE.map(b=>({...b,...d.ST.find(x=>x.id===b.id)}));TL=d.TL;
   $('g-log').innerHTML='';S.feed.slice().reverse().forEach(e=>drawFeed(e));
   buildStockRows();setMk(S.mk||'tw');setPanel('market');setShopC('wear');setMargin(false);setSide('long');
@@ -1156,7 +1157,7 @@ function startGame(again){
   S={day:0,days,dn:DIFFN,e50_0:stock('E50').price,sharkRate:SHARK?(DC.shark||.03):0,rentB:DC.rent,livB:DC.liv,tipPen:DC.tipPen,req:DC.req,grace:DC.grace,rate:DC.rate,date:new Date(2027,0,4),cash:CFG.cash,debt:CFG.debt,debt0:CFG.debt,shark:SHARK?CFG.cash:0,sharkInt:0,repaid:0,hold:{},short:{},orders:[],owned:{},iv:{},eq:{},trades:0,fees:0,tax:0,interest:0,debtInt:0,rentExtra:0,
      moments:[],feed:[],speed:0,regime:'normal',sel:'TSMC',mk:'tw',k:'d',panel:'market',shopC:'wear',margin:false,side:'long',ended:false,lastChoice:0,modal:false,mood:'sad',moodT:4,tut:-1,warned:{},unit:'q',unl:{shop:1,margin:1,orders:1,short:1},unlSeen:{shop:1,margin:1,orders:1,short:1},story:{},
      st:{panicSell:0,panicHold:0,liquid:0,sellW:0,sellL:0,best:null,worst:null,chase:0,tipF:0,tipW:0,dt:0,dtPL:0,incomeTotal:0,shortPL:0,lockFail:0}};
-  S.bal={job:DC.job||0,tipMin:DC.tipMin||.2,scam:DC.scam??1,yearPop:DC.yearPop||0,cm:DC.cm??1,warn:DC.warn??.65,fake:DC.fake??.004};
+  S.bal=Object.fromEntries(Object.keys(BAL0).map(k=>[k,DC[k]??BAL0[k]]));
   S.prevA=total();
   $('g-log').innerHTML='';
   document.querySelectorAll('#unit button').forEach(x=>x.classList.toggle('on',x.dataset.u==='q'));$('cq').value='';
@@ -1200,7 +1201,7 @@ const fame=()=>Object.keys(S.owned).reduce((s,id)=>s+itemOf(id).f,0);
 const fameLv=()=>{const f=fame();let L=FAME[0];FAME.forEach(x=>{if(f>=x[0])L=x});return L};
 const upkeep=()=>Object.keys(S.owned).reduce((s,id)=>s+itemOf(id).up,0);
 const bill=()=>(S.owe||0)+(S.eq.home?0:(S.rentB||CFG.rent)+S.rentExtra)+(S.livB||CFG.living)+upkeep()+(S.focus==='aggr'?2000:S.focus==='safe'?-1000:S.focus==='influ'?3000:S.focus==='final'?5000:0)+(S.pet?2000:0);
-const income=()=>Object.keys(S.owned).reduce((s,id)=>s+(id==='used'&&S.carBroken>S.day?0:(itemOf(id).inc||0)+(id==='used'?(S.carBonus||0):0)),0)+(S.rentOut||0)+(S.petInc||0)+(S.focus==='influ'?fameLv()[3]:0)+fameLv()[3]+(S.focus==='side'?15000:0)+balOf('job');
+const income=()=>Object.keys(S.owned).reduce((s,id)=>s+(id==='used'&&S.carBroken>S.day?0:(itemOf(id).inc||0)+(id==='used'?(S.carBonus||0):0)),0)+(S.rentOut||0)+(S.petInc||0)+(S.focus==='influ'?fameLv()[3]:0)+fameLv()[3]+(S.focus==='side'?15000:0)+S.bal.job;
 function recalcEq(){const eq={};Object.keys(S.owned).forEach(id=>{const it=itemOf(id);eq[it.slot]=Math.max(eq[it.slot]||0,it.t)});S.eq=eq}
 
 /* ===== 每日 ===== */
@@ -1230,8 +1231,7 @@ function stepDay(){
   if(S.day%21===16&&S.cash<bill()&&Object.keys(S.hold).length&&S.day-(S.lessonCash||-999)>63){S.lessonCash=S.day;S.cashPop=1}
   if(S.day%21===16&&S.cash<bill()){addFeed({cat:'bad',i:'bill',h:`現金警報：5 天後要繳 ${wan(bill())}，現在現金只有 ${wan(S.cash)}！不夠的話會被迫賣股票。${isUnl('shop')&&!S.owned.used?'（商城的二手國產車可以跑外送，每月淨賺約 1.5 萬）':''}`,moment:1});if(!S.ff)toast('現金不夠付這個月的帳單！')}
   // 年度還款門檻
-  if(S.day%245===224&&S.day+21<S.days&&S.repaid<yearNeed(Math.ceil(S.day/245)))addFeed({cat:'bad',i:'thug',h:`債權人通知：今年底前累積還款要達到 ${wan(yearNeed(Math.ceil(S.day/245)))}（目前 ${wan(S.repaid)}），否則會被催收出局！`,moment:1});
-  if(S.day%245===224&&S.day+21<S.days&&S.tut<0&&balOf('yearPop')&&S.repaid<yearNeed(Math.ceil(S.day/245)))S.yearPopDue=1;
+  if(S.day%245===224&&S.day+21<S.days&&yearGap()>0){addFeed({cat:'bad',i:'thug',h:`債權人通知：今年底前累積還款要達到 ${wan(yearGap()+S.repaid)}（目前 ${wan(S.repaid)}），否則會被催收出局！`,moment:1});if(S.tut<0&&S.bal.yearPop)S.yearPopDue=1}
   if(S.day%245===0&&S.day<S.days&&S.tut<0)yearReview();
   if(S.day%245===0&&S.day<S.days&&S.repaid<yearNeed(S.day/245)){if(S.grace>0){S.grace--;addFeed({cat:'bad',i:'thug',h:'年度還款沒達標！債權人這次先放你一馬，但下次就沒這麼好運了。',moment:1})}else{endGame('collect');return}}
   // 劇情
@@ -1346,15 +1346,16 @@ function panicEvent(m){
 function yearReview(){const y=S.day/245,nw=total()+itemsVal()-debtAll(),L=S.yr||{rep:0,nw:CFG.cash-CFG.debt},dr=S.repaid-L.rep,dn=nw-L.nw,left=S.days-S.day,pf2=repaidFrac();S.yr={rep:S.repaid,nw};
   const tip=pf2>=.75?'終點就在眼前，別在最後關頭冒太大的險。':pf2>=.4?'已經還了一大段，照這個節奏有機會翻身！':dn<0?'今年資產縮水了。換個方法，或抓住下一個大新聞。':left<490?'時間不多了，現在的速度還不完，要更積極才行。':'債務還很多，要找到能讓錢滾起來的方法。';
   if(!S.lesson)S.lesson={i:'trophy',title:`第 ${y} 年結束`,text:`今年還了 ${wan(dr)}，淨資產${dn>=0?'增加':'減少'} ${wan(Math.abs(dn))}。目前還了 ${Math.round(pf2*100)}% 的債，剩 ${Math.round(left/245*10)/10} 年。${tip}選一個明年的方針：`,opts:focusOpts()}}
-function yearPayPop(){const n=Math.max(0,yearNeed(Math.ceil(S.day/245))-S.repaid);return {i:'bill',title:'年度還款快到期',text:`今年底前還要再還 ${wan(n)}，否則會被催收。要現在一鍵還清這筆嗎？現金不夠時，會先賣掉賠最多的股票。`,opts:[{t:`一鍵還 ${wan(n)}`,fn:()=>{if(S.cash<n+bill())raiseCash(n+bill()*2,true);const a=Math.min(n,Math.max(0,S.cash-bill()));if(a>0){repay(a,true);if(a<n&&S&&!S.ended)toast('可動用的現金不夠，這次只還了一部分')}else toast('現金不夠還款')}},{t:'我晚點自己還',fn:()=>{}}]}}
+function yearPayPop(){const n=Math.max(0,yearGap());return {i:'bill',title:'年度還款快到期',text:`今年底前還要再還 ${wan(n)}，否則會被催收。要現在一鍵還清這筆嗎？現金不夠時，會先賣掉賠最多的股票。`,opts:[{t:`一鍵還 ${wan(n)}`,fn:()=>{if(S.cash<n+bill())raiseCash(n+bill()*2,true);const a=Math.min(n,Math.max(0,S.cash-bill()));if(a>0){repay(a,true);if(a<n&&!S.ended)toast('可動用的現金不夠，這次只還了一部分')}else toast('現金不夠還款')}},{t:'我晚點自己還',fn:()=>{}}]}}
 function yearNeed(y){return Math.round(S.debt0*(S.req||.02)*y)}
-function raiseCash(target,loserFirst){const plOf=id=>{const h=S.hold[id];return posVal(id,h)-h.loan-h.cost};const ids=Object.keys(S.hold).sort((a,b)=>loserFirst?plOf(a)-plOf(b):posVal(b,S.hold[b])-posVal(a,S.hold[a]));for(const id of ids){if(S.cash>=target)break;const h=S.hold[id],st=stock(id),px=st.price*fxOf(st),net=px*(1-.0045)-h.loan/h.qty,lb=st.hist[st.hist.length-1];if(st.limit==='down'&&lb.h===lb.l)continue;if(net<=0){sell(id,1,true,'補現金');continue}const q=Math.min(h.qty,st.mk==='cr'?(target-S.cash)/net*1.02:Math.ceil((target-S.cash)/net));sell(id,0,true,'補現金',q)}renderAll()}
+const yearGap=()=>yearNeed(Math.ceil(S.day/245))-S.repaid;
+function raiseCash(target,loserFirst){const plOf=id=>{const h=S.hold[id];return posVal(id,h)-h.loan-h.cost};const ids=Object.keys(S.hold).sort((a,b)=>loserFirst?plOf(a)-plOf(b):posVal(b,S.hold[b])-posVal(a,S.hold[a]));for(const id of ids){if(S.cash>=target)break;const h=S.hold[id],st=stock(id),px=st.price*fxOf(st),net=px*(1-.0045)-h.loan/h.qty;if(limitLocked(st,'down'))continue;if(net<=0){sell(id,1,true,'補現金');continue}const q=Math.min(h.qty,st.mk==='cr'?(target-S.cash)/net*1.02:Math.ceil((target-S.cash)/net));sell(id,0,true,'補現金',q)}renderAll()}
 function checkUnlock(){
   if(S.cashPop){S.cashPop=0;S.ff=0;const b=bill();
     const hs=Object.entries(S.hold).map(([id,h])=>{const st=stock(id),eqv=posVal(id,h)-h.loan;return {id,st,eqv,pl:eqv-h.cost}}).sort((a,c)=>a.pl-c.pl);
     openModal({i:'bill',title:'現金不夠付帳單！',text:`5 天後要繳 ${wan(b)}，你的現金只有 ${wan(S.cash)}。不夠的話月底會被迫賤賣股票，再不夠就會被趕出去。要賣哪一檔？`,
       opts:[{t:`自動補到 ${wan(b*2)}（先賣賠最多的）`,fn:()=>raiseCash(b*2,true)},...hs.slice(0,4).map(x=>({t:`全部賣掉${x.st.name}（${x.pl>=0?'賺':'賠'} ${wan(Math.abs(x.pl))}）`,fn:()=>{sell(x.id,1,true,'補現金');renderAll()}})),{t:'我自己處理',fn:()=>{}}]});return true}
-  if(S.yearPopDue){S.yearPopDue=0;if(S.day%245>=224&&S.repaid<yearNeed(Math.ceil(S.day/245))){S.ff=0;openModal(yearPayPop());return true}}
+  if(S.yearPopDue){S.yearPopDue=0;if(S.day%245>=224&&yearGap()>0){S.ff=0;openModal(yearPayPop());return true}}
   if(S.queued){const q=S.queued;S.queued=null;S.ff=0;openModal(q());return true}
   if(S.lesson){const L=S.lesson;S.lesson=null;S.ff=0;openModal({...L,opts:L.opts||[{t:'學到了',fn:()=>{}}]});return true}
   if(!S.unl)return false;
@@ -1362,7 +1363,7 @@ function checkUnlock(){
   SN[u[0]]=1;S.unl[u[0]]=1;S.ff=0;snd('ach');
   openModal({i:'trophy',title:u[2],text:u[3],opts:[{t:'知道了',fn:()=>{}}]});return true;
 }
-const scamM=()=>balOf('scam');
+const scamM=()=>S.bal.scam;
 function scamBack(a,who){const b=Math.round(a*(1-scamM()));if(b>0){S.cash+=b;addFeed({cat:'good',i:'bank',h:`${who}協助追回 ${wan(b)}，算是不幸中的大幸。`,moment:1})}}
 function storyTick(){
   const st=S.story||(S.story={});
@@ -1380,7 +1381,7 @@ function monthEnd(){
   if(S.shark>0){const si=Math.round(S.shark*SHARK_RATE());S.shark+=si;S.sharkInt+=si;addFeed({cat:'bad',i:'thug',h:`地下錢莊利息 +${wan(si)}，欠款滾到 ${wan(S.shark)}。`})}
   // 收入
   Object.keys(S.owned).forEach(id=>{const it=itemOf(id);if(!it.biz)return;const bm=((S.bizMul||{})[id]||1)*(S.focus==='biz'?1.3:1);const v=Math.round((it.volat?(PR()<.35?0:it.biz*PR()*2.4):it.biz*(.4+PR()*1.2))*bm);S.cash+=v;S.st.incomeTotal+=v;S.st.bizInc=(S.st.bizInc||0)+v;addFeed({cat:v>0?'good':'bad',i:'money',h:`${it.n}本月${v>0?`賺進 ${wan(v)}`:'沒有收入'}。`})});
-  const inc=income();if(inc>0){S.cash+=inc;S.st.incomeTotal+=inc;const parts=[];Object.keys(S.owned).forEach(id=>{if(itemOf(id).inc)parts.push('外送')});if(fameLv()[3])parts.push('業配');if(S.focus==='side')parts.push('兼差');if(balOf('job'))parts.push('打零工');addFeed({cat:'good',i:'money',h:`本月收入 ${wan(inc)}（${parts.join('、')}）。`})}
+  const inc=income();if(inc>0){S.cash+=inc;S.st.incomeTotal+=inc;const parts=[];Object.keys(S.owned).forEach(id=>{if(itemOf(id).inc)parts.push('外送')});if(fameLv()[3])parts.push('業配');if(S.focus==='side')parts.push('兼差');if(S.bal.job)parts.push('打零工');addFeed({cat:'good',i:'money',h:`本月收入 ${wan(inc)}（${parts.join('、')}）。`})}
   // 物品漲跌
   Object.keys(S.owned).forEach(id=>{const it=itemOf(id);if(!it.g)return;const g=it.g==='house'?(S.regime==='bull'?.006:S.regime==='bear'?-.004:.002):it.g;S.iv[id]=(S.iv[id]||1)*(1+g)});
   // 帳單
@@ -1432,7 +1433,7 @@ const TIPSRC=['LINE 群組的「老師」','某位做業務的朋友','在名流
 function futRet(id,n){const st=stock(id),f=st.fut;const a=st.price,bI=Math.min(f.length-1,S.day-1+n);if(bI<S.day)return 0;return f[bI].c/a-1}
 const CHOICES=[
  {w:3,cond:()=>S.cash>5000&&S.day<S.days-6&&S.focus!=='side'&&S.focus!=='biz',f:()=>{const L=fameLv(),li=FAME.indexOf(L);const tg=['EVA','BIO','TSMC','NV','TSL','BTC'][ri(6)],st=stock(tg);const vip=S.story&&S.story.vip&&!S.story.vipEnd;
-   const truthUp=futRet(tg,5)>0,acc=S.forceAcc||Math.min(.95,Math.max(vip?.2:balOf('tipMin'),(vip?.3:L[2])-(S.tipPen||0))),correct=PR()<acc,sayUp=correct?truthUp:!truthUp;if(acc<.5||!correct)S.tipOpp={id:tg,up:sayUp,day:S.day};S.forceAcc=0;
+   const truthUp=futRet(tg,5)>0,acc=S.forceAcc||Math.min(.95,Math.max(vip?.2:S.bal.tipMin,(vip?.3:L[2])-(S.tipPen||0))),correct=PR()<acc,sayUp=correct?truthUp:!truthUp;if(acc<.5||!correct)S.tipOpp={id:tg,up:sayUp,day:S.day};S.forceAcc=0;
    const rec=f=>{S.st.tipF+=f;if(f&&correct)S.st.tipW++};
    const opts=sayUp?[{t:'重押！投入 50% 現金',fn:()=>{rec(1);S.sel=tg;setSide('long');buyPct(tg,.5,'聽信內線')}},{t:'小試一下，投入 15%',fn:()=>{rec(1);S.sel=tg;setSide('long');buyPct(tg,.15,'小試內線')}},{t:'不理會',fn:()=>addFeed({cat:'me',i:'phone',h:'你沒理會那則消息。'})}]
      :st.mk==='cr'||!isUnl('short')?[{t:S.hold[tg]?'趕快全部賣掉':'記下來就好',fn:()=>{rec(S.hold[tg]?1:0);if(S.hold[tg])sell(tg,1,false,'聽信內線')}},{t:'不理會',fn:()=>{}}]
@@ -1485,8 +1486,8 @@ const PHASE={bull:['多頭來了！','市場氣氛轉好，大部分股票都在
 const PHASE_PRE={bull:'分析師：景氣指標好轉，市場可能即將翻多。',bear:'分析師警告：景氣訊號轉弱，市場可能即將轉空。',normal:'分析師：多空力道拉鋸，市場可能進入盤整。'};
 function phaseTick(prevReg){
   if(S.tut>=0)return;
-  const nx=TL[S.day+4];if(nx&&nx.reg!==S.regime&&S.preWarn!==S.day+4){let same=1;for(let i=S.day;i<S.day+4;i++)if(TL[i]&&TL[i].reg!==S.regime)same=0;if(same){S.preWarn=S.day+4;if(PR()<balOf('warn'))addFeed({cat:'news',i:'news',h:PHASE_PRE[nx.reg],moment:1})}}
-  else if(S.day-(S.fakeWarn||-999)>120&&PR()<balOf('fake')){S.fakeWarn=S.day;const o=['bull','normal','bear'].filter(r=>r!==S.regime);addFeed({cat:'news',i:'news',h:PHASE_PRE[o[ri(2)]],moment:1})}
+  const nx=TL[S.day+4];if(nx&&nx.reg!==S.regime&&S.preWarn!==S.day+4){let same=1;for(let i=S.day;i<S.day+4;i++)if(TL[i]&&TL[i].reg!==S.regime)same=0;if(same){S.preWarn=S.day+4;if(PR()<S.bal.warn)addFeed({cat:'news',i:'news',h:PHASE_PRE[nx.reg],moment:1})}}
+  else if(S.day-(S.fakeWarn||-999)>120&&PR()<S.bal.fake){S.fakeWarn=S.day;const o=['bull','normal','bear'].filter(r=>r!==S.regime);addFeed({cat:'news',i:'news',h:PHASE_PRE[o[ri(2)]],moment:1})}
   if(prevReg&&prevReg!==S.regime){const P=PHASE[S.regime];addFeed({cat:S.regime==='bear'?'bad':S.regime==='bull'?'good':'news',i:S.regime==='bear'?'crash':'up',h:`市場階段改變：${P[0]}`,moment:1});const seen=S.phSeen||(S.phSeen={});if(!seen[S.regime]&&!S.lesson&&!S.ff){seen[S.regime]=1;S.lesson={i:S.regime==='bear'?'crash':'up',title:`市場階段：${P[0]}`,text:P[1]+'（分析師的預告不一定每次都準。）'}}}
 }
 /* ===== 延後的劇情結果 ===== */
@@ -1566,7 +1567,7 @@ function maybeChoice(){
   const hv=Object.entries(S.hold).reduce((s,[id,h])=>s+posVal(id,h),0);
   if(mTW<-.035&&(hv>S.cash*.3||S.cash>1e6)&&S.focus!=='safe'&&PR()<.6&&S.day-S.lastChoice>5&&S.day-(S.panicLast??-999)>=42){const pe=panicEvent(mTW);if(pe&&(S.day<S.days/2||/追繳/.test(pe.title))){S.lastChoice=S.day;S.panicLast=S.day;openModal(pe);return}}
   const force=false;
-  const lateC=S.day>=S.days/2,CM=balOf('cm');if(!force&&(S.day-S.lastChoice<(lateC?75:25)/CM||PR()>CM*(lateC?.3:1)*(S.story&&S.story.vip>0&&!S.story.vipEnd?.18:.1)*(S.focus==='aggr'||S.focus==='final'?1.5:S.focus==='side'?.7:1)))return;
+  const lateC=S.day>=S.days/2,CM=S.bal.cm;if(!force&&(S.day-S.lastChoice<(lateC?75:25)/CM||PR()>CM*(lateC?.3:1)*(S.story&&S.story.vip>0&&!S.story.vipEnd?.18:.1)*(S.focus==='aggr'||S.focus==='final'?1.5:S.focus==='side'?.7:1)))return;
   const CL=S.chLast||(S.chLast={}),cdOf=i=>i===0?168:i===5?168:490;let c=CHOICES.filter((x,i)=>x.cond()&&S.day-(CL[i]??-9999)>=cdOf(i));if(!c.length&&force){c=CHOICES.map((x,i)=>[x,i]).filter(([x,i])=>x.cond()&&S.day-(CL[i]??-9999)>=84).sort((a,b)=>(CL[a[1]]??-9999)-(CL[b[1]]??-9999)).slice(0,1).map(x=>x[0])}if(!c.length)return;S.lastChoice=S.day;const ch=pick(c);CL[CHOICES.indexOf(ch)]=S.day;openModal(ch.f());
 }
 function dayTrade(){
@@ -1620,7 +1621,7 @@ function buyCost(st,qty,px){px=px||st.price*fxOf(st);const lev=levOf(st),amt=qty
 function buyPct(id,frac,why){const st=stock(id);const own=S.cash*frac;if(own<100){toast('現金不夠');return false}return buyQty(id,qtyFor(st,own),why)}
 function buyQty(id,qty,why,pxRaw){
   const st=stock(id);
-  if(!pxRaw&&st.limit==='up'){const b=st.hist[st.hist.length-1];if(b.h===b.l){toast('漲停鎖死，排隊也買不到！');return false}}
+  if(!pxRaw&&limitLocked(st,'up')){toast('漲停鎖死，排隊也買不到！');return false}
   qty=st.mk==='cr'?Math.floor(qty*1e6)/1e6:Math.floor(qty);
   if(!(qty>0)){toast(`錢不夠買 1 ${unitOf(st)}${st.name}`);return false}
   const px=(pxRaw||st.price)*fxOf(st);
@@ -1637,7 +1638,7 @@ function teach(k,title,text){const L=S.les||(S.les={});if(L[k]||S.lesson||S.tut>
 function recTrade(st,pl,sh){if(pl>=3e5)unlock('first_buy');if(sh&&pl>=5e5)unlock('short');if(S.tipOpp&&S.tipOpp.id===st.id&&S.day-S.tipOpp.day<=7&&pl>=5e4&&(S.tipOpp.up?sh:!sh)){unlock('contra');S.tipOpp=null}if(S.quest){if(S.quest.id==='bigwin')S.quest.best=Math.max(S.quest.best,pl);if(sh&&S.quest.id==='short'&&pl>0)S.quest.got+=pl}if(pl>=0)S.st.sellW++;else S.st.sellL++;if(!S.st.best||pl>S.st.best.pl)S.st.best={n:st.name,pl};if(!S.st.worst||pl<S.st.worst.pl)S.st.worst={n:st.name,pl}}
 function sell(id,frac,force,why,exact,tag,pxRaw){
   const st=stock(id),h=S.hold[id];if(!h){toast('你沒有這檔');return false}
-  if(!force&&st.limit==='down'){const b=st.hist[st.hist.length-1];if(b.h===b.l){addFeed({cat:'bad',i:'crash',h:`${st.name}跌停鎖死，掛賣單沒人接！`,moment:1});teach('lock','跌停鎖死賣不掉','台股一天最多跌 10%。跌停時大家都想賣、沒人要買，就算掛單也賣不掉，只能等隔天。');S.st.lockFail++;unlock('lock');toast('跌停鎖死，賣不掉！');snd('alarm');return false}}
+  if(!force&&limitLocked(st,'down')){addFeed({cat:'bad',i:'crash',h:`${st.name}跌停鎖死，掛賣單沒人接！`,moment:1});teach('lock','跌停鎖死賣不掉','台股一天最多跌 10%。跌停時大家都想賣、沒人要買，就算掛單也賣不掉，只能等隔天。');S.st.lockFail++;unlock('lock');toast('跌停鎖死，賣不掉！');snd('alarm');return false}
   let q=exact!=null?(st.mk==='cr'?Math.floor(exact*1e6)/1e6:Math.floor(exact)):frac>=1?h.qty:st.mk==='cr'?Math.floor(h.qty*frac*1e6)/1e6:Math.max(1,Math.floor(h.qty*frac));q=Math.min(q,h.qty);
   if(!(q>0)){toast('數量至少要 1');return false}
   const part=q/h.qty,amt=q*(pxRaw||st.price)*fxOf(st),f=feeOf(st,amt),tx=Math.round(amt*taxRate(st));
@@ -1669,7 +1670,7 @@ function shortQty(id,q,why){
 }
 function cover(id,frac,force,why,exact){
   const st=stock(id),h=S.short[id];if(!h){toast('你沒有放空這檔');return false}
-  if(!force&&st.limit==='up'){const b=st.hist[st.hist.length-1];if(b.h===b.l){toast('漲停鎖死，買不到股票回補！');addFeed({cat:'bad',i:'up',h:`${st.name}漲停鎖死，回補不了！`,moment:1});return false}}
+  if(!force&&limitLocked(st,'up')){toast('漲停鎖死，買不到股票回補！');addFeed({cat:'bad',i:'up',h:`${st.name}漲停鎖死，回補不了！`,moment:1});return false}
   let q=exact!=null?Math.floor(exact):frac>=1?h.qty:Math.max(1,Math.floor(h.qty*frac));q=Math.min(q,h.qty);if(!(q>0)){toast('數量至少要 1');return false}
   const px=st.price*fxOf(st),part=q/h.qty,cl=h.coll*part,f=feeOf(st,q*px),pl=(h.entry-px)*q-f,get=Math.max(0,cl+pl);
   h.qty-=q;h.coll-=cl;if(h.qty<=0)delete S.short[id];
@@ -1929,9 +1930,10 @@ function showTut(){
   $('coach-box').innerHTML=`<div class="row between"><span class="tiny mute px">教學 ${S.tut+1}/${TSTEPS.length}</span><button class="btn ghost sm" onclick="endTut()">跳過</button></div><p style="margin:8px 0 10px">${calm(typeof s.t==='function'?s.t():s.t)}</p>${s.w==='next'?`<button class="btn full" onclick="nextTut()">${s.last?'開始翻身！':'下一步'}</button>`:'<span class="hint">完成畫面上亮起來的操作就會繼續</span>'}`;
   $('coach').classList.add('on');
 }
-function nextTut(){if(!S||S.tut<0)return;S.tut++;if(S.tut>=TSTEPS.length){const SN=S.unlSeen||(S.unlSeen={});UNL.forEach(u=>SN[u[0]]=1);endTut();setPanel('market')}else showTut()}
+function nextTut(){if(!S||S.tut<0)return;S.tut++;showTut()}
 /* 教學用的是調整過的行情：結束或跳過後一律重開乾淨的一局，教學賺的錢不帶進正式遊戲 */
-function endTut(){if(!S)return;const restart=S.tut>=0&&!S.ended;S.tut=-1;META.tutDone=1;lsSet(META_KEY,META);document.querySelectorAll('.hl,.hlp').forEach(e=>e.classList.remove('hl','hlp','hlb'));$('coach').classList.remove('on');document.body.classList.remove('tut');if(restart){$('modal').classList.remove('on');startGame(true);toast('教學結束，資金和行情已重置，正式開局！')}}
+function closeTut(){S.tut=-1;META.tutDone=1;lsSet(META_KEY,META);document.querySelectorAll('.hl,.hlp').forEach(e=>e.classList.remove('hl','hlp','hlb'));$('coach').classList.remove('on');document.body.classList.remove('tut')}
+function endTut(){if(!S)return;closeTut();$('modal').classList.remove('on');startGame(true);toast('教學結束，資金和行情已重置，正式開局！')}
 function tutHook(type,v){if(!S||S.tut<0)return;const s=TSTEPS[S.tut];if(!s)return;if(s.w===type&&(s.v===undefined||s.v===v))setTimeout(nextTut,300)}
 
 /* ===== 結局 ===== */
@@ -1956,7 +1958,7 @@ function review(){
   return out;
 }
 function endGame(type){
-  if(S.ended)return;S.ended=true;clearTimeout(loopT);endTut();$('modal').classList.remove('on');S.modal=false;lsDel(SAVE_KEY);
+  if(S.ended)return;S.ended=true;clearTimeout(loopT);closeTut();$('modal').classList.remove('on');S.modal=false;lsDel(SAVE_KEY);
   const nw=total()+itemsVal()-debtAll(),paid=clamp(S.repaid/(S.repaid+debtAll()),0,1);
   let title,desc,mood='sad',key=type;
   if(type==='win'){mood='happy';
