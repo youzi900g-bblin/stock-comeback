@@ -15,7 +15,7 @@
 /* Hallmark · dismissed 3 · the tab strip's right border is a divider between tabs, not a coloured side stripe on a card */
 /* Hallmark · dismissed F4 · the start button turns outlined by CSS whenever the continue button is showing, so one filled action remains */
 @font-face{font-family:"Cubic11";src:url("fonts/Cubic_11.woff2") format("woff2"),url("fonts/Cubic_11.woff") format("woff");font-display:swap}
-:root{--bg:#f7ede4;--card:#fffdf9;--ink:#3a2f45;--mute:#6a5e70;--line:#3a2f45;--up:#c63a33;--down:#1f7a58;--soft:#fbeee2;--y:#ffa775;--paper:#fffdf9;--focus:#1f5fbf;--disabled-bg:#e6dcc4;--disabled-ink:#5f5466;--font-body:"Noto Sans TC",system-ui,sans-serif;--font-pixel:"Cubic11","DotGothic16","Noto Sans TC",monospace;--avprev-h:216px;--sticky-flush:1px;--sticky-game:4px;--c-fff6ee:#fff6ee;--c-a9cde6:#a9cde6;--c-43b088:#43b088;--c-ffeedd:#ffeedd;--c-fff7d6:#fff7d6;--c-d9cdb3:#d9cdb3;--c-a32d2d:#a32d2d;--c-226b41:#226b41;--c-2b4f9a:#2b4f9a;--c-6a5d45:#6a5d45;--c-9a5a12:#9a5a12;--c-a-30-26-36-6:rgba(30,26,36,.6);--c-a-20-16-26-6:rgba(20,16,26,.6);--c-e0b860:#e0b860;--c-f6efe2:#f6efe2;--c-00000033:#00000033;--c-eee8da:#eee8da;--c-e0a92e:#e0a92e;--c-f2c14e:#f2c14e;--c-00000008:#00000008;--c-2b2733:#2b2733;--c-00000040:#00000040;--c-00000055:#00000055;--c-d2423b:#d2423b;--c-7d7568:#7d7568;--c-fdebe8:#fdebe8;--c-e6f4ec:#e6f4ec;--c-3a5ba0:#3a5ba0;--c-e6dcc4:#e6dcc4;--c-c9bfa8:#c9bfa8;--c-c0562a:#c0562a;--c-e07b39:#e07b39}
+:root{--bg:#f7ede4;--card:#fffdf9;--ink:#3a2f45;--ink-raised:#4d4159;--mute:#6a5e70;--line:#3a2f45;--up:#c63a33;--down:#1f7a58;--soft:#fbeee2;--y:#ffa775;--paper:#fffdf9;--focus:#1f5fbf;--disabled-bg:#e6dcc4;--disabled-ink:#5f5466;--font-body:"Noto Sans TC",system-ui,sans-serif;--font-pixel:"Cubic11","DotGothic16","Noto Sans TC",monospace;--avprev-h:216px;--sticky-flush:1px;--sticky-game:4px;--c-fff6ee:#fff6ee;--c-a9cde6:#a9cde6;--c-43b088:#43b088;--c-ffeedd:#ffeedd;--c-fff7d6:#fff7d6;--c-d9cdb3:#d9cdb3;--c-a32d2d:#a32d2d;--c-226b41:#226b41;--c-2b4f9a:#2b4f9a;--c-6a5d45:#6a5d45;--c-9a5a12:#9a5a12;--c-a-30-26-36-6:rgba(30,26,36,.6);--c-a-20-16-26-6:rgba(20,16,26,.6);--c-e0b860:#e0b860;--c-f6efe2:#f6efe2;--c-00000033:#00000033;--c-eee8da:#eee8da;--c-e0a92e:#e0a92e;--c-f2c14e:#f2c14e;--c-00000008:#00000008;--c-2b2733:#2b2733;--c-00000040:#00000040;--c-00000055:#00000055;--c-d2423b:#d2423b;--c-7d7568:#7d7568;--c-fdebe8:#fdebe8;--c-e6f4ec:#e6f4ec;--c-3a5ba0:#3a5ba0;--c-e6dcc4:#e6dcc4;--c-c9bfa8:#c9bfa8;--c-c0562a:#c0562a;--c-e07b39:#e07b39}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:clip;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.55}
 button{touch-action:manipulation;-webkit-tap-highlight-color:transparent;font:inherit;color:inherit}
@@ -256,6 +256,48 @@ body .mini button,body .mini .mrow button{height:44px}
 body .swr button{width:44px;height:44px}
 }
 #mbox:focus{outline:0}
+/* ===== unslop 修飾（unslop by Damir Sokolovsky, CC BY 4.0）===== */
+/* 字：Cubic 11 只有單一字重，禁止瀏覽器硬加粗；文字收斂成 12／14／16 */
+html{font-synthesis:none}
+h3{font-size:16px}
+.small,.hinfo,.quest,.newsbar .nb,.hold-row,.mres p,.ed-l,.btn.sm,.sub button,.seg button,.gal b{font-size:14px}
+.bigdebt,.mres .d{font-size:33px}
+body.desk #scr-title h1{font-size:55px}
+/* 色：橘色只留給主要行動與選中狀態 */
+.badge{background:var(--soft)}
+.gal.got{background:var(--c-fff7d6)}
+.mini .mrow button{background:var(--ink-raised);color:var(--paper)}
+.mini .mrow button.on{background:var(--paper);color:var(--ink)}
+.mini .mrow .nx{background:var(--ink-raised);color:var(--c-f2c14e)}
+/* 交易：最小的買單與完整出場保留實心，其餘退為次要 */
+#buy-btns .btn:not(:disabled):not(:first-child){background:var(--card);color:var(--up)}
+#sell-btns .btn:not(:disabled):first-child{background:var(--card);color:var(--down)}
+#p-quit:not(:disabled){color:var(--mute)}
+.small:has(>#g-date){flex-wrap:wrap;row-gap:4px;font-size:13px}
+/* 場景實際輸出 img，要填滿外框 */
+.scene img{width:100%;height:auto;display:block;image-rendering:pixelated}
+/* 間距：回到 4px 節奏 */
+#app{padding-left:16px;padding-right:16px}
+.card{padding:16px;margin-bottom:16px}
+.mini{padding:8px 12px;gap:8px}.mini .gr{gap:8px 12px}
+.statg{gap:8px 12px;margin-top:12px}
+.sub,.styles,.edtabs,.galg,.custom,.speed{gap:8px}
+.hinfo,.quest,.toggle{padding:8px 12px}
+.hinfo,.quest{margin-top:12px}.toggle{margin:12px 0}
+.items{gap:8px}.fi{gap:8px}
+.newsbar{gap:4px}.newsbar .nb{padding:8px}
+.kv,.hold-row,.achr{padding-top:4px;padding-bottom:4px}
+.review li{margin:8px 0}
+.btn{padding:12px 16px}.btn.sm{padding:8px}
+.modal{padding:16px}.coach .cbox{padding:12px 16px}
+details.orders{margin-top:12px;padding:8px 12px}
+/* 閃爍提示閃三次就停 */
+.flash{animation:blink 1s 3}
+/* 電腦版：加寬 K 線與交易欄，音樂、音效、放棄收成右下角小按鈕 */
+body.desk #app{padding:12px 24px}
+body.desk .dk{grid-template-columns:minmax(320px,26%) minmax(0,1fr) minmax(420px,36%)}
+body.desk #scr-game>.grid3{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 @media (prefers-reduced-motion:reduce){
 *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 .plfx,.plfx.dn{animation:none!important;transform:translate(-50%,0)}
@@ -1092,7 +1134,8 @@ function genWorld(days,seed,bad=1,vm=1){
 /* ===== 主角編輯 ===== */
 let EDTAB=0;
 function buildEditor(){
-  const sw=(k,arr)=>`<div class="swr">${arr.map((c,i)=>`<button style="background:${c}" class="${(AV[k]||0)===i?'on':''}" data-k="${k}" data-i="${i}" aria-label="顏色"></button>`).join('')}</div>`;
+  const colorName=c=>{const m=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);if(!m)return '顏色';const x=m[1].length===3?[...m[1]].map(v=>v+v).join(''):m[1];const [r,g,b]=[0,2,4].map(p=>parseInt(x.slice(p,p+2),16)/255),M=Math.max(r,g,b),n=Math.min(r,g,b),d=M-n,l=(M+n)/2,s=d?d/(1-Math.abs(2*l-1)):0;if(s<.12)return l>.85?'白色':l<.25?'黑色':'灰色';const h=(M===r?((g-b)/d+6)%6:M===g?(b-r)/d+2:(r-g)/d+4)*60;const base=h<15||h>=340?'紅':h<40?(l<.5?'棕':'橙'):h<65?'黃':h<170?'綠':h<200?'青':h<255?'藍':h<290?'紫':'粉';return (l>.75?'淺':l<.35?'深':'')+base+'色'};
+  const sw=(k,arr)=>`<div class="swr">${arr.map((c,i)=>`<button style="background:${c}" class="${(AV[k]||0)===i?'on':''}" data-k="${k}" data-i="${i}" aria-label="${colorName(c)}，第 ${i+1} 個"></button>`).join('')}</div>`;
   const grid=(k,names,head)=>`<div class="styles">${names.map((n,i)=>`<button class="opt${(AV[k]||0)===i?' on':''}" data-k="${k}" data-i="${i}">${charIcon(avChar({...AV,[k]:i}),'n',{},head)}<span>${n}</span></button>`).join('')}</div>`;
   const tabs=['臉和身體','頭髮','衣服','配件'];
   const T=[
