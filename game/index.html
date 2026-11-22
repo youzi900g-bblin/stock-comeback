@@ -1303,7 +1303,7 @@ function stepDay(){
   const T=TL[S.day-1];let big=null;const tut=S.tut>=0;
   ST.forEach(st=>{const b=st.fut[S.day-1];st.prev=st.price;st.price=b.c;st.limit=b.lim;st.hist.push(b);if(st.hist.length>400)st.hist.shift()});
   const prevReg=S.regime;S.regime=T.reg;
-  T.ev.forEach(ev=>{revealEvent(ev);const late=S.day>=S.days/2,hit=ev.blind||ev.mega||(!late&&newsHits(ev)>0&&S.day-(S.lastNewsPop??-99)>=20);if(hit)S.lastNewsPop=S.day;if(hit&&!big)big=ev;else if(!S.ff)toast('新聞：'+ev.h);if(ev.blindOk&&S.hold.BIO)unlock('blind')});
+  (tut?[]:T.ev).forEach(ev=>{revealEvent(ev);const late=S.day>=S.days/2,hit=ev.blind||ev.mega||(!late&&newsHits(ev)>0&&S.day-(S.lastNewsPop??-99)>=20);if(hit)S.lastNewsPop=S.day;if(hit&&!big)big=ev;else if(!S.ff)toast('新聞：'+ev.h);if(ev.blindOk&&S.hold.BIO)unlock('blind')});
   if(T.life>=0&&!tut){const e=LIFE[T.life];if(!e.cond||e.cond()){if(e.cash)S.cash+=e.cash;if(e.rent)S.rentExtra+=e.rent;addFeed({cat:'me',i:e.i,h:e.h});setMood(e.m,3)}}
   runOrders();
   // 融資利息、斷頭、融券回補
@@ -1345,14 +1345,14 @@ function tutCrash(id){const st=stock(id),h=st.hist,n=Math.min(60,h.length);for(l
 function tutRig(){if(S.tut<0||!TSTEPS[S.tut])return;const w=TSTEPS[S.tut].w;
   if(w==='profit'){const ids=Object.keys(S.hold);if(!ids.length){S.tut=tutBack();setSpeed(0);toast('你手上沒有股票，先買一點吧');showTut();return}
     S.tutWait=S.tutWait||S.day;const mg=ids.find(id=>S.hold[id].loan>0);
-    if(mg){const tg=CFG.cash*2,st=stock(mg),h=S.hold[mg];if(total()<tg*.98&&S.day>S.tutWait){const G=tg-total(),f=1+Math.min(.1,G/(h.qty*fxOf(st)*st.price));tutShift(st,f);if(!S.tutBig){S.tutBig=1;addFeed({cat:'good',i:'up',h:`${st.name}接獲 AI 超級大單，股價連續漲停！`,moment:1,nw:1,sid:mg})}}
+    if(mg){const tg=CFG.cash*2,st=stock(mg),h=S.hold[mg];if(total()<tg*.98&&S.day>S.tutWait){const G=tg-total(),f=1+Math.min(.1,G/(h.qty*fxOf(st)*st.price));tutShift(st,f)}
       if(total()>=tg*.98){S.tutWait=0;setSpeed(0);snd('win');toast('錢翻倍了！先暫停');tutHook('profit')}return}
     const ok=()=>ids.some(id=>posVal(id,S.hold[id])>S.hold[id].basis*1.02);
-    if(S.day-S.tutWait>=3&&!ok()){const id=ids[0],st=stock(id),h=S.hold[id],f=h.basis*1.03/(h.qty*fxOf(st))/st.price;if(f>1){tutShift(st,f);addFeed({cat:'good',i:'up',h:`${st.name}接獲大客戶急單，股價大漲！`,moment:1})}}
+    if(S.day-S.tutWait>=3&&!ok()){const id=ids[0],st=stock(id),h=S.hold[id],f=h.basis*1.03/(h.qty*fxOf(st))/st.price;if(f>1)tutShift(st,f)}
     if(ok()){S.tutWait=0;setSpeed(0);snd('ach');toast('漲了！先暫停');tutHook('profit')}}
   else if(w==='sprofit'){const ids=Object.keys(S.short);if(!ids.length){S.tut=tutBack();setSpeed(0);toast('你沒有放空部位，先放空一點吧');showTut();return}
     S.tutWait=S.tutWait||S.day;const gain=id=>{const h=S.short[id],st=stock(id);return (h.entry-st.price*fxOf(st))*h.qty};const ok=()=>ids.some(id=>gain(id)>S.short[id].coll*.03);
-    if(S.day-S.tutWait>=3&&!ok()){const id=ids[0],st=stock(id),h=S.short[id],tg=h.entry-h.coll*.05/h.qty,f=tg/(st.price*fxOf(st));if(f<1){tutShift(st,f);addFeed({cat:'bad',i:'crash',h:`${st.name}傳出大客戶砍單，股價重挫！`,moment:1})}}
+    if(S.day-S.tutWait>=3&&!ok()){const id=ids[0],st=stock(id),h=S.short[id],tg=h.entry-h.coll*.05/h.qty,f=tg/(st.price*fxOf(st));if(f<1)tutShift(st,f)}
     if(ok()){S.tutWait=0;setSpeed(0);snd('ach');toast('跌了！先暫停');tutHook('sprofit')}}}
 /* 每個選擇都有後果：選項本身沒有效果的，在這裡補上後續發展 */
 const CONSEQ=[
