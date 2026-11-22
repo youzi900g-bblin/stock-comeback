@@ -192,12 +192,14 @@ details.orders{border-style:solid}
 img,svg{image-rendering:pixelated}
 
 /* 教學高亮：蓋過像素風樣式，並讓祖先容器浮到遮罩上 */
-html body .hl{position:relative;z-index:31;box-shadow:0 0 0 4px var(--c-f2c14e),0 0 0 9999px var(--c-a-20-16-26-6)!important;outline:3px solid var(--c-f2c14e);outline-offset:2px;animation:hlp 1s ease-in-out infinite}
+html body .hl{position:relative;z-index:31;box-shadow:0 0 0 4px var(--c-f2c14e),0 0 0 200vmax var(--c-a-20-16-26-6)!important;outline:3px solid var(--c-f2c14e);outline-offset:2px;animation:hlp 1s ease-in-out infinite}
 @keyframes hlp{50%{outline-color:var(--paper)}}
 html body .hl{outline-width:4px!important}
 html body .hlb::after{content:'按這裡';position:absolute;left:50%;top:-30px;transform:translateX(-50%);background:var(--c-d2423b);color:var(--paper);font-size:13px;line-height:1;padding:5px 8px;border-radius:4px;white-space:nowrap;z-index:40;pointer-events:none;animation:hlbob .5s ease-in-out infinite alternate;font-weight:700}
 @keyframes hlbob{to{transform:translate(-50%,-6px)}}
 html body .hlp{position:relative;z-index:30;overflow:visible!important}
+/* 濾鏡會把遮罩陰影整塊畫進暫存圖，iPhone 會因記憶體不足而崩潰 */
+html body .hl,html body .hlp{filter:none!important;transition:none!important}
 html body .coach .cbox{max-height:72vh;overflow-y:auto}
 .wtag{display:inline-block;padding:2px 7px;border-radius:4px;color:var(--paper);font-weight:700;font-size:13px;margin-left:2px}.wtag.bull{background:var(--up)}.wtag.bear{background:var(--down)}.wtag.normal{background:var(--mute)}
 .newsbar{margin-top:8px;display:grid;gap:5px}.newsbar .nb{font-size:13px;line-height:1.4;padding:6px 8px;border:2px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer}.newsbar .nb.good{background:var(--c-fdebe8)}.newsbar .nb.bad{background:var(--c-e6f4ec)}.newsbar .go{color:var(--c-3a5ba0);white-space:nowrap}.newsbar .chip{margin-right:4px}
