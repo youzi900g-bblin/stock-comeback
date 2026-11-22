@@ -2100,7 +2100,7 @@ function copyLog(){const r=S.result,t=S.st,n=t.sellW+t.sellL;
 function copyResult(){try{navigator.clipboard.writeText(resultText()).then(()=>toast('已複製！'),()=>toast('無法複製'))}catch(e){toast('無法複製')}}
 
 /* ===== 分享圖 ===== */
-const SHARE_URL='https://claude.ai/artifact/XHVrGCEGHeTobknzGnYbXS';
+const SHARE_URL='https://youzi900g-bblin.github.io/stock-comeback/';
 function makeShare(){
   const r=S.result;const CELLS=fmapCells(),ROWS=Math.ceil(CELLS.length/21),MB=1243+ROWS*40,H=MB+190;const cv=document.createElement('canvas');cv.width=1080;cv.height=H;const x=cv.getContext('2d');
   const svg=scene({...S.eq,tier:S.tier||0,pet:S.pet||0},CH,r.mood,r.type==='win'?'bull':r.sv==='near'?'normal':'bear',r.sv).replace('<svg ','<svg xmlns="http://www.w3.org/2000/svg" width="960" height="672" ');
