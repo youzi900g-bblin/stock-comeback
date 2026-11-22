@@ -1157,7 +1157,7 @@ function lsGet(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch(e
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
 function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
 let META=lsGet(META_KEY)||{endings:{},ach:{}};
-const ENDINGS=[['win1','驚險翻身'],['win2','人生勝利組'],['win3','千萬身家'],['win4b','新科富豪'],['win4','億萬富翁'],['near','差一步翻身'],['close','功虧一簣'],['mid','力不從心'],['time','債務到期'],['evict','流落街頭'],['quit','放棄了']];
+const ENDINGS=[['win1','驚險翻身'],['win2','人生勝利組'],['win3','千萬身家'],['win4b','新科富豪'],['win4','億萬富翁'],['near','差一步翻身'],['close','功虧一簣'],['mid','力不從心'],['collect','被催收出局'],['time','債務到期'],['evict','流落街頭'],['quit','放棄了']];
 const ACH=[
  ['first_buy','第一桶金','單筆交易賺超過 30 萬'],['margin','槓桿玩家','融資單筆賺進 100 萬'],['short','看空的勇氣','放空單筆賺進 50 萬'],['order','自動駕駛','自動單成交'],
  ['liquid','斷頭體驗','被強制斷頭或回補'],['lock','賣不掉的痛','遇到跌停賣不掉'],['blind','賭神','解盲成功時持有奇蹟生技'],['delivery','外送之王','買二手車跑外送'],
@@ -1168,8 +1168,10 @@ function unlock(id){if(META.ach[id]||(S&&S.tut>=0))return;META.ach[id]=Date.now(
 const WORLD_KEY='ghfs_world_v1';
 /* 存檔分兩份：整局固定的未來行情只在開局（或教學調整行情後）存一次，平常只存會變的部分 */
 function saveGame(){if(!S||S.ended||S.tut>=0)return;if(S.moments.length>60)S.moments=S.moments.slice(-60);
-  if(S.worldDirty||!S.wid){S.wid=S.wid||Date.now();lsSet(WORLD_KEY,{wid:S.wid,fut:ST.map(s=>({id:s.id,fut:s.fut})),TL});S.worldDirty=0}
-  lsSet(SAVE_KEY,{v:2,CH,AV,S:{...S,date:S.date.toISOString()},ST:ST.map(s=>({id:s.id,hist:s.hist.slice(-120),price:s.price,prev:s.prev,limit:s.limit}))})}
+  const fail=()=>{const n=Date.now();if(n-(saveGame.t||0)<30000)return;saveGame.t=n;toast('存檔失敗，瀏覽器儲存空間可能不足')};
+  /* 行情沒寫入就不寫進度，否則存檔會對不上行情而讀不回來 */
+  if(S.worldDirty||!S.wid){S.wid=S.wid||Date.now();if(!lsSet(WORLD_KEY,{wid:S.wid,fut:ST.map(s=>({id:s.id,fut:s.fut})),TL})){S.worldDirty=1;fail();return}S.worldDirty=0}
+  if(!lsSet(SAVE_KEY,{v:2,CH,AV,S:{...S,date:S.date.toISOString()},ST:ST.map(s=>({id:s.id,hist:s.hist.slice(-120),price:s.price,prev:s.prev,limit:s.limit}))}))fail()}
 function loadGame(){
   const d=lsGet(SAVE_KEY);if(!d||(d.v!==1&&d.v!==2))return false;
   if(d.v===2){const w=lsGet(WORLD_KEY);if(!w||w.wid!==d.S.wid)return false;d.TL=w.TL;d.ST.forEach(x=>{const f=w.fut.find(y=>y.id===x.id);x.fut=f?f.fut:[]})}
@@ -1180,7 +1182,7 @@ function loadGame(){
   setSpeed(0);go('game');renderAll();startMusic();return true;
 }
 function refreshTitle(){$('btn-continue').style.display=lsGet(SAVE_KEY)?'':'none'}
-const END_HINT={win1:'還清債務，淨資產不到 100 萬',win2:'還清債務，淨資產 100 萬～1,000 萬',win3:'還清債務，淨資產 1,000 萬～5,000 萬',win4b:'還清債務，淨資產 5,000 萬～1 億',win4:'還清債務，淨資產超過 1 億',near:'期限到時還了 80% 以上，但沒還完',close:'期限到時還了 50%～80%',mid:'期限到時還了 25%～50%',collect:'年底累積還款沒達到門檻',time:'期限到時還不到 25%',evict:'月底繳不出房租和生活費',default:'當沖沒沖掉，又付不出交割款',quit:'自己按下放棄'};
+const END_HINT={win1:'還清債務，淨資產不到 100 萬',win2:'還清債務，淨資產 100 萬～1,000 萬',win3:'還清債務，淨資產 1,000 萬～5,000 萬',win4b:'還清債務，淨資產 5,000 萬～1 億',win4:'還清債務，淨資產超過 1 億',near:'期限到時還了 80% 以上，但沒還完',close:'期限到時還了 50%～80%',mid:'期限到時還了 25%～50%',collect:'年底累積還款沒達到門檻',time:'期限到時還不到 25%',evict:'月底繳不出房租和生活費',quit:'自己按下放棄'};
 const ACH_TIP={first_buy:'抓住一波大行情，一筆賺超過 30 萬',quests:'留意畫面上的季度目標，完成 5 個',margin:'多頭時用融資買台股，抱到賺 100 萬再賣',short:'看到大利空時放空，一筆賺 50 萬',settle:'還了一部分債之後，等債權人提議和解',angel:'錢夠的時候，賭一把學弟的新創',contra:'覺得內線不可靠時，反著它操作',comeback:'快破產時別放棄，撐到翻身',flash:'衝快一點，3 年內還清',tsunami:'後半局可能遇到金融海嘯，撐過去並還清',order:'在自動單掛一張單，等它成交',liquid:'融資全押後遇到大跌（雖然很痛）',lock:'持有的台股跌停鎖死時按賣出',blind:'看到「5 天後公布解盲」的新聞先買奇蹟生技，賭它成功',delivery:'在商城買二手國產車',lux:'在商城隨便買一樣',house:'存到 500 萬買小套房',supercar:'存到 800 萬',jet:'存到 2,000 萬',repay1m:'累計還款 100 萬',win:'在任何難度還清債務',legend:'還清前先繼續投資，把淨資產衝到 1 億',shark:'選困難難度，先把高利貸還清',boss:'存到 300 萬買手搖飲料店',collector:'錢夠的時候逐一買下商城的東西再轉賣（事業不用買），只要「買過」就算'};
 function showGallery(){
   const e=ENDINGS.map(([k,n])=>`<div class="gal${META.endings[k]?' got':''}"><b>${META.endings[k]?n:'？？？'}</b><span>${META.endings[k]?'已達成':esc(END_HINT[k]||'')}</span></div>`).join('');
@@ -1225,7 +1227,8 @@ function toggleSnd(){SND=!SND;lsSet('ghfs_snd',SND);document.querySelectorAll('.
 function nextTD(d){const n=new Date(d);do{n.setDate(n.getDate()+1)}while(n.getDay()===0||n.getDay()===6);return n}
 const dstr=d=>`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
 function startNormal(){document.querySelectorAll('[data-group=tut] .opt').forEach(b=>b.classList.toggle('on',b.dataset.v===(META.tutDone?'0':'1')));go('create')}
-function startGame(again){
+function startGame(again,overwrite){
+  if(!again&&!overwrite&&lsGet(SAVE_KEY)){openModal({i:'bill',title:'要覆蓋舊存檔嗎？',text:'開始新遊戲會取代目前的存檔，舊進度無法復原。',opts:[{t:'取消',fn:()=>{}},{t:'覆蓋並開始',fn:()=>startGame(false,true)}]},true);return}
   if(!again)CH={...avChar(),n:($('c-name').value.trim()||'阿明')};
   if(!again){const o=document.querySelector('[data-group=diff] .opt.on');SHARK=!!o.dataset.shark;DIFFN=o.querySelector('b').textContent}
   const days=diffCfg().days||+val('diff');
@@ -1486,7 +1489,7 @@ function monthEnd(){
 function runOrders(){
   if(!S.orders.length)return;
   const keep=[];
-  S.orders.forEach(o=>{const st=stock(o.id),b=st.hist[st.hist.length-1],lockDn=b.lim==='down'&&b.h===b.l,lockUp=b.lim==='up'&&b.h===b.l;
+  S.orders.forEach(o=>{if(!S.orders.includes(o))return;/* 同一天稍早賣光時，舊停損停利已被 sell 移除，不可再碰新買的股 */const st=stock(o.id),b=st.hist[st.hist.length-1],lockDn=b.lim==='down'&&b.h===b.l,lockUp=b.lim==='up'&&b.h===b.l;
     let done=false;
     if(o.t==='buy'&&b.l<=o.p){if(lockUp){keep.push(o);return}const px=Math.min(b.o,o.p);const m=S.margin;S.margin=o.lev;done=buyQty(o.id,o.q,'限價單成交',px);S.margin=m;if(!done)addFeed({cat:'bad',i:'trade',h:`${st.name}限價單觸發，但現金不足，已取消。`});done=true}
     else if((o.t==='tp'&&b.h>=o.p)||(o.t==='sl'&&b.l<=o.p)){
@@ -1495,11 +1498,12 @@ function runOrders(){
       else{const px=o.t==='tp'?Math.max(b.o,o.p):Math.min(b.o,o.p);sell(o.id,0,true,o.t==='tp'?'停利單成交':'停損單成交',Math.min(o.q||S.hold[o.id].qty,S.hold[o.id].qty),null,px);done=true}
     }
     if(done){unlock('order');snd('coin')}else keep.push(o)});
-  S.orders=keep;
+  S.orders=keep.filter(o=>S.orders.includes(o)&&(o.t==='buy'||S.hold[o.id]));
 }
 function addOrder(){
   const st=stock(S.sel),t=S.otype||'buy',p=+$('o-price').value,qv=$('o-qty').value;let q=qv?+qv:0;
   if(!(p>0)){toast('請輸入觸發價格');return}
+  if(qv&&(!(q>0&&isFinite(q))||(st.mk==='cr'?q<1e-6:!Number.isInteger(q)))){toast(st.mk==='cr'?'數量最少 0.000001':'數量要是正整數');return}
   const cur=st.price;
   if(t==='buy'){if(!(q>0)){toast('限價買進要輸入數量');return}if(p>=cur){toast('限價買進的價格要低於現價');return}}
   else{if(!S.hold[S.sel]){toast('你沒有持有這檔');return}if(t==='tp'&&p<=cur){toast('停利價要高於現價');return}if(t==='sl'&&p>=cur){toast('停損價要低於現價');return}}
@@ -1523,7 +1527,7 @@ const CHOICES=[
  {w:1,cond:()=>!S.story.fam&&S.cash>80000,f:()=>({i:'heart',title:'家人打電話來',text:'老家的屋頂漏水要修，家人問你能不能先借 5 萬。',opts:[{t:'借給家人',fn:()=>{S.cash-=50000;S.story.fam=S.day;S.story.famGive=1;setMood('happy',2);addFeed({cat:'me',i:'heart',h:'你借了家人 5 萬修屋頂。',moment:1})}},{t:'自己都欠一屁股債了……',fn:()=>{S.story.fam=S.day;setMood('sad',3);addFeed({cat:'me',i:'heart',h:'你拒絕了家人，心裡有點難過。'})}}]})},
  {w:1,cond:()=>S.cash>30000&&S.day>5&&S.day<S.days-2,f:()=>({i:'phone',title:'營業員來電',text:`${['營業員打來推銷：','朋友說他靠當沖一天賺 10 萬，介紹營業員給你：','券商發簡訊：'][ri(3)]}可以幫你開通當沖，額度是現金的 5 倍（約 ${wan(S.cash*5)}）。要在明天用神山積電當沖一次嗎？`,opts:[{t:'賭一把當沖',fn:dayTrade},{t:'不要',fn:()=>addFeed({cat:'me',i:'phone',h:'你婉拒了當沖邀請。'})}]})},
  {w:1,cond:()=>S.cash<80000&&S.day>60,f:()=>({i:'thug',title:'地下錢莊找上門',text:'「兄弟缺錢嗎？現在借你 50 萬，債務直接加 75 萬就好。」',opts:[{t:'借！拿 50 萬翻身',fn:()=>{S.cash+=5e5;S.debt+=7.5e5;addFeed({cat:'bad',i:'thug',h:'你向地下錢莊借了 50 萬，債務增加 75 萬。',moment:1})}},{t:'不借',fn:()=>addFeed({cat:'me',i:'thug',h:'你拒絕了地下錢莊。'})}]})},
- {w:2,cond:()=>S.shark>0,f:()=>({i:'thug',title:'地下錢莊來催收',text:`「欠我們 ${wan(S.shark)}，這個月先拿 3 萬出來，不然別怪我們。」`,opts:[{t:'先還 3 萬',fn:()=>{const a=Math.min(30000,S.cash);S.cash-=a;S.shark=Math.max(0,S.shark-a);S.repaid+=a;addFeed({cat:'bad',i:'thug',h:`被地下錢莊逼著先還了 ${wan(a)}。`})}},{t:'拖著不給',fn:()=>{if(PR()<.5){S.cash-=50000;setMood('shock',3);addFeed({cat:'bad',i:'thug',h:'他們砸了你的家，修理花了 5 萬……',moment:1})}else addFeed({cat:'me',i:'thug',h:'你躲過了這次催收。'})}}]})},
+ {w:2,cond:()=>S.shark>0,f:()=>({i:'thug',title:'地下錢莊來催收',text:`「欠我們 ${wan(S.shark)}，這個月先拿 3 萬出來，不然別怪我們。」`,opts:[{t:'先還 3 萬',fn:()=>{const a=Math.min(30000,S.cash,S.shark);repay(a,true);if(a>0&&!S.ended)addFeed({cat:'bad',i:'thug',h:`被地下錢莊逼著先還了 ${wan(a)}。`})}},{t:'拖著不給',fn:()=>{if(PR()<.5){S.cash-=50000;setMood('shock',3);addFeed({cat:'bad',i:'thug',h:'他們砸了你的家，修理花了 5 萬……',moment:1})}else addFeed({cat:'me',i:'thug',h:'你躲過了這次催收。'})}}]})},
  {w:1,cond:()=>true,f:()=>({i:'thug',title:'討債集團上門',text:['幾個刺青大哥在門口：「今天不拿點錢出來，我們不走。」','討債公司在你家門口貼滿紅色大字報，鄰居都在看：「再不給錢，明天還會再來。」','半夜電話一直響：「不想我們去你老家找家人，就先拿點錢出來。」'][ri(3)],opts:[{t:'給 1 萬打發他們',fn:()=>{S.cash-=10000;addFeed({cat:'bad',i:'thug',h:'你付了 1 萬打發討債集團。'})}},{t:'硬撐不給',fn:()=>{if(PR()<.4){S.cash-=30000;setMood('sad',3);addFeed({cat:'bad',i:'thug',h:'他們砸了你的家，修理花了 3 萬……',moment:1})}else addFeed({cat:'me',i:'thug',h:'你硬撐過去，他們悻悻然離開。'})}}]})}
 ];
 /* ===== 季度目標 ===== */
@@ -1680,7 +1684,7 @@ function openModal(o,noPause){
   const w=box.querySelector('.opts');
   o.opts.forEach((op,i)=>{const b=document.createElement('button');b.className='btn '+(i===0?'':'ghost')+' full';b.textContent=op.t;
     b.onclick=()=>{if(b.dataset.dn)return;b.dataset.dn=1;const tr=!window.NORES&&S&&!S.ended&&!(S.tut>=0)&&!o.flash&&o.opts.length>1&&$('scr-game').classList.contains('on');const nw0=tr?nwNow():0,f0=tr?S.feed[0]:null;
-      $('modal').classList.remove('on');if(S)S.modal=false;op.fn&&op.fn();if(S&&!S.ended)choiceAfter(o.title||'',op.t||'',o.text||'');
+      $('modal').classList.remove('on');if(S)S.modal=false;op.fn&&op.fn();if(S&&!S.ended&&S.tut<0&&S.cash<0)payNeg();if(S&&!S.ended)choiceAfter(o.title||'',op.t||'',o.text||'');
       const fin=()=>{if(S&&!S.ended&&$('scr-game').classList.contains('on')){renderAll();if(S.speed)schedule()}};
       if(tr&&S&&!S.ended&&!S.modal&&!$('modal').classList.contains('on')){const d=nwNow()-nw0,nf=[];for(const f of S.feed){if(f===f0)break;if(f.cat!=='trade')nf.push(f.h)}if(Math.abs(d)>=1000||nf.length){showResult(d,nf.slice(0,2),fin);return}}
       fin()};w.appendChild(b)});
@@ -1723,7 +1727,7 @@ function sell(id,frac,force,why,exact,tag,pxRaw){
   if(!(q>0)){toast('數量至少要 1');return false}
   const part=q/h.qty,amt=q*(pxRaw||st.price)*fxOf(st),f=feeOf(st,amt),tx=Math.round(amt*taxRate(st));
   const lr=h.loan*part,cr=h.cost*part,get=amt-f-tx-lr,pl=get-cr;
-  h.qty-=q;h.loan-=lr;h.cost-=cr;h.basis-=h.basis*part;if(h.qty<=1e-9)delete S.hold[id];
+  h.qty-=q;h.loan-=lr;h.cost-=cr;h.basis-=h.basis*part;if(h.qty<=1e-9){delete S.hold[id];S.orders=S.orders.filter(o=>o.id!==id||o.t==='buy')}
   S.cash+=get;S.fees+=f;S.tax+=tx;S.trades++;recTrade(st,pl);if(lr>0&&pl>=1e6)unlock('margin');
   if(pl<0&&tag!=='liquid'){if(lr>0)teach('mgLoss','融資賠錢會放大',`這筆用融資買的${st.name}賠了 ${wan(-pl)}。融資是借錢買股票，漲跌都放大 2.5 倍，借的錢還要付利息。`);else if(pl<-cr*.1)teach('bigLoss','賠了一成以上',`${st.name}這筆賠了 ${pct(pl/cr)}。可以試試「自動單」的停損：跌到你設的價格就自動賣掉，避免越賠越多。`)}
   addFeed({cat:pl>=0?'good':'bad',i:'trade',h:`${why?why+'，':''}賣出${st.name} ${qfmt(st,q)} ${unitOf(st)}，${pl>=0?'賺':'賠'}了 ${wan(Math.abs(pl))}。`,moment:!!why||Math.abs(pl)>3e5});
@@ -1734,12 +1738,12 @@ function sell(id,frac,force,why,exact,tag,pxRaw){
 /* ===== 交易：放空（融券） ===== */
 function openShort(id,own,why){
   const st=stock(id);if(st.mk==='cr'){toast('加密幣不能放空');return false}
-  if(st.limit==='down'){toast('跌停時不能放空');return false}
   const px=st.price*fxOf(st);if(own<100){toast('現金不夠');return false}
   const q=Math.floor(own/(px*(1+.0015+taxRate(st))));return shortQty(id,q,why);
 }
 function shortQty(id,q,why){
   const st=stock(id);if(st.mk==='cr'){toast('加密幣不能放空');return false}
+  if(st.limit==='down'){toast('跌停時不能放空');return false}
   q=Math.floor(q);if(!(q>0)){toast(`錢不夠放空 1 股${st.name}`);return false}
   const px=st.price*fxOf(st),amt=q*px,f=feeOf(st,amt),tx=Math.round(amt*taxRate(st));
   if(amt+f+tx>S.cash){toast(`現金不夠，放空需要保證金 ${wan(amt+f+tx)}`);return false}
@@ -1834,8 +1838,7 @@ function repayCustom(){if(!S||S.ended)return;const u=+document.querySelector('#r
   const go=()=>{if(amt>max)toast(`最多只能還 ${fmt(max)} 元，已幫你調整`);repay(Math.min(amt,max));$('rp-amt').value='';rpPrev();if(S&&!S.ended&&S.cash<bill())setTimeout(()=>toast(`注意：剩下的現金不夠下個月的開銷（${wan(bill())}）`),2100)};
   if(!(S.tut>=0)&&(amt>max||amt>=S.cash*.5)){const unitHint=u>1&&v>=1000?`你選的單位是「萬」，輸入 ${fmt(v)} 等於 ${wan(amt)}。如果你想還 ${wan(v)}，請改成「元」或只輸入 ${+(v/1e4).toFixed(2)}。`:'';
     openModal({i:'bill',title:`確定要還 ${wan(Math.min(amt,max))}？`,text:`${amt>max?`你輸入的是 ${wan(amt)}（${fmt(amt)} 元），超過你能還的金額，會直接還 ${wan(max)}。`:`這筆會用掉你一半以上的現金（現金 ${wan(S.cash)}）。`}${unitHint}`,opts:[{t:'確定還款',fn:go},{t:'我再改一下',fn:()=>{}}]});return}
-  go();return;
-  repay(Math.min(amt,max));$('rp-amt').value='';if(S&&!S.ended&&S.cash<bill())setTimeout(()=>toast(`注意：剩下的現金不夠下個月的開銷（${wan(bill())}）`),2100)}
+  go()}
 $('rp-go').addEventListener('click',repayCustom);$('rp-amt').addEventListener('keydown',e=>{if(e.key==='Enter')repayCustom()});
 
 /* ===== 畫面 ===== */
@@ -2051,7 +2054,6 @@ function endGame(type){
   }else{snd('down');
     if(type==='collect'){title='被催收出局';desc=`年度還款沒達標（還了 ${wan(S.repaid)}），債權人失去耐心，把你告上了法院……`}
     else if(type==='evict'){title='流落街頭';desc='繳不出房租和生活費，被房東趕了出去……'}
-    else if(type==='default'){title='違約交割';desc='當沖沒沖掉又付不出錢，信用破產，遊戲結束。'}
     else if(type==='quit'){title='放棄了';desc=`你還了 ${Math.round(paid*100)}% 的債。休息一下，再來一次吧。`}
     else{const pc=Math.round(paid*100),left=wan(debtAll());if(paid>=.8){title='差一步翻身';key='near';desc=`期限到了，你還了 ${pc}% 的債，只差 ${left}！再來一次一定行。`}else if(paid>=.5){title='功虧一簣';key='close';desc=`期限到了，你還了 ${pc}% 的債，剩下 ${left} 還不出來……`}else if(paid>=.25){title='力不從心';key='mid';desc=`期限到了，你還了 ${pc}% 的債。雖然沒還完，但已經比剛開始好很多了。`}else{title='債務到期';desc=`期限到了，你只還了 ${pc}% 的債，剩下 ${left} 還不出來……`}}}
   META.endings[key]=Date.now();lsSet(META_KEY,META);
@@ -2076,7 +2078,6 @@ function endGame(type){
 }
 function nextTip(type,key){const t=S.st;
   if(type==='win'){if(key==='win4')return '你已經是億萬富翁了。挑戰更高難度，或試試收集全部成就吧！';return key==='win1'?'還清後如果繼續投資、晚點再還，結局可以更好：淨資產破 1 億就是億萬富翁。':'試試更高的難度，或是衝更高的淨資產結局！'}
-  if(type==='default')return '當沖額度是現金的 5 倍，一次沒沖掉就會大虧，甚至背上更多債。下次營業員來電可以拒絕。';
   if(t.liquid>=1)return `你被斷頭／強制回補 ${t.liquid} 次。下次融資別全押，保留現金，並設停損單。`;
   if(type==='collect')return '每年年底前記得先還一點債，年度門檻比一次還清更重要。';
   if(type==='evict')return S.ever&&S.ever.used?'留至少 3 個月的生活費在現金，不要把錢全部壓在股票上。':'先在商城買二手國產車跑外送：每月淨賺約 1.5 萬，房租生活費就有著落了。也記得留至少 3 個月的生活費在現金。';
@@ -2136,7 +2137,6 @@ function applyDesk(){const on=DESKQ.matches;if(on===deskOn)return;deskOn=on;cons
   else{deskHome.forEach(el=>g.appendChild(el));deskMk.forEach(el=>pm.appendChild(el));deskCr.forEach(el=>cr.appendChild(el));['dk','ck'].forEach(id=>{const e=$(id);if(e)e.remove()});document.body.classList.remove('desk')}
   if(S&&!S.ended&&$('scr-game').classList.contains('on'))renderAll()}
 DESKQ.addEventListener('change',applyDesk);applyDesk();
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
 /* ===== 鍵盤與輔助工具 ===== */
 const A11Y_ROWS='.stock,.toggle,.nb[onclick],.hold-row[onclick]';
 function a11yRows(){document.querySelectorAll(A11Y_ROWS).forEach(e=>{if(!e.hasAttribute('tabindex')){e.tabIndex=0;e.setAttribute('role','button')}})}
