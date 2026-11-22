@@ -221,6 +221,10 @@ body.desk #scr-game>.grid3 .btn{padding-top:6px;padding-bottom:6px}
 body.desk .items{grid-template-columns:repeat(auto-fill,minmax(165px,1fr))}
 body.desk .coach>*{max-width:560px;margin-left:auto;margin-right:auto}
 body.desk.tut .dk>div{padding-bottom:230px}
+/* 教學高亮不能關掉欄位捲動，否則欄位下方的按鈕捲不到；其他區域改由遮罩變暗 */
+html body.desk .dk>div.hlp{overflow-y:auto!important;overflow-x:clip!important;overflow-clip-margin:8px}
+html body.desk .dk.hlp{z-index:auto}
+body.desk #scr-game:has(.dk .hl)::before{content:'';position:fixed;inset:0;z-index:29;background:var(--c-a-20-16-26-6);pointer-events:none}
 /* 標題畫面：左邊大圖、右邊文字和按鈕 */
 body.desk #scr-title.on>div{min-height:0!important;height:100%;display:grid!important;text-align:left!important;grid-template-columns:minmax(0,1.25fr) minmax(320px,1fr);column-gap:48px;row-gap:12px;align-content:center;max-width:1200px;margin:0 auto}
 body.desk #scr-title>div>*{grid-column:2}
@@ -1514,7 +1518,7 @@ function addOrder(){
   S.orders.push({id:S.sel,t,p,q,lev:S.margin&&st.mk==='tw'});
   $('o-price').value='';$('o-qty').value='';toast('已掛單');renderOrders();tutHook('order');
 }
-function delOrder(i){S.orders.splice(i,1);renderOrders();tutHook('odel')}
+function delOrder(i){S.orders.splice(i,1);renderOrders()}
 
 /* ===== 選擇事件 ===== */
 const TIPSRC=['LINE 群組的「老師」','某位做業務的朋友','在名流酒會上，一位董事','遊艇派對上，某集團大老闆','私人飛機上，一位基金經理人'];
@@ -1981,8 +1985,7 @@ const TSTEPS=[
  {sel:'#o-add',t:'買了之後掛個「停損」，跌到某個價格就自動賣掉，用融資時更能避免被斷頭。價格幫你填好了，按「掛單」。',w:'order',pre:()=>{setSpeed(0);$('p-orders').open=true;const ob=document.querySelector('#otype [data-t=sl]');if(ob)ob.click();const st=stock('TSMC');$('o-price').value=rT(st.price*.92,'f');$('o-qty').value=''}},
  {sel:'#speed button[data-s="1"]',t:'按「1x」。',w:'run'},
  {sel:'#p-holds',t:'等它漲。',w:'profit'},
- {sel:'#sell-btns button:nth-child(2)',t:'教學行情讓你賺翻了。融資最怕變天：股價跌約兩成就可能被斷頭，所以要掛停損，變天就先跑。按「全部賣出」。',w:'sell'},
- {sel:'#o-list button',t:'停損單用不到了，按「取消」。',w:'odel'},
+ {sel:'#sell-btns button:nth-child(2)',t:'教學行情讓你賺翻了。融資最怕變天：股價跌約兩成就可能被斷頭，所以要掛停損，變天就先跑。按「全部賣出」，賣光後這檔的停損單會自動取消。',w:'sell'},
  {sel:'#side [data-side=short]',t:'最後一個工具是「放空」：股價跌你反而賺，下雨天也有機會，但看錯會賠很快。切到「放空（看跌）」。',w:'side',v:'short',pre:()=>{setMargin(false);S.sel='TSMC';renderAll()}},
  {sel:'#buy-btns button:nth-child(1)',t:'按「空 25%」。',w:'buy'},
  {sel:'#speed button[data-s="1"]',t:'按「1x」。',w:'run'},
