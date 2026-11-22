@@ -52,7 +52,7 @@ h3{font-size:15px;font-weight:700;margin-bottom:8px}
 .row{display:flex;gap:8px;align-items:center}.row.wrap{flex-wrap:wrap}.grow{flex:1}.between{justify-content:space-between}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .opt{border:2px solid var(--line);background:var(--card);border-radius:8px;padding:8px;cursor:pointer;text-align:center}
-.opt.on{background:var(--y);box-shadow:2px 2px 0 var(--line)}
+.opt.on{background:var(--y);box-shadow:2px 2px 0 var(--line)}.opt.on span{color:var(--ink)}
 .opt b{display:block}.opt span{font-size:12px;color:var(--mute)}
 input[type=text]{width:100%;border:3px solid var(--line);border-radius:8px;padding:9px 12px;font:inherit;background:var(--paper)}
 input:focus{background:var(--c-fff6ee)}
@@ -158,9 +158,9 @@ details.orders summary{font-weight:700;font-size:14px;cursor:pointer}
 .galg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .gal{border:2px solid var(--line);border-radius:6px;padding:6px 4px;text-align:center;background:var(--c-eee8da);color:var(--mute)}
 .gal.got{background:var(--y);color:var(--ink)}.gal b{display:block;font-size:13px}.gal span{font-size:12px;line-height:1.3;display:block}
-.achr{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--c-d9cdb3);opacity:.6;text-align:left}
+.achr{display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px dashed var(--c-d9cdb3);text-align:left}
 .quest{margin-top:10px;background:var(--c-ffeedd);padding:8px 10px;font-size:13px;border:2px solid transparent;border-image:var(--fr2) 2 / 2px stretch;background-clip:padding-box}.quest .bar i{background:repeating-linear-gradient(90deg,var(--c-e0a92e) 0 6px,var(--c-f2c14e) 6px 8px)}
-.achr.got{opacity:1}.achr .ai{width:26px;height:26px;flex:none}
+.achr:not(.got){color:var(--mute)}.achr:not(.got) .ai{opacity:.6;filter:grayscale(1)}.achr .ai{width:26px;height:26px;flex:none}
 
 /* ===== 像素風統一外觀 ===== */
 :root{--fr3:url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5IiBoZWlnaHQ9IjkiIGZpbGw9IiMyYjI3MzMiIHNoYXBlLXJlbmRlcmluZz0iY3Jpc3BFZGdlcyI+PHJlY3QgeD0iMiIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjMiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI0IiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNSIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjYiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMiIgeT0iMSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjMiIHk9IjEiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI0IiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNSIgeT0iMSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjYiIHk9IjEiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI3IiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMyIgeT0iMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjQiIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI1IiB5PSIyIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNiIgeT0iMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjciIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI4IiB5PSIyIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iMyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSIzIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNiIgeT0iMyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjciIHk9IjMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI4IiB5PSIzIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNiIgeT0iNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjciIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI4IiB5PSI0IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSI1IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNiIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjciIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI4IiB5PSI1IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjYiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSI2IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMyIgeT0iNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjQiIHk9IjYiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI1IiB5PSI2IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNiIgeT0iNiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjciIHk9IjYiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI4IiB5PSI2IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMSIgeT0iNyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjIiIHk9IjciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIzIiB5PSI3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNCIgeT0iNyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjUiIHk9IjciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI2IiB5PSI3IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNyIgeT0iNyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjIiIHk9IjgiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIzIiB5PSI4IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNCIgeT0iOCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjUiIHk9IjgiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI2IiB5PSI4IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PC9zdmc+);--fr2:url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2IiBoZWlnaHQ9IjYiIGZpbGw9IiMyYjI3MzMiIHNoYXBlLXJlbmRlcmluZz0iY3Jpc3BFZGdlcyI+PHJlY3QgeD0iMSIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjIiIHk9IjAiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIzIiB5PSIwIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNCIgeT0iMCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjAiIHk9IjEiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIxIiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMiIgeT0iMSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjMiIHk9IjEiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI0IiB5PSIxIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNSIgeT0iMSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjAiIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIxIiB5PSIyIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNCIgeT0iMiIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjUiIHk9IjIiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIwIiB5PSIzIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMSIgeT0iMyIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjQiIHk9IjMiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI1IiB5PSIzIiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMCIgeT0iNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjEiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMyIgeT0iNCIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjQiIHk9IjQiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSI1IiB5PSI0IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iMSIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjxyZWN0IHg9IjIiIHk9IjUiIHdpZHRoPSIxIiBoZWlnaHQ9IjEiLz48cmVjdCB4PSIzIiB5PSI1IiB3aWR0aD0iMSIgaGVpZ2h0PSIxIi8+PHJlY3QgeD0iNCIgeT0iNSIgd2lkdGg9IjEiIGhlaWdodD0iMSIvPjwvc3ZnPg==)}
@@ -199,7 +199,7 @@ html body .hlb::after{content:'按這裡';position:absolute;left:50%;top:-30px;t
 @keyframes hlbob{to{transform:translate(-50%,-6px)}}
 html body .hlp{position:relative;z-index:30;overflow:visible!important}
 html body .coach .cbox{max-height:72vh;overflow-y:auto}
-.wtag{display:inline-block;padding:2px 7px;border-radius:4px;color:var(--paper);font-weight:700;font-size:13px;margin-left:2px}.wtag.bull{background:var(--up)}.wtag.bear{background:var(--down)}.wtag.normal{background:var(--c-7d7568)}
+.wtag{display:inline-block;padding:2px 7px;border-radius:4px;color:var(--paper);font-weight:700;font-size:13px;margin-left:2px}.wtag.bull{background:var(--up)}.wtag.bear{background:var(--down)}.wtag.normal{background:var(--mute)}
 .newsbar{margin-top:8px;display:grid;gap:5px}.newsbar .nb{font-size:13px;line-height:1.4;padding:6px 8px;border:2px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer}.newsbar .nb.good{background:var(--c-fdebe8)}.newsbar .nb.bad{background:var(--c-e6f4ec)}.newsbar .go{color:var(--c-3a5ba0);white-space:nowrap}.newsbar .chip{margin-right:4px}
 .newsbar .chip.good{background:var(--up);color:var(--paper);border-color:var(--up)}.newsbar .chip.bad{background:var(--down);color:var(--paper);border-color:var(--down)}
 #scr-game .card,#scr-game .tabs{contain:layout style}
@@ -306,7 +306,7 @@ body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 </head>
 <body>
 <noscript><p class="foot">這個遊戲需要開啟 JavaScript 才能玩。</p></noscript>
-<div id="app">
+<main id="app">
 
 <section id="scr-title" class="scr on">
   <div style="min-height:86vh;display:flex;flex-direction:column;justify-content:center;gap:14px;text-align:center">
@@ -323,6 +323,7 @@ body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 </section>
 
 <section id="scr-create" class="scr">
+  <h1 class="sr-only">股海翻身</h1>
   <div class="row between"><h2 style="margin:0">打造你的主角</h2><button class="btn ghost sm" onclick="randAv()">隨機</button></div>
   <div class="avprev" id="av-prev" style="margin-top:10px"></div>
   <div id="av-ed"></div>
@@ -348,6 +349,7 @@ body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 </section>
 
 <section id="scr-game" class="scr">
+  <h1 class="sr-only">股海翻身</h1><h2 class="sr-only">遊戲畫面</h2>
   <div class="mini" id="mini"><div class="gr"><span id="m-date"></span><span>現金 <b id="m-cash"></b></span><span>負債 <b id="m-debt"></b></span></div><button id="m-play" aria-label="播放"><svg viewBox="0 0 8 8" aria-hidden="true"><path d="M2 0h2v1h1v1h1v1h1v2H6v1H5v1H4v1H2z" fill="currentColor"/></svg></button><div class="mrow" id="speed"><button data-s="1">1x</button><button data-s="2">2x</button><button data-s="3">4x</button><button data-s="4">極速</button><button class="nx" id="ff-ev">下一個決定</button></div></div>
   <div class="card" id="p-top" style="padding:10px 12px">
     <div class="row between" style="margin-bottom:6px">
@@ -461,6 +463,7 @@ body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 <section id="scr-end" class="scr">
   <div class="card" id="end-card"></div>
   <button class="btn full" style="margin-bottom:14px" onclick="makeShare()">產生結局分享圖</button>
+  <h2 class="sr-only">結局回顧</h2>
   <div class="card"><h3>投資檢討</h3><ul class="review" id="end-review"></ul></div>
   <div class="card"><h3>關鍵時刻</h3><div class="feed" id="end-moments"></div></div>
   <div class="grid2">
@@ -475,7 +478,7 @@ body.desk #scr-game>.grid3 .btn{width:auto;padding:4px 12px}
 </section>
 
 <p class="foot">本遊戲為虛構模擬，股票、公司、新聞與價格皆非真實，不構成任何投資建議。</p>
-</div>
+</main>
 
 <div class="modal" id="modal"><div class="mbox" id="mbox" role="dialog" aria-modal="true" aria-labelledby="mbox-title" tabindex="-1"></div></div>
 <div class="coach" id="coach"><div class="cbox" id="coach-box" role="status" aria-live="polite"></div></div>
@@ -940,18 +943,18 @@ const ITEMS=[
  {id:'team',c:'biz',slot:'biz4',t:1,n:'職業球隊',p:100000000,rs:.8,up:0,f:7000,biz:1200000,use:'每月約 120 萬，名氣爆表',icon:ICONS.trophy,pc:{}}
 ];
 const itemOf=id=>ITEMS.find(x=>x.id===id);
-const UNL=[['shop',1,'商城開放了！','商城可以買名牌、名車和房子，「事業」分頁可以投資店面和公司賺月收入。強烈推薦先買二手國產車：每月外送 +1.8 萬，扣掉保養還淨賺約 1.5 萬，是最穩的收入來源！另外買房免房租、名錶和鉑金包會增值；名氣越高，內線越準，還有業配收入。'],['margin',1,'融資開放了！','台股可以用 2.5 倍槓桿買進，賺賠都放大。維持率低於 130% 會被券商強制斷頭，小心使用。'],['orders',1,'自動單開放了！','可以設定限價買進、停利、停損，碰到價格就自動成交，不用一直盯盤。但跌停鎖死時停損會失敗。'],['short',1,'放空開放了！','看跌也能賺錢：股價下跌你就賺。但股價漲太多（放空價的 1.45 倍）會被強制回補。']];
+const UNL=[['shop',1,'商城開放了！','商城可以買名牌、名車和房子，「事業」分頁可以投資店面和公司賺月收入。強烈推薦先買二手國產車：每月外送 +1.8 萬，扣掉保養還淨賺約 1.5 萬，是最穩的收入來源！另外買房免房租、名錶和鉑金包會增值；名氣越高，內線越準，還有業配收入。'],['margin',1,'融資開放了！','台股可以用 2.5 倍槓桿買進，賺賠都放大。這是翻身的核心：晴天放膽用，變天先賣。維持率低於 130% 會被券商強制斷頭。'],['orders',1,'自動單開放了！','可以設定限價買進、停利、停損，碰到價格就自動成交，不用一直盯盤。但跌停鎖死時停損會失敗。'],['short',1,'放空開放了！','看跌也能賺錢：股價下跌你就賺。但股價漲太多（放空價的 1.45 倍）會被強制回補。']];
 const isUnl=k=>!S||!S.unl||!!S.unl[k];
 const unlDay=k=>UNL.find(x=>x[0]===k)[1];
 // [名氣門檻, 稱號, 內線準確度, 每月業配收入]
 const FAME=[[0,'平民',.35,0],[30,'小資族',.45,0],[200,'新貴',.55,20000],[1000,'富豪',.7,100000],[5000,'頂級富豪',.85,800000]];
 const SHARK_RATE=()=>S&&S.sharkRate!=null?S.sharkRate:(diffCfg().shark||.03);let SHARK=false,DIFFN='簡單';
 const debtAll=()=>S.debt+(S.shark||0);
-/* 難度參數：rent 房租、liv 生活費、req 每年最低還款（佔原債務比例）、grace 可寬限次數、rate 月利率、bad 壞新聞權重、vm 個股波動倍數、mn 大盤波動倍數、tipPen 內線準確度懲罰、mu 大盤基本漲幅、flip 新聞反轉機率、rw 多頭/盤整/空頭權重、fake 假預告機率、warn 真預告出現率、rs 多空落差倍數、fw 新聞後續力道、tipMin 內線準確度下限、scam 詐騙損失倍數、yearPop 年度還款跳窗、cm 選擇事件頻率、job 每月打零工收入 */
+/* 難度參數：rent 房租、liv 生活費、req 每年最低還款（佔原債務比例）、grace 可寬限次數、rate 月利率、bad 壞新聞權重、vm 個股波動倍數、rp 多空切換機率（越低趨勢越長）、mn 大盤波動倍數、tipPen 內線準確度懲罰、mu 大盤基本漲幅、flip 新聞反轉機率、rw 多頭/盤整/空頭權重、fake 假預告機率、warn 真預告出現率、rs 多空落差倍數、fw 新聞後續力道、tipMin 內線準確度下限、scam 詐騙損失倍數、yearPop 年度還款跳窗、cm 選擇事件頻率、job 每月打零工收入 */
 const DIFF={
- '簡單':{rent:2500,liv:4000,req:.001,grace:3,rate:.001,bad:.8,vm:.75,mn:.75,tipPen:-.15,days:2205,mu:.0002,flip:.03,rw:[4,4,3],fake:.001,warn:.9,rs:.5,fw:.004,job:25000,tipMin:.75,scam:.5,yearPop:1,cm:.67},
- '普通':{rent:3000,liv:5000,req:.001,grace:2,rate:.0012,bad:.95,vm:.85,mn:.85,tipPen:-.05,days:1715,mu:.00015,flip:.06,rw:[5,5,4],fake:.002,warn:.8,rs:.7,fw:.0025,job:20000},
- '困難':{rent:3500,liv:5500,req:.0015,grace:1,rate:.0018,bad:1.05,vm:1,mn:1,tipPen:0,days:1470,shark:.06/12,mu:.0001,flip:.1,rw:[1,1,1],fake:.003,warn:.7,rs:1,fw:.0015,job:10000}
+ '簡單':{rent:2500,liv:4000,req:.001,grace:3,rate:.001,bad:.8,vm:.75,mn:.75,tipPen:-.15,days:2205,mu:-.0004,flip:.03,rw:[4,2,5],rp:.004,fake:.0005,warn:.98,rs:1.6,fw:.004,job:10000,tipMin:.75,scam:.5,yearPop:1,cm:.67},
+ '普通':{rent:3000,liv:5000,req:.001,grace:2,rate:.0012,bad:.95,vm:.85,mn:.85,tipPen:-.05,days:1715,mu:-.00008,flip:.06,rw:[4,2,4],rp:.005,fake:.001,warn:.9,rs:1.3,fw:.0025,job:12000},
+ '困難':{rent:3500,liv:5500,req:.0015,grace:1,rate:.0018,bad:1.05,vm:1,mn:1,tipPen:0,days:1470,shark:.06/12,mu:-.00008,flip:.1,rw:[1,1,1],rp:.006,fake:.002,warn:.8,rs:1.3,fw:.0015,job:10000}
 };
 const diffCfg=()=>({...DIFF[DIFFN]||DIFF['簡單'],...(window.__DIFF&&window.__DIFF[DIFFN]||{})});
 /* 開局時寫進存檔的難度設定；舊存檔沒有這份資料，維持舊版規則 */
@@ -1118,7 +1121,7 @@ function genWorld(days,seed,bad=1,vm=1){
   const NW=bad!==1?NEWS.map(e=>({...e,w:(e.w||1)*(e.cat==='bad'?bad:1)})):NEWS;
   for(let d=1;d<=days;d++){
     const sh={},sS={},evs=[];
-    if(MR()<.008*K){const RW=diffCfg().rw||[1,1,1],R0=MR()*(RW[0]+RW[1]+RW[2]);regime=R0<RW[0]?'bull':R0<RW[0]+RW[1]?'normal':'bear'}
+    if(MR()<(diffCfg().rp??.008)*K){const RW=diffCfg().rw||[1,1,1],R0=MR()*(RW[0]+RW[1]+RW[2]);regime=R0<RW[0]?'bull':R0<RW[0]+RW[1]?'normal':'bear'}
     sched.filter(x=>x.day===d).forEach(x=>{apply(x.ev,sh,sS,d);evs.push(x.ev)});sched=sched.filter(x=>x.day!==d);
     if(MR()<(bad>1?.14:.12)*K*.15){/* 新聞頻率：約一個月一則，每則都會跳出來 */const ev=pick(NW,MR);apply(ev,sh,sS,d);evs.push(ev)}
     st.forEach(x=>{if(x.etf||x.bars.length<61||d-(x.la||-999)<42)return;const r60=x.price/x.bars[x.bars.length-61].c-1;
@@ -1162,7 +1165,7 @@ const ACH=[
  ['first_buy','第一桶金','單筆交易賺超過 30 萬'],['margin','槓桿玩家','融資單筆賺進 100 萬'],['short','看空的勇氣','放空單筆賺進 50 萬'],['order','自動駕駛','自動單成交'],
  ['liquid','斷頭體驗','被強制斷頭或回補'],['lock','賣不掉的痛','遇到跌停賣不掉'],['blind','賭神','解盲成功時持有奇蹟生技'],['delivery','外送之王','買二手車跑外送'],
  ['lux','第一件奢侈品','在商城買下任何東西'],['house','有殼族','買下房子'],['supercar','超跑人生','買下義式超跑'],['jet','天空之城','買下私人飛機'],
- ['shark','擺脫地下錢莊','在困難難度中還清高利貸'],['boss','當老闆','買下任何一個事業'],['collector','收藏家','一局內買過商城所有物品（不含事業，可以轉賣）'],['quests','目標達人','完成 5 個季度目標'],['repay1m','還款百萬','累計還款達 100 萬'],['settle','債務和解','接受債權人的和解提議'],['angel','天使降臨','天使投資成功'],['contra','反指標','反著內線操作，7 天內賺 5 萬以上'],['comeback','逆轉勝','現金曾經跌破 5 萬，最後還是還清'],['flash','閃電翻身','3 年內還清債務'],['tsunami','海嘯倖存者','經歷金融海嘯，最後還是還清'],['win','債務歸零','還清所有債務'],['legend','億萬富翁','達成「億萬富翁」結局']
+ ['shark','擺脫地下錢莊','在困難難度中還清高利貸'],['boss','當老闆','買下任何一個事業'],['collector','收藏家','一局內買過商城 12 種物品（不含事業，可以轉賣）'],['quests','目標達人','完成 5 個季度目標'],['repay1m','還款百萬','累計還款達 100 萬'],['settle','債務和解','接受債權人的和解提議'],['angel','天使降臨','天使投資成功'],['contra','反指標','反著內線操作，10 天內賺 3 萬以上'],['comeback','逆轉勝','現金曾經跌破 5 萬，最後還是還清'],['flash','閃電翻身','3 年內還清債務'],['tsunami','海嘯倖存者','經歷金融海嘯，最後還是還清'],['win','債務歸零','還清所有債務'],['legend','億萬富翁','達成「億萬富翁」結局']
 ];
 function unlock(id){if(META.ach[id]||(S&&S.tut>=0))return;META.ach[id]=Date.now();lsSet(META_KEY,META);const a=ACH.find(x=>x[0]===id);if(a){toast('★ 成就解鎖：'+a[1]);snd('ach')}}
 const WORLD_KEY='ghfs_world_v1';
@@ -1183,7 +1186,7 @@ function loadGame(){
 }
 function refreshTitle(){$('btn-continue').style.display=lsGet(SAVE_KEY)?'':'none'}
 const END_HINT={win1:'還清債務，淨資產不到 100 萬',win2:'還清債務，淨資產 100 萬～1,000 萬',win3:'還清債務，淨資產 1,000 萬～5,000 萬',win4b:'還清債務，淨資產 5,000 萬～1 億',win4:'還清債務，淨資產超過 1 億',near:'期限到時還了 80% 以上，但沒還完',close:'期限到時還了 50%～80%',mid:'期限到時還了 25%～50%',collect:'年底累積還款沒達到門檻',time:'期限到時還不到 25%',evict:'月底繳不出房租和生活費',quit:'自己按下放棄'};
-const ACH_TIP={first_buy:'抓住一波大行情，一筆賺超過 30 萬',quests:'留意畫面上的季度目標，完成 5 個',margin:'多頭時用融資買台股，抱到賺 100 萬再賣',short:'看到大利空時放空，一筆賺 50 萬',settle:'還了一部分債之後，等債權人提議和解',angel:'錢夠的時候，賭一把學弟的新創',contra:'覺得內線不可靠時，反著它操作',comeback:'快破產時別放棄，撐到翻身',flash:'衝快一點，3 年內還清',tsunami:'後半局可能遇到金融海嘯，撐過去並還清',order:'在自動單掛一張單，等它成交',liquid:'融資全押後遇到大跌（雖然很痛）',lock:'持有的台股跌停鎖死時按賣出',blind:'看到「5 天後公布解盲」的新聞先買奇蹟生技，賭它成功',delivery:'在商城買二手國產車',lux:'在商城隨便買一樣',house:'存到 500 萬買小套房',supercar:'存到 800 萬',jet:'存到 2,000 萬',repay1m:'累計還款 100 萬',win:'在任何難度還清債務',legend:'還清前先繼續投資，把淨資產衝到 1 億',shark:'選困難難度，先把高利貸還清',boss:'存到 300 萬買手搖飲料店',collector:'錢夠的時候逐一買下商城的東西再轉賣（事業不用買），只要「買過」就算'};
+const ACH_TIP={first_buy:'抓住一波大行情，一筆賺超過 30 萬',quests:'留意畫面上的季度目標，完成 5 個',margin:'多頭時用融資買台股，抱到賺 100 萬再賣',short:'看到大利空時放空，一筆賺 50 萬',settle:'先還掉 5% 以上的債，手上留 30 萬以上現金，等債權人提議和解',angel:'錢夠的時候，賭一把學弟的新創',contra:'聽到內線時反著做：說漲就放空、說跌就買進，10 天內賺 3 萬',comeback:'快破產時別放棄，撐到翻身',flash:'衝快一點，3 年內還清',tsunami:'後半局可能遇到金融海嘯，撐過去並還清',order:'在自動單掛一張單，等它成交',liquid:'融資全押後遇到大跌（雖然很痛）',lock:'持有的台股跌停鎖死時按賣出',blind:'看到「5 天後公布解盲」的新聞先買奇蹟生技，賭它成功',delivery:'在商城買二手國產車',lux:'在商城隨便買一樣',house:'存到 500 萬買小套房',supercar:'存到 800 萬',jet:'存到 2,000 萬',repay1m:'累計還款 100 萬',win:'在任何難度還清債務',legend:'還清前先繼續投資，把淨資產衝到 1 億',shark:'選困難難度，先把高利貸還清',boss:'存到 300 萬買手搖飲料店',collector:'錢夠的時候逐一買下商城的東西再轉賣（事業不用買），買過 12 種就算'};
 function showGallery(){
   const e=ENDINGS.map(([k,n])=>`<div class="gal${META.endings[k]?' got':''}"><b>${META.endings[k]?n:'？？？'}</b><span>${META.endings[k]?'已達成':esc(END_HINT[k]||'')}</span></div>`).join('');
   const a=ACH.map(([k,n,d])=>`<div class="achr${META.ach[k]?' got':''}"><div class="ai">${ic('trophy')}</div><div><b>${n}</b>${META.ach[k]?' <span class="tiny up-c">已解鎖</span>':''}<div class="tiny mute">${d}</div></div></div>`).join('');
@@ -1300,7 +1303,7 @@ function stepDay(){
   // 融資利息、斷頭、融券回補
   Object.entries(S.hold).forEach(([id,h])=>{if(!h.loan)return;const it=h.loan*.07/245;S.cash-=it;S.interest+=it;
     const st=stock(id),ratio=posVal(id,h)/h.loan;
-    if(ratio<1.3){if(!S.lessonLiq){S.lessonLiq=1;const own=h.cost,avg=h.basis/h.qty/fxOf(st);S.lesson={i:'crash',title:'為什麼會被斷頭？',text:`你用融資買 ${st.name}：自己出 ${wan(own)}，向券商借了 ${wan(h.loan)}。股價從均價 ${pf(avg,st)} 跌到 ${pf(st.price,st)}（${pct(st.price/avg-1)}），持股市值只剩借款的 ${Math.round(ratio*100)}%，低於 130%，券商就強制賣掉你的股票把錢收回去。融資放大 2.5 倍，股價跌 25% 左右，你自己的本金就賠掉六成以上。下次記得：融資別全押、設停損、留現金付房租。`}}addFeed({cat:'bad',i:'crash',h:`${st.name}維持率跌破 130%，被券商強制斷頭賣出！`,moment:1});sell(id,1,true,'',null,'liquid');S.st.liquid++;unlock('liquid');setMood('shock',3);snd('alarm')}
+    if(ratio<1.3){if(!S.lessonLiq){S.lessonLiq=1;const own=h.cost,avg=h.basis/h.qty/fxOf(st);S.lesson={i:'crash',title:'為什麼會被斷頭？',text:`你用融資買 ${st.name}：自己出 ${wan(own)}，向券商借了 ${wan(h.loan)}。股價從均價 ${pf(avg,st)} 跌到 ${pf(st.price,st)}（${pct(st.price/avg-1)}），持股市值只剩借款的 ${Math.round(ratio*100)}%，低於 130%，券商就強制賣掉你的股票把錢收回去。融資放大 2.5 倍，股價跌 22% 左右，你自己的本金就賠掉五成以上。下次記得：只在晴天用融資、設停損、變天先賣、留現金付房租。`}}addFeed({cat:'bad',i:'crash',h:`${st.name}維持率跌破 130%，被券商強制斷頭賣出！`,moment:1});sell(id,1,true,'',null,'liquid');S.st.liquid++;unlock('liquid');setMood('shock',3);snd('alarm')}
     else if(ratio<1.45&&(S.warned[id]||0)<S.day-5){S.warned[id]=S.day;addFeed({cat:'bad',i:'bill',h:`追繳警告：${st.name}維持率只剩 ${Math.round(ratio*100)}%，再跌就會被斷頭！`})}});
   Object.entries(S.short).forEach(([id,h])=>{const st=stock(id),px=st.price*fxOf(st);
     if(px>h.entry*1.45){if(!S.lessonSh){S.lessonSh=1;S.lesson={i:'up',title:'為什麼會被強制回補？',text:`你在 ${pf(h.entry/fxOf(st),st)} 放空 ${st.name}，但它漲到 ${pf(st.price,st)}（${pct(px/h.entry-1)}）。放空的虧損理論上沒有上限，所以漲到放空價的 1.45 倍，券商就會強制幫你買回來停損。放空要看清楚趨勢，最好搭配停損。`}}addFeed({cat:'bad',i:'up',h:`${st.name}漲太多，放空部位被券商強制回補！`,moment:1});cover(id,1,true,'',null);S.st.liquid++;unlock('liquid');setMood('shock',3);snd('alarm')}});
@@ -1371,6 +1374,7 @@ const STYLE=[[/VIP/,/加入/,'scam'],[/三天學會/,/報名/,'scam'],[/保本/,
 const TITLES=[
  ['詐騙集團的好朋友','被騙了不只一次',()=>(S.st.scam||0)/2],
  ['槓桿狂人','被斷頭好幾次，還是照樣借錢買',()=>S.st.liquid/2],
+ ['順勢操盤手','看準晴天重押，靠融資賺進大把鈔票',()=>(S.st.mgPL||0)/5e6],
  ['放空之王','靠看空賺進大把鈔票',()=>Math.max(0,S.st.shortPL)/1e6],
  ['好人卡','自己都欠債了，還是一直幫別人',()=>(S.st.kind||0)/3],
  ['玻璃心散戶','一跌就賠錢賣掉',()=>(S.st.panicLoss||0)/4],
@@ -1517,7 +1521,7 @@ const TIPSRC=['LINE 群組的「老師」','某位做業務的朋友','在名流
 function futRet(id,n){const st=stock(id),f=st.fut;const a=st.price,bI=Math.min(f.length-1,S.day-1+n);if(bI<S.day)return 0;return f[bI].c/a-1}
 const CHOICES=[
  {w:3,cond:()=>S.cash>5000&&S.day<S.days-6&&S.focus!=='side'&&S.focus!=='biz',f:()=>{const L=fameLv(),li=FAME.indexOf(L);const tg=['EVA','BIO','TSMC','NV','TSL','BTC'][ri(6)],st=stock(tg);const vip=S.story&&S.story.vip&&!S.story.vipEnd;
-   const truthUp=futRet(tg,5)>0,acc=S.forceAcc||Math.min(.95,Math.max(vip?.2:S.bal.tipMin,(vip?.3:L[2])-(S.tipPen||0))),correct=PR()<acc,sayUp=correct?truthUp:!truthUp;if(acc<.5||!correct)S.tipOpp={id:tg,up:sayUp,day:S.day};S.forceAcc=0;
+   const truthUp=futRet(tg,5)>0,acc=S.forceAcc||Math.min(.95,Math.max(vip?.2:S.bal.tipMin,(vip?.3:L[2])-(S.tipPen||0))),correct=PR()<acc,sayUp=correct?truthUp:!truthUp;S.tipOpp={id:tg,up:sayUp,day:S.day};S.forceAcc=0;
    const rec=f=>{S.st.tipF+=f;if(f&&correct)S.st.tipW++};
    const opts=sayUp?[{t:'重押！投入 50% 現金',fn:()=>{rec(1);S.sel=tg;setSide('long');buyPct(tg,.5,'聽信內線')}},{t:'小試一下，投入 15%',fn:()=>{rec(1);S.sel=tg;setSide('long');buyPct(tg,.15,'小試內線')}},{t:'不理會',fn:()=>addFeed({cat:'me',i:'phone',h:'你沒理會那則消息。'})}]
      :st.mk==='cr'||!isUnl('short')?[{t:S.hold[tg]?'趕快全部賣掉':'記下來就好',fn:()=>{rec(S.hold[tg]?1:0);if(S.hold[tg])sell(tg,1,false,'聽信內線')}},{t:'不理會',fn:()=>{}}]
@@ -1566,7 +1570,7 @@ const lifeTier=()=>{if(!S)return 0;const f=repaidFrac();return MILES.filter(m=>f
 function mileTick(){const t=lifeTier();if(t>(S.tier||0)){S.tier=t;const m=MILES[t-1];addFeed({cat:'good',i:'heart',h:`人生進度：${m[1]}`,moment:1});S.lesson={i:'heart',title:`人生進度 ${Math.round(m[0]*100)}%：${m[1]}`,text:m[2],...(t===2?{art:petsArt(),opts:[...PETS.slice(1).map((n,i)=>({t:n,fn:()=>{S.pet=i+1;askPetName();addFeed({cat:'good',i:'heart',h:`你養了一隻${n}，幫牠取個名字吧。`,moment:1});setMood('happy',3)}})),{t:'先不養',fn:()=>addFeed({cat:'me',i:'heart',h:'你決定先專心還債，不養寵物。'})}]}:{})}}}
 function petsArt(){return `<div class="row" style="gap:6px;justify-content:center">${PETS.slice(1).map((n,i)=>`<div style="width:44px">${petPG(i+1).svg('width="100%"')}</div>`).join('')}</div>`}
 /* ===== 行情階段 ===== */
-const PHASE={bull:['多頭來了！','市場氣氛轉好，大部分股票都在漲。多頭時抱得住比較會賺，追高也要小心別在最高點才進場。'],bear:['空頭來襲！','市場開始下跌，壞消息特別多。空頭時先減少融資和高波動股，大盤 ETF 可以抱著或分批撿便宜。'],normal:['市場轉為盤整','漲跌都不大，股價在區間裡來回。盤整時適合低買高賣、慢慢累積小賺。']};
+const PHASE={bull:['多頭來了！','市場氣氛轉好，大部分股票都在漲。這是開融資、放大部位的時機，記得掛停損。'],bear:['空頭來襲！','市場開始下跌，壞消息特別多。先賣掉融資和高波動股，退到場外等放晴，熟練的話也可以放空。'],normal:['市場轉為盤整','漲跌都不大，股價在區間裡來回。先收斂融資，等下一次放晴。']};
 const PHASE_PRE={bull:'分析師：景氣指標好轉，市場可能即將翻多。',bear:'分析師警告：景氣訊號轉弱，市場可能即將轉空。',normal:'分析師：多空力道拉鋸，市場可能進入盤整。'};
 function phaseTick(prevReg){
   if(S.tut>=0)return;
@@ -1595,8 +1599,8 @@ const PEND_FN={
  contestRev:()=>addFeed({cat:'me',i:'trophy',h:`投資比賽結果出爐，冠軍的報酬率是 ${12+ri(30)}%。你覺得自己也辦得到。`}),
  ma:p=>{if(PR()<.45){const g=Math.round(p.a*2.2);S.cash+=g;setMood('happy',4);addFeed({cat:'good',i:'money',h:`併購案成功！你投入的 ${wan(p.a)} 變成 ${wan(g)}！`,moment:1})}else{const g=Math.round(p.a*.3);S.cash+=g;setMood('sad',4);addFeed({cat:'bad',i:'money',h:`併購案破局，你投入的 ${wan(p.a)} 只拿回 ${wan(g)}……`,moment:1})}},
  maRev:()=>{if(PR()<.45){setMood('sad',2);addFeed({cat:'me',i:'money',h:'你沒參與的那個併購案成功了，跟投的人資金翻了一倍多……',moment:1})}else{setMood('happy',2);addFeed({cat:'me',i:'money',h:'你沒參與的那個併購案破局了，跟投的人賠了七成。好險！',moment:1})}},
- angel:p=>{if(PR()<.2){S.cash+=5e6;unlock('angel');setMood('happy',5);addFeed({cat:'good',i:'money',h:'你投資的新創被大公司收購！100 萬變成 500 萬！',moment:1})}else{setMood('sad',4);addFeed({cat:'bad',i:'money',h:'你投資的新創燒完錢倒閉了，100 萬化為烏有……',moment:1})}},
- angelRev:()=>{if(PR()<.2){setMood('sad',3);addFeed({cat:'me',i:'money',h:'學弟的新創被大公司收購了，當初投 100 萬的人拿回 500 萬……',moment:1})}else{setMood('happy',2);addFeed({cat:'me',i:'money',h:'學弟的新創倒閉了，好險你沒投。',moment:1})}},
+ angel:p=>{if(PR()<.3){S.cash+=5e6;unlock('angel');setMood('happy',5);addFeed({cat:'good',i:'money',h:'你投資的新創被大公司收購！100 萬變成 500 萬！',moment:1})}else{setMood('sad',4);addFeed({cat:'bad',i:'money',h:'你投資的新創燒完錢倒閉了，100 萬化為烏有……',moment:1})}},
+ angelRev:()=>{if(PR()<.3){setMood('sad',3);addFeed({cat:'me',i:'money',h:'學弟的新創被大公司收購了，當初投 100 萬的人拿回 500 萬……',moment:1})}else{setMood('happy',2);addFeed({cat:'me',i:'money',h:'學弟的新創倒閉了，好險你沒投。',moment:1})}},
  wedThanks:()=>{S.cash+=1e4;setMood('happy',3);addFeed({cat:'good',i:'heart',h:'新人寄來喜餅和一個 1 萬元的回禮紅包，說謝謝你的祝福。'})},
  wedRev:()=>{setMood('sad',3);addFeed({cat:'me',i:'heart',h:'家族群組裡有人酸你：「欠錢欠到連婚禮都不來了。」'})},
  tenantDmg:()=>{if(PR()<.3){const c=S.rentOut>5e4?5e5:3e4;S.cash-=c;setMood('sad',3);addFeed({cat:'bad',i:'bill',h:`房客把房子弄壞了，修繕花了 ${wan(c)}。`,moment:1})}else addFeed({cat:'good',i:'bill',h:'房客很愛惜房子，每個月準時繳租。'})},
@@ -1622,9 +1626,9 @@ CHOICES.push(
  {w:1,cond:()=>!S.story.wallet&&S.day>20,f:()=>({i:'money',title:'撿到錢包',text:'路上撿到一個錢包，裡面有 2 萬現金和身分證。',opts:[{t:'送去警察局',fn:()=>{S.story.wallet=1;setMood('happy',2);if(PR()<.6){S.cash+=5000;addFeed({cat:'good',i:'heart',h:'失主找到錢包，送你 5,000 元謝禮！',moment:1})}else addFeed({cat:'me',i:'heart',h:'你把錢包送去警察局，做了件好事。'})}},{t:'錢收下，錢包丟掉',fn:()=>{S.story.wallet=1;if(PR()<.4){S.cash-=3e4;setMood('shock',3);addFeed({cat:'bad',i:'thug',h:'監視器拍到你了！除了還錢還要和解，倒賠 3 萬……',moment:1})}else{S.cash+=2e4;addFeed({cat:'me',i:'money',h:'你收下了 2 萬，心裡有點不安。'})}}}]})},
  {w:1,cond:()=>!S.story.contest&&S.cash>1e4&&S.day>30&&S.day<S.days-70,f:()=>({i:'trophy',title:'投資比賽報名',text:'券商舉辦模擬投資比賽，報名費 3,000 元。接下來 63 天淨資產成長 10% 以上，就能拿到 5 萬獎金！',opts:[{t:'報名！',fn:()=>{S.story.contest=S.day;S.cash-=3000;pend('contest',63,{base:total(),rp:S.repaid});addFeed({cat:'me',i:'trophy',h:'你報名了投資比賽，63 天後結算。',moment:1})}},{t:'不參加',fn:()=>{S.story.contest=S.day}}]})},
  {w:1,cond:()=>!!S.owned.used&&(!S.story.typhoon||S.day-S.story.typhoon>400),f:()=>({i:'quake',title:'颱風天外送',text:'颱風天外送單價翻倍，跑一天可以多賺 8,000 元，但路上很危險。',opts:[{t:'衝了！',fn:()=>{S.story.typhoon=S.day;if(PR()<.2){S.cash-=15000;setMood('sad',3);addFeed({cat:'bad',i:'cross',h:'雨天打滑擦撞，醫藥費加修車花了 1.5 萬……',moment:1})}else{S.cash+=8000;setMood('happy',2);addFeed({cat:'good',i:'money',h:'颱風天外送賺了 8,000 元！',moment:1})}}},{t:'安全第一，在家休息',fn:()=>{S.story.typhoon=S.day}}]})},
- {w:3,cond:()=>!S.story.settle&&S.day>=490&&repaidFrac()>=.15&&S.cash-bill()*2>3e5,f:()=>{const A=roundTo((S.cash-bill()*2)*.8,1e4),B=Math.round(A*.2);return {i:'bank',title:'債權人提議和解',text:`看你一直有在還錢，債權人提議：現在一次還 ${wan(A)}，就幫你多減免 20%（${wan(B)}）。`,opts:[{t:'接受，一次還清這筆',fn:()=>{S.story.settle=1;unlock('settle');repay(A,true);if(!S.ended){S.debt=Math.max(0,S.debt-B);S.repaid+=B;addFeed({cat:'good',i:'bank',h:`債權人依約多減免了 ${wan(B)}。`,moment:1});if(debtAll()<=0){S.debt=0;S.shark=0;endGame('win')}}}},{t:'不了，錢要留著投資',fn:()=>{S.story.settle=1;S.rate=(S.rate||CFG.rate)+.0002;addFeed({cat:'bad',i:'bank',h:'債權人不太高興，之後每月利息多加 0.02%。',moment:1})}}]}}},
+ {w:3,cond:()=>!S.story.settle&&S.day>=490&&repaidFrac()>=.05&&S.cash-bill()*2>3e5,f:()=>{const A=roundTo((S.cash-bill()*2)*.8,1e4),B=Math.round(A*.2);return {i:'bank',title:'債權人提議和解',text:`看你一直有在還錢，債權人提議：現在一次還 ${wan(A)}，就幫你多減免 20%（${wan(B)}）。`,opts:[{t:'接受，一次還清這筆',fn:()=>{S.story.settle=1;unlock('settle');repay(A,true);if(!S.ended){S.debt=Math.max(0,S.debt-B);S.repaid+=B;addFeed({cat:'good',i:'bank',h:`債權人依約多減免了 ${wan(B)}。`,moment:1});if(debtAll()<=0){S.debt=0;S.shark=0;endGame('win')}}}},{t:'不了，錢要留著投資',fn:()=>{S.story.settle=1;S.rate=(S.rate||CFG.rate)+.0002;addFeed({cat:'bad',i:'bank',h:'債權人不太高興，之後每月利息多加 0.02%。',moment:1})}}]}}},
  {w:2,cond:()=>!S.story.ma&&S.day>=600&&total()>3e6&&S.cash>1e6,f:()=>{const a=roundTo(S.cash*.3,1e4);return {i:'money',title:'併購機會',text:`有位老闆找你合資收購一間公司，要你出 ${wan(a)}。三個月後見分曉：成功大概能翻倍，失敗只拿得回三成。成功率差不多一半。`,opts:[{t:`投入 ${wan(a)}`,fn:()=>{S.story.ma=1;S.cash-=a;pend('ma',63,{a});addFeed({cat:'me',i:'money',h:`你投入 ${wan(a)} 參與併購案，三個月後見分曉。`,moment:1})}},{t:'太冒險了，不參與',fn:()=>{S.story.ma=1;pend('maRev',63)}}]}}},
- {w:2,cond:()=>!S.story.angel&&S.day>=735&&S.cash>1.5e6,f:()=>({i:'person',title:'天使投資',text:'學弟的新創公司在募資，希望你投 100 萬。半年後見分曉：被收購能變 5 倍，倒閉就全沒了。新創成功的機率大概只有兩成。',opts:[{t:'投 100 萬賭一把',fn:()=>{S.story.angel=1;S.cash-=1e6;pend('angel',126);addFeed({cat:'me',i:'person',h:'你投了 100 萬到學弟的新創，半年後見分曉。',moment:1})}},{t:'婉拒，太難預測了',fn:()=>{S.story.angel=1;pend('angelRev',126)}}]})},
+ {w:2,cond:()=>!S.story.angel&&S.day>=490&&S.cash>1.5e6,f:()=>({i:'person',title:'天使投資',text:'學弟的新創公司在募資，希望你投 100 萬。半年後見分曉：被收購能變 5 倍，倒閉就全沒了。新創成功的機率大概三成。',opts:[{t:'投 100 萬賭一把',fn:()=>{S.story.angel=1;S.cash-=1e6;pend('angel',126);addFeed({cat:'me',i:'person',h:'你投了 100 萬到學弟的新創，半年後見分曉。',moment:1})}},{t:'婉拒，太難預測了',fn:()=>{S.story.angel=1;pend('angelRev',126)}}]})},
  {w:2,cond:()=>!S.story.landlord&&!S.eq.home&&S.day>=490&&S.cash>4.3e6,f:()=>({i:'bill',title:'房東要賣房子',text:'房東要移民，想把你住的這間套房便宜賣你：400 萬（市價 500 萬）。買下就再也不用付房租。不買的話，新房東可能會漲房租。',opts:[{t:'買下來！',fn:()=>{S.story.landlord=1;S.cash-=4e6;S.owned.studio=1;S.iv.studio=1;(S.ever||(S.ever={})).studio=1;recalcEq();unlock('lux');unlock('house');setMood('happy',4);addFeed({cat:'good',i:'bill',h:'你用 400 萬買下了住的套房，從此不用付房租！',moment:1})}},{t:'錢要留著投資',fn:()=>{S.story.landlord=1;S.rentExtra+=2000;addFeed({cat:'bad',i:'bill',h:'新房東一接手就把房租調高了 2,000。',moment:1})}}]})},
  {w:2,cond:()=>!S.story.tv&&S.day>=490&&fame()>=200,f:()=>({i:'person',title:'電視節目邀約',text:'財經節目想邀你上節目，聊聊「從欠債千萬到翻身」的故事。通告費 20 萬，但上節目也可能被酸民起底。',opts:[{t:'上節目！',fn:()=>{S.story.tv=1;if(PR()<.7){S.cash+=2e5;setMood('happy',4);addFeed({cat:'good',i:'person',h:'節目播出後大受好評，你拿到 20 萬通告費！',moment:1})}else{S.cash+=2e5-2.8e5;setMood('sad',4);addFeed({cat:'bad',i:'person',h:'節目播出後被酸民起底，你花了 28 萬請公關處理，倒賠 8 萬……',moment:1})}}},{t:'低調一點，婉拒',fn:()=>{S.story.tv=1;setMood('sad',2);addFeed({cat:'me',i:'person',h:'節目改邀別的網紅，那人上完節目就爆紅了……'})}}]})},
  {w:2,cond:()=>!S.story.wed&&S.day>=400&&S.cash>5e4,f:()=>({i:'heart',title:'家人的婚禮',text:'表弟要結婚了，邀你去喝喜酒。紅包要包多少？',opts:[{t:'包 3 萬，面子要顧',fn:()=>{S.story.wed=1;S.cash-=3e4;setMood('happy',3);pend('wedThanks',30);addFeed({cat:'me',i:'heart',h:'你包了 3 萬紅包，親戚都說你好大方。'})}},{t:'包 6,000 意思一下',fn:()=>{S.story.wed=1;S.cash-=6000;addFeed({cat:'me',i:'heart',h:'你包了 6,000 元，吃得很開心。'})}},{t:'沒錢，不去了',fn:()=>{S.story.wed=1;pend('wedRev',20)}}]})},
@@ -1667,7 +1671,7 @@ function dayTrade(){
   if(S.cash<0){for(const id of Object.keys(S.short)){if(S.cash>=0)break;cover(id,1,true,'被迫回補')}for(const id of Object.keys(S.hold)){if(S.cash>=0)break;sell(id,1,true,'被迫變賣')}
     if(S.cash<0){const d=Math.round(-S.cash*1.2);S.debt+=d;S.cash=0;setMood('shock',3);addFeed({cat:'bad',i:'thug',h:`付不出交割款，券商把欠款轉成債務，加收 20% 違約金，負債增加 ${wan(d)}。`,moment:1})}}
 }
-function payNeg(){for(const id of Object.keys(S.short)){if(S.cash>=0)break;cover(id,1,true,'被迫回補')}for(const id of Object.keys(S.hold)){if(S.cash>=0)break;sell(id,1,true,'被迫變賣')}if(S.cash<0)endGame('evict')}
+function payNeg(){for(const id of Object.keys(S.short)){if(S.cash>=0)break;cover(id,1,true,'被迫回補')}for(const id of Object.keys(S.hold)){if(S.cash>=0)break;sell(id,1,true,'被迫變賣')}}/* 還不夠的部分留到月底，由房租寬限規則處理 */
 
 /* ===== 彈窗 ===== */
 const nwNow=()=>total()+itemsVal()-debtAll();
@@ -1719,7 +1723,7 @@ function buyQty(id,qty,why,pxRaw){
   return true;
 }
 function teach(k,title,text){const L=S.les||(S.les={});if(L[k]||S.lesson||S.tut>=0)return;L[k]=1;S.lesson={i:'crash',title,text};setTimeout(()=>{if(S&&S.lesson&&!S.modal&&!S.ended&&!S.ff)checkUnlock()},400)}
-function recTrade(st,pl,sh){if(pl>=3e5)unlock('first_buy');if(sh&&pl>=5e5)unlock('short');if(S.tipOpp&&S.tipOpp.id===st.id&&S.day-S.tipOpp.day<=7&&pl>=5e4&&(S.tipOpp.up?sh:!sh)){unlock('contra');S.tipOpp=null}if(S.quest){if(S.quest.id==='bigwin')S.quest.best=Math.max(S.quest.best,pl);if(sh&&S.quest.id==='short'&&pl>0)S.quest.got+=pl}if(pl>=0)S.st.sellW++;else S.st.sellL++;if(!S.st.best||pl>S.st.best.pl)S.st.best={n:st.name,pl};if(!S.st.worst||pl<S.st.worst.pl)S.st.worst={n:st.name,pl}}
+function recTrade(st,pl,sh){if(pl>=3e5)unlock('first_buy');if(sh&&pl>=5e5)unlock('short');if(S.tipOpp&&S.tipOpp.id===st.id&&S.day-S.tipOpp.day<=10&&pl>=3e4&&(S.tipOpp.up?sh:!sh)){unlock('contra');S.tipOpp=null}if(S.quest){if(S.quest.id==='bigwin')S.quest.best=Math.max(S.quest.best,pl);if(sh&&S.quest.id==='short'&&pl>0)S.quest.got+=pl}if(pl>=0)S.st.sellW++;else S.st.sellL++;if(!S.st.best||pl>S.st.best.pl)S.st.best={n:st.name,pl};if(!S.st.worst||pl<S.st.worst.pl)S.st.worst={n:st.name,pl}}
 function sell(id,frac,force,why,exact,tag,pxRaw){
   const st=stock(id),h=S.hold[id];if(!h){toast('你沒有這檔');return false}
   if(!force&&limitLocked(st,'down')){addFeed({cat:'bad',i:'crash',h:`${st.name}跌停鎖死，掛賣單沒人接！`,moment:1});teach('lock','跌停鎖死賣不掉','台股一天最多跌 10%。跌停時大家都想賣、沒人要買，就算掛單也賣不掉，只能等隔天。');S.st.lockFail++;unlock('lock');toast('跌停鎖死，賣不掉！');snd('alarm');return false}
@@ -1728,7 +1732,7 @@ function sell(id,frac,force,why,exact,tag,pxRaw){
   const part=q/h.qty,amt=q*(pxRaw||st.price)*fxOf(st),f=feeOf(st,amt),tx=Math.round(amt*taxRate(st));
   const lr=h.loan*part,cr=h.cost*part,get=amt-f-tx-lr,pl=get-cr;
   h.qty-=q;h.loan-=lr;h.cost-=cr;h.basis-=h.basis*part;if(h.qty<=1e-9){delete S.hold[id];S.orders=S.orders.filter(o=>o.id!==id||o.t==='buy')}
-  S.cash+=get;S.fees+=f;S.tax+=tx;S.trades++;recTrade(st,pl);if(lr>0&&pl>=1e6)unlock('margin');
+  S.cash+=get;S.fees+=f;S.tax+=tx;S.trades++;recTrade(st,pl);if(lr>0&&pl>0)S.st.mgPL=(S.st.mgPL||0)+pl;if(lr>0&&pl>=1e6)unlock('margin');
   if(pl<0&&tag!=='liquid'){if(lr>0)teach('mgLoss','融資賠錢會放大',`這筆用融資買的${st.name}賠了 ${wan(-pl)}。融資是借錢買股票，漲跌都放大 2.5 倍，借的錢還要付利息。`);else if(pl<-cr*.1)teach('bigLoss','賠了一成以上',`${st.name}這筆賠了 ${pct(pl/cr)}。可以試試「自動單」的停損：跌到你設的價格就自動賣掉，避免越賠越多。`)}
   addFeed({cat:pl>=0?'good':'bad',i:'trade',h:`${why?why+'，':''}賣出${st.name} ${qfmt(st,q)} ${unitOf(st)}，${pl>=0?'賺':'賠'}了 ${wan(Math.abs(pl))}。`,moment:!!why||Math.abs(pl)>3e5});
   if(Math.abs(pl)>Math.max(2e4,total()*.05))setMood(pl>=0?'happy':'sad',3);snd('coin');plFx(pl,cr>0?pl/cr:null);
@@ -1804,7 +1808,7 @@ function buyItem(id){
   if(S.cash<it.p){toast(`現金不夠，還差 ${wan(it.p-S.cash)}`);return}
   S.cash-=it.p;S.owned[id]=1;S.iv[id]=1;recalcEq();setMood('happy',4);snd('up');
   addFeed({cat:'me',i:'gift',h:`買下了${it.n}！花了 ${wan(it.p)}。${it.use?it.use+'。':''}`,moment:1});
-  unlock('lux');if(it.slot==='home')unlock('house');if(id==='super')unlock('supercar');if(id==='jet')unlock('jet');if(id==='used')unlock('delivery');if(it.biz)unlock('boss');S.ever=S.ever||{};S.ever[id]=1;if(ITEMS.filter(x=>x.c!=='biz').every(x=>S.ever[x.id]))unlock('collector');
+  unlock('lux');if(it.slot==='home')unlock('house');if(id==='super')unlock('supercar');if(id==='jet')unlock('jet');if(id==='used')unlock('delivery');if(it.biz)unlock('boss');S.ever=S.ever||{};S.ever[id]=1;if(ITEMS.filter(x=>x.c!=='biz'&&S.ever[x.id]).length>=12)unlock('collector');
   renderAll();
 }
 function sellItem(id,force){
@@ -1962,24 +1966,24 @@ function renderChart(){
 const TSTEPS=[
  {sel:'#p-top',t:`這是你。欠了 ${wan(CFG.debt)}、只剩 ${wan(CFG.cash)}。在期限內把負債還到 0 就贏了！`,w:'next'},
  {sel:'#p-stats',t:'每個月要付房租和生活費，債務也會滾利息。先跟著教學賺到第一筆錢吧！',w:'next'},
- {sel:'#row-E50',t:'最重要的第一課：平常先把大部分資金放在「台灣五十」這種大盤 ETF，長期抱著，不要一跌就賣。股市長期會慢慢往上，抱得住就贏一半了。',w:'next'},
- {sel:'#g-news',t:'接下來教進階技巧：短線抓新聞。利多新聞一出，買新聞裡提到的個股，通常比較有機會。快看，AI 熱潮來了，神山積電大利多！',w:'next',pre:()=>{addFeed({cat:'good',i:'robot',h:'聊天機器人爆紅，AI 熱潮來了！AI 概念股全面噴發，神山積電領漲。',moment:1,nw:1,day:S.day,sid:'TSMC'});renderAll()}},
+ {sel:'#row-E50',t:'先認識「台灣五十」這種大盤 ETF：波動小，適合當基本款。但光靠它很難在期限內還清一千萬，真正翻身要靠看懂趨勢，在對的時候放大部位。',w:'next'},
+ {sel:'#g-news',t:'第一個技巧：抓新聞。利多新聞一出，買新聞裡提到的個股，通常比較有機會。快看，AI 熱潮來了，神山積電大利多！',w:'next',pre:()=>{addFeed({cat:'good',i:'robot',h:'聊天機器人爆紅，AI 熱潮來了！AI 概念股全面噴發，神山積電領漲。',moment:1,nw:1,day:S.day,sid:'TSMC'});renderAll()}},
  {sel:'#row-TSMC',t:'點「神山積電」。（紅色是漲、綠色是跌）',w:'sel',v:'TSMC'},
  {sel:'#buy-btns button:nth-child(1)',t:'按「買 25%」上車！',w:'buy'},
  {sel:'#speed button[data-s="1"]',t:'按「1x」讓時間開始跑。',w:'run'},
  {sel:'#p-holds',t:'等它漲，漲了會自動暫停。',w:'profit'},
- {sel:'#sell-btns button:nth-child(2)',t:'這種搶短線的部位，新聞效果過了就可以先落袋。記得，這只是額外的小部位，大盤 ETF 還是長期抱著。按「全部賣出」！',w:'sell'},
+ {sel:'#sell-btns button:nth-child(2)',t:'新聞效果過了就可以先落袋。按「全部賣出」！',w:'sell'},
  {sel:'#p-tabs [data-p=repay]',t:'賺到的錢要拿去還債，點「還款」。',w:'panel',v:'repay'},
  {sel:'#rp-go',t:()=>`金額幫你填好了，按「還款」！還越多利息越少。每年還有最低還款門檻，記得要達到。`,w:'repay',pre:()=>{document.querySelectorAll('#rp-unit button').forEach(x=>x.classList.toggle('on',x.dataset.u==='1'));$('rp-amt').value=tutPay()}},
- {sel:'#g-date',t:'看天氣。晴天時大型股比較好賺；下雨時不要慌，大盤 ETF 通常抱得過去，只要先減少融資和高波動股就好。',w:'next',pre:()=>setPanel('market')},
- {sel:'#mg-toggle',t:'再來看進階工具「融資」：跟券商借錢買，賺賠都放大 2.5 倍。新手平常不建議用，這裡先示範一次，打開它。',w:'margin',pre:()=>{setPanel('market');S.sel='TSMC';setSide('long');setMargin(false);renderAll()}},
- {sel:'#buy-btns button:nth-child(3)',t:'這次只是教學示範，按「全買」。實戰時千萬別這樣全押。',w:'buy'},
+ {sel:'#g-date',t:'看天氣，這是最重要的訊號。晴天是多頭，可以放膽加碼；陰天先收斂；下雨就賣掉融資、退到場外。分析師常在變天前幾天預告。',w:'next',pre:()=>setPanel('market')},
+ {sel:'#mg-toggle',t:'翻身的核心工具是「融資」：跟券商借錢買，賺賠都放大 2.5 倍。只靠本金很難翻身，看對晴天就用它衝刺。打開它。',w:'margin',pre:()=>{setPanel('market');S.sel='TSMC';setSide('long');setMargin(false);renderAll()}},
+ {sel:'#buy-btns button:nth-child(3)',t:'假設現在是趨勢明確的晴天，按「全買」放大部位。實戰記得：融資只在晴天用。',w:'buy'},
  {sel:'#o-add',t:'買了之後掛個「停損」，跌到某個價格就自動賣掉，用融資時更能避免被斷頭。價格幫你填好了，按「掛單」。',w:'order',pre:()=>{setSpeed(0);$('p-orders').open=true;const ob=document.querySelector('#otype [data-t=sl]');if(ob)ob.click();const st=stock('TSMC');$('o-price').value=rT(st.price*.92,'f');$('o-qty').value=''}},
  {sel:'#speed button[data-s="1"]',t:'按「1x」。',w:'run'},
  {sel:'#p-holds',t:'等它漲。',w:'profit'},
- {sel:'#sell-btns button:nth-child(2)',t:'教學行情讓你賺翻了，但真實行情沒這麼好。融資遇到大跌可能一次賠光，所以才要掛停損。按「全部賣出」。',w:'sell'},
+ {sel:'#sell-btns button:nth-child(2)',t:'教學行情讓你賺翻了。融資最怕變天：股價跌約兩成就可能被斷頭，所以要掛停損，變天就先跑。按「全部賣出」。',w:'sell'},
  {sel:'#o-list button',t:'停損單用不到了，按「取消」。',w:'odel'},
- {sel:'#side [data-side=short]',t:'最後一個進階工具是「放空」：股價跌你反而賺，但看錯會賠很快，熟悉之後再用。切到「放空（看跌）」。',w:'side',v:'short',pre:()=>{setMargin(false);S.sel='TSMC';renderAll()}},
+ {sel:'#side [data-side=short]',t:'最後一個工具是「放空」：股價跌你反而賺，下雨天也有機會，但看錯會賠很快。切到「放空（看跌）」。',w:'side',v:'short',pre:()=>{setMargin(false);S.sel='TSMC';renderAll()}},
  {sel:'#buy-btns button:nth-child(1)',t:'按「空 25%」。',w:'buy'},
  {sel:'#speed button[data-s="1"]',t:'按「1x」。',w:'run'},
  {sel:'#p-holds',t:'等它跌。',w:'sprofit'},
@@ -1988,21 +1992,22 @@ const TSTEPS=[
  {sel:'#p-shop',t:'開局先買台「二手國產車」跑外送，多一份收入會輕鬆很多。名牌、房子會增加名氣，名氣越高內線越準。慢慢逛，看完按「下一步」。',w:'next'},
  {sel:'#p-tabs [data-p=biz]',t:'點「事業」看看。',w:'panel',v:'biz'},
  {sel:'#p-biz',t:'存到一筆錢後，開一家「手搖飲料店」，每個月都有營收，錢會自己滾錢。慢慢逛，看完按「下一步」。',w:'next'},
- {sel:'#p-log',t:'教學完成！教學賺的錢不會帶進正式遊戲，按下去就會重新開局。記住三件事：先買大盤 ETF 抱著、留幾個月生活費、太好康的事通常是詐騙。更多技巧都整理在首頁的「賺錢秘訣」。開始翻身吧！',w:'next',last:1}
+ {sel:'#p-log',t:'教學完成！教學賺的錢不會帶進正式遊戲，按下去就會重新開局。記住三件事：晴天敢融資、變天先跑、留幾個月生活費。太好康的事通常是詐騙。更多技巧都整理在首頁的「賺錢秘訣」。開始翻身吧！',w:'next',last:1}
 ];
 const TIPS=[
- ['先買大盤','大部分資金先買台灣五十或美國五百，長期抱著。股市長期會慢慢漲，這是新手最穩的翻身方法。'],
- ['別一跌就賣','小跌是常態，一跌就賣很容易賣在低點。只要不用融資，大盤 ETF 通常等得回來。'],
- ['進階：抓新聞','想賺快一點，可以拿一小部分資金買新聞提到的個股，效果過了再賣。'],
- ['看天氣','晴天時大型股比較好賺；下雨時先減少融資和高波動股，大盤 ETF 不用急著賣。'],
- ['掛停損','買了之後掛個停損，跌到某個價格就自動賣掉；用融資時更能避免被斷頭。'],
- ['進階：放空','看到大利空可以小額放空，看錯就早點回補。新手先不用碰。'],
- ['撿便宜','跌很深的股票常會反彈，可以買一點試試。'],
+ ['看天氣','晴天多頭、陰天盤整、下雨空頭。這是最重要的訊號，分析師常在變天前幾天預告。'],
+ ['晴天敢融資','只靠本金很難還清千萬。趨勢明確的晴天，把資金放進強勢股並開融資，才有機會翻身。'],
+ ['變天先跑','轉陰或下雨就先賣掉融資部位。融資後股價跌約兩成就可能被斷頭。'],
+ ['掛停損','買了之後掛個停損，跌到某個價格就自動賣掉。跌停鎖死時停損也可能失敗，所以別等到最後。'],
+ ['留生活費','至少留 3 個月房租和生活費，別讓帳單逼你在低點賣股票。'],
+ ['大盤當基本款','不知道選什麼時，買台灣五十或美國五百。它比較穩，但光靠它很難在期限內翻身。'],
+ ['進階：抓新聞','利多新聞常帶來短線行情，買新聞提到的個股，效果過了再賣。'],
+ ['進階：放空','下雨天可以放空賺下跌，看錯就早點回補。'],
  ['錢滾錢','開局先買二手國產車跑外送，存到一筆錢再開手搖飲料店，每個月都有收入。'],
  ['小心上當','VIP 群、保本投資、空投連結大多是詐騙。高利貸早點還，每年記得達到最低還款。']
 ];
 const tipsHtml=()=>`<div style="text-align:left;font-size:14px;line-height:1.55">${TIPS.map(t=>`<p style="margin:0 0 6px"><b style="color:var(--up)">${t[0]}</b>：${t[1]}</p>`).join('')}</div>`;
-function showTips(){openModal({i:'money',title:'賺錢秘訣',text:'欠了一千萬別慌，先求穩、再求快：',note:tipsHtml(),opts:[{t:'知道了',fn:()=>{}}]})}
+function showTips(){openModal({i:'money',title:'賺錢秘訣',text:'欠了一千萬，光靠存錢翻不了身。要看懂趨勢，大膽但有紀律：',note:tipsHtml(),opts:[{t:'知道了',fn:()=>{}}]})}
 const tutPay=()=>Math.max(100,Math.round((S.tutGet||0)*.02/100)*100);
 function startTut(){S.worldDirty=1;const t=stock('TSMC');if(t)t.fut.forEach((b,d)=>{const f=1+.06*Math.min(d+1,12)/12;b.o*=f;b.h*=f;b.l*=f;b.c*=f});S.tut=0;document.body.classList.add('tut');showTut()}
 function showTut(){
@@ -2078,13 +2083,13 @@ function endGame(type){
 }
 function nextTip(type,key){const t=S.st;
   if(type==='win'){if(key==='win4')return '你已經是億萬富翁了。挑戰更高難度，或試試收集全部成就吧！';return key==='win1'?'還清後如果繼續投資、晚點再還，結局可以更好：淨資產破 1 億就是億萬富翁。':'試試更高的難度，或是衝更高的淨資產結局！'}
-  if(t.liquid>=1)return `你被斷頭／強制回補 ${t.liquid} 次。下次融資別全押，保留現金，並設停損單。`;
+  if(t.liquid>=1)return `你被斷頭／強制回補 ${t.liquid} 次。融資可以大膽，但要在晴天用、掛停損，變天就先賣。`;
   if(type==='collect')return '每年年底前記得先還一點債，年度門檻比一次還清更重要。';
   if(type==='evict')return S.ever&&S.ever.used?'留至少 3 個月的生活費在現金，不要把錢全部壓在股票上。':'先在商城買二手國產車跑外送：每月淨賺約 1.5 萬，房租生活費就有著落了。也記得留至少 3 個月的生活費在現金。';
-  if(t.panicSell>=1)return `你在恐慌時刻殺出 ${t.panicSell} 次，常常賣在最低點。大盤 ETF 跌的時候，抱著通常比賣掉好。`;
+  if(t.panicSell>=1)return `你在恐慌時刻殺出 ${t.panicSell} 次，常常賣在最低點。下次看到轉雨預告就先減碼，不用等到恐慌才逃。`;
   if(t.chase>=3)return `你追高買進了 ${t.chase} 次。等股價回到月均線附近再買，成本會低很多。`;
-  if(S.trades<5)return '你幾乎沒有投資。下次先把大部分資金買進大盤 ETF 抱著，錢才會慢慢變多。';
-  return '下次試試把大部分資金放大盤 ETF 長抱，再用一小部分抓新聞行情。';}
+  if(S.trades<5)return '你幾乎沒有投資。只靠存錢還不完千萬債，下次看到晴天就買進強勢股，熟悉後開融資。';
+  return '下次試試晴天開融資放大部位、變天先賣，會比一直抱著更有機會翻身。';}
 function resultText(){const r=S.result;return `我在《股海翻身》${S.dn?`「${S.dn}」難度`:''}欠債 ${wan(CFG.debt)}，結局是「${r.title}」：還了 ${Math.round(r.paid*100)}% 的債，淨資產 ${wan(r.nw)}。你能翻身嗎？${SHARE_URL}`}
 function copyLog(){const r=S.result,t=S.st,n=t.sellW+t.sellL;
   const txt=`【股海翻身遊玩紀錄】\n難度：${S.dn||''}\n結局：${r.title}\n還債進度：${Math.round(r.paid*100)}%\n淨資產：${wan(r.nw)}\n經過：${S.day} 天\n交易次數：${S.trades}（勝率 ${n?Math.round(t.sellW/n*100):0}%）\n手續費＋稅＋利息：${wan(S.fees+S.tax+S.interest)}\n擁有：${r.own.join('、')||'無'}\n心得：`;
