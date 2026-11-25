@@ -1,0 +1,6 @@
+source: https://github.com/heydamir/unslop
+commit: 620163eedb3529d9cd23a3994ed8d287d06f760d
+path: skills/unslop
+license: CC-BY-4.0
+credit: Damir Sokolovsky (@heydamir)
+auto-update: off (manual copy)
