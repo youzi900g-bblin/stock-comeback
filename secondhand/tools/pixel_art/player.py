@@ -129,7 +129,9 @@ def face_data():
         rimless=glasses('#b8d4e8', '#d8ecf860', True, '#ffffffd0'),
         gold=glasses('#e0b040', '#f8f0d070', True, '#ffffffd0'),
         pink=glasses('#f080b0', '#f8d8ec80', True, '#ffffffd0'),
-        sun=glasses('#6a6488', '#34304a', False, '#a8a8d0'))
+        sun=glasses('#6a6488', '#34304a', False, '#a8a8d0') +
+            # 墨鏡反光：每片鏡片一道斜線（亮→暗三格）加一個小亮點
+            [c for sd in (-1, 1) for c in ([CX+sd*4, 9, '#e4e4ff'], [CX+sd*3, 10, '#a8a8e0'], [CX+sd*2, 11, '#6a6aa0'], [CX+sd*4, 11, '#5a5a90'])])
     return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
 COLS = 20
