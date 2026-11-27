@@ -2,8 +2,8 @@
 
 規則出處：docs/系統設計.md「八-1、角色美術規格」、docs/美術製作指南.md。
 輸出（art/player/）：
-  <髮型>_<膚色>_<上衣>_<下身>.png  身體底圖（27×53 格、1 格 1 像素、透明背景、不含五官；網頁以整數倍放大）
-  face.js                          五官格子與各髮色膚色組合的顏色，網頁用 SVG 疊在底圖上
+  atlas.png  所有身體底圖合成一張（每格 27×53、1 格 1 像素、透明背景、不含五官；網頁以整數倍放大）
+  face.js    atlas 的索引、五官／頭飾／眼鏡的格子與顏色，網頁用 SVG 疊在底圖上
 id 要與 config.js 的 HAIR_STYLES / SKIN_TONES / TOPS / BOTTOMS / EYES / MOUTHS 一致。
 體型固定為中等（不開放玩家改，避免衣服要跟著改版）。
 
@@ -124,15 +124,22 @@ def face_data():
     geo['glasses'] = dict(round=box(False, False), square=box(True, False), sun=box(True, True))
     return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
+COLS = 20
+
 def build_all(out_dir, scale=1):
+    """所有底圖合成一張 atlas.png（每格 27×53，依 face.js 的 keys 順序由左到右、由上到下），避免幾百個小檔。"""
+    from PIL import Image
+    from engine import W, HH
     d = os.path.join(out_dir, 'player'); os.makedirs(d, exist_ok=True)
-    for f in os.listdir(d):
-        if f.endswith('.png'): os.remove(os.path.join(d, f))
-    for h in HAIR:
-        for s in SKIN_TONES:
-            for t in TOPS:
-                for b in BOTTOMS:
-                    render_rgba(build(player(h, s, t, b, features=False)), scale).save(os.path.join(d, f'{h}_{s}_{t}_{b}.png'))
+    for f in os.listdir(d): os.remove(os.path.join(d, f))
+    keys = [f'{h}_{s}_{t}_{b}' for h in HAIR for s in SKIN_TONES for t in TOPS for b in BOTTOMS]
+    rows = -(-len(keys) // COLS)
+    atlas = Image.new('RGBA', (COLS*W, rows*HH), (0, 0, 0, 0))
+    for i, k in enumerate(keys):
+        h, s, t, b = k.split('_')
+        atlas.paste(render_rgba(build(player(h, s, t, b, features=False)), 1), ((i % COLS)*W, (i//COLS)*HH))
+    atlas.save(os.path.join(d, 'atlas.png'))
+    data = face_data(); data['atlas'] = dict(cols=COLS, keys=keys)
     with open(os.path.join(d, 'face.js'), 'w') as f:
-        f.write('window.PLAYER_FACE=' + json.dumps(face_data(), separators=(',', ':')) + ';\n')
+        f.write('window.PLAYER_FACE=' + json.dumps(data, separators=(',', ':')) + ';\n')
     return d

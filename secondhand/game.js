@@ -78,11 +78,12 @@
   // 玩家圖：身體底圖（art/player/）加上用 SVG 疊的五官格子（art/player/face.js），27×53 格
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
+    const i = F.atlas.keys.indexOf(`${q.hair}_${q.skin}_${q.top}_${q.bottom}`);
     const cells = [...F.geo.eyes[q.eyes], ...F.geo.blush, ...(q.freckles === "on" ? F.geo.freckles : []), ...F.geo.mouth[q.mouth]]
       .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${r === "iris" ? F.iris[q.iris] : col[r]}"/>`).join("");
     const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
     const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
-    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/${q.hair}_${q.skin}_${q.top}_${q.bottom}.png" width="27" height="53"/>${hw}${cells}${gl}</svg>`;
+    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/atlas.png" x="${-(i % F.atlas.cols) * 27}" y="${-Math.floor(i / F.atlas.cols) * 53}" width="${F.atlas.cols * 27}" height="${Math.ceil(F.atlas.keys.length / F.atlas.cols) * 53}"/>${hw}${cells}${gl}</svg>`;
   };
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
