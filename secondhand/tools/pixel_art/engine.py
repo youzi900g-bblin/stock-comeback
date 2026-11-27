@@ -90,6 +90,23 @@ def headwear(cv,hw):
     elif k=='star':
         for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,b)
         cv.px(CX+4,4,hi)
+def fringe_new(kind,fw,hh,sd):
+    """新版劉海：由 3 到 4 束大髮束組成，底緣高低錯開、保留一點額頭，加 3 格亮線與一根散落髮絲。
+    回傳 (髮束格子, 亮色格子, 髮束間的暗線格子)。"""
+    rows={}; hi=[]; seam=[]
+    if kind=='part':      # 中分：左右各一束，由中線往外下垂成倒 V
+        L={7:(CX-5,CX-1),8:(CX-5,CX-2),9:(CX-5,CX-3),10:(CX-5,CX-4)}
+        R={7:(CX+1,CX+5),8:(CX+2,CX+5),9:(CX+3,CX+5),10:(CX+4,CX+5)}
+        rows={y:[L[y],R[y]] for y in L}
+        hi=[(CX-4,7),(CX-3,7),(CX-2,7),(CX+3,8),(CX+4,8),(CX+4,9)]; seam=[(CX-1,8),(CX+2,9)]
+    elif kind=='airy':    # 空氣劉海：三束薄髮束，尖端長短不一，中間露出額頭
+        rows={7:[(CX-5,CX-2),(CX-1,CX+1),(CX+2,CX+5)],8:[(CX-5,CX-4),(CX,CX),(CX+4,CX+5)]}
+        hi=[(CX-4,7),(CX-3,7),(CX-2,7),(CX+3,7)]; seam=[(CX-2,8)]
+    elif kind=='sweep':   # 斜劉海：三束大髮束由右上往左下掃，最長的一束落在左側
+        rows={7:[(CX-5,CX+4)],8:[(CX-5,CX+1)],9:[(CX-5,CX-3)],10:[(CX-5,CX-4)]}
+        hi=[(CX-1,7),(CX,7),(CX+1,7),(CX-3,8),(CX-2,8)]; seam=[(CX+2,7),(CX-1,8),(CX-3,9)]
+    cells={(x,y) for y,segs in rows.items() for (a,b) in segs for x in range(a,b+1)}
+    return cells,hi,seam
 def build(P,want_log=False):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
@@ -225,10 +242,17 @@ def build(P,want_log=False):
             for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,s)
     elif P['hs']=='bob':
         m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=6}
-        for y,(a,b2) in {7:(CX-fw,CX),8:(CX-fw,CX-2),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
-        m|={(CX+fw+2,y) for y in range(7,14)}|{(CX-fw-2,y) for y in range(7,14)}
-        cv.paint(m,hair)
-        for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,9),(CX+5,9)]: cv.px(x,y,hh)
+        if P.get('fringe'):
+            fc,fh,fs=fringe_new(P['fringe'],fw,hh,None); m|=fc
+            m|={(CX+fw+2,y) for y in range(7,14)}|{(CX-fw-2,y) for y in range(7,14)}
+            cv.paint(m,hair)
+            for (x,y) in fs: cv.px(x,y,dk(hair))
+            for (x,y) in fh+[(CX-2,4),(CX+3,3)]: cv.px(x,y,hh)
+        else:
+            for y,(a,b2) in {7:(CX-fw,CX),8:(CX-fw,CX-2),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
+            m|={(CX+fw+2,y) for y in range(7,14)}|{(CX-fw-2,y) for y in range(7,14)}
+            cv.paint(m,hair)
+            for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,9),(CX+5,9)]: cv.px(x,y,hh)
         if P.get('hp'):
             cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(P['hp'][0],P['hp'][1],P['hp'][0],0,0.2),base=P['hp'][0])
             cv.px(CX-1,-1+1,P['hp'][2])
@@ -239,10 +263,17 @@ def build(P,want_log=False):
         for (x,y) in [(CX-3,3),(CX+1,2),(CX+4,4),(CX-5,5)]: cv.px(x,y,hh)
     elif P['hs'] in ('short','twin','hpony','lpony','braids'):
         m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=6}
-        for y,(a,b2) in {7:(CX-fw,CX+1),8:(CX-fw,CX-1),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
-        m|={(CX+fw+2,y) for y in range(7,11)}|{(CX-fw-2,y) for y in range(7,11)}
-        cv.paint(m,hair)
-        for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,8),(CX+5,8)]: cv.px(x,y,hh)
+        if P.get('fringe'):
+            fc,fh,fs=fringe_new(P['fringe'],fw,hh,None); m|=fc
+            m|={(CX+fw+2,y) for y in range(7,11)}|{(CX-fw-2,y) for y in range(7,11)}
+            cv.paint(m,hair)
+            for (x,y) in fs: cv.px(x,y,dk(hair))
+            for (x,y) in fh+[(CX+2,4)]: cv.px(x,y,hh)
+        else:
+            for y,(a,b2) in {7:(CX-fw,CX+1),8:(CX-fw,CX-1),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
+            m|={(CX+fw+2,y) for y in range(7,11)}|{(CX-fw-2,y) for y in range(7,11)}
+            cv.paint(m,hair)
+            for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,8),(CX+5,8)]: cv.px(x,y,hh)
         if P['hs']=='twin':
             for sd in (-1,1):
                 for dy in (0,1): cv.px(CX+sd*(fw+3),8+dy,hh)
@@ -251,10 +282,17 @@ def build(P,want_log=False):
                 cv.paint(rows_mask({y:(CX+sd*6+(sd if (y//2)%2 else 0)-1,CX+sd*6+(sd if (y//2)%2 else 0)+1) for y in range(17,31)}),hair)
                 for y in range(18,31,4): cv.px(CX+sd*6+(sd if (y//2)%2 else 0),y,hh)
     elif P['hs']=='long':
-        m={(x,y) for y in range(3,8) for x in range(CX-fw-2,CX+fw+3)}
-        m|={(x,y) for y in range(3,5) for x in range(CX-fw,CX+fw+1)}
+        if P.get('fringe'):
+            m=mask_poly('ell',[CX-7,1,CX+7,12]); m={(x,y) for (x,y) in m if y<=6}
+            fc,fh,fs=fringe_new(P['fringe'],fw,hh,None); m|=fc
+        else:
+            m={(x,y) for y in range(3,8) for x in range(CX-fw-2,CX+fw+3)}
+            m|={(x,y) for y in range(3,5) for x in range(CX-fw,CX+fw+1)}
         m|={(CX-fw-3,y) for y in range(8,20)}|{(CX+fw+3,y) for y in range(8,20)}|{(CX-fw-2,y) for y in range(8,20)}|{(CX+fw+2,y) for y in range(8,20)}
         cv.paint(m,hair)
+        if P.get('fringe'):
+            for (x,y) in fs: cv.px(x,y,dk(hair))
+            for (x,y) in fh: cv.px(x,y,hh)
         # strands over shoulders
         for side in (-1,1):
             sm={(CX+side*(tw+1+k+((0,1,2,1)[(y//2)%4] if P.get('wave') else 0)),y) for y in range(17,28) for k in range(2)}
