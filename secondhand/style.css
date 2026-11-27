@@ -200,3 +200,5 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   .hl, .money.flash { animation: none; }
 }
+
+.room.night { max-height: 28vh; object-fit: cover; margin-bottom: 8px; border: 2px solid var(--line); }

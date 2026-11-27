@@ -206,7 +206,8 @@
   function homeView() {
     const stale = staleListings().length;
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="768">
+    const tidy = S.wardrobe.length <= C.TIDY_AT;
+    return `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(S.player)}
         <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
@@ -294,7 +295,7 @@
       const body = sales.length
         ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
-      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><h3>第 ${S.day} 天・結算</h3>${body}
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
