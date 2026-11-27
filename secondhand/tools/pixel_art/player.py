@@ -80,7 +80,7 @@ def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
         bottom=_bottom(bottom), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'), torso_len=0,
         iris=H(IRIS[iris]), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
-        nofeatures=not features)
+        nofeatures=not features, no_blush=bool(freckles))  # 有雀斑就不畫腮紅（美術規則）
     if hw: t = tone(HEADWEAR[hw]); P['hw'] = dict(kind=hw, **t)
     P.update(_top(top))
     return P
@@ -95,8 +95,9 @@ def face_data():
             # 只取該選項新增或不同的格子：眼睛只留 y<=11 且非腮紅，嘴只留 y==13
             pick = (lambda c: c[2] in ('brow', 'white', 'iris')) if k == 'eyes' else (lambda c: c[2] == 'lip')
             geo.setdefault(k, {})[v] = [list(c) for c in face_cells(player('bob', 's1', **{k: v})) if pick(c)]
-    allc = face_cells(player('bob', 's1', freckles=True))
-    geo['blush'] = [list(c) for c in allc if c[2] in ('blush', 'nose')]
+    allc = face_cells(player('bob', 's1')) + face_cells(player('bob', 's1', freckles=True))
+    geo['blush'] = [list(c) for c in allc if c[2] == 'blush']
+    geo['nose'] = [list(c) for c in face_cells(player('bob', 's1')) if c[2] == 'nose']
     geo['freckles'] = [list(c) for c in allc if c[2] == 'freckle']
     colors = {}
     for h in HAIR:
