@@ -153,10 +153,16 @@ def draw_shoes(cv,P,x0,x1,pants=False):
         for x in range(x0,x1+1): cv.px(x,44,hi)                       # 上緣反摺
         for x in range(x0-1,x1+2): cv.px(x,50,hi)                     # 鞋跟與厚底（深色兩列）
         cv.px(x0-1,51,hi); cv.px(x1+1,51,hi)                          # 鞋跟兩角
-    elif st=='sandal':   # 涼鞋（橫向分層）：最上一條橫帶，中間露出皮膚，最下面是鞋面與鞋底
-        top=49 if pants else 48
-        cv.paint(rows_mask({y:(x0,x1) for y in range(top+1,51)}),sk,base=sk,warm=True)   # 中間的皮膚
-        cv.paint(rows_mask({top:(x0,x1)}),sh,base=sh)                                      # 腳背橫帶
+    elif st=='sandal':   # 涼鞋（橫向分層）：最上一條橫帶，中間皮膚上有交叉帶（鞋子的顏色），最下面是鞋面與鞋底
+        if pants:   # 穿長褲只看得到腳背以下：橫帶、皮膚（兩端各一小段帶子）、鞋底
+            cv.paint(rows_mask({50:(x0,x1)}),sk,base=sk,warm=True)
+            cv.paint(rows_mask({49:(x0,x1)}),sh,base=sh)
+            cv.px(x0,50,sh); cv.px(x1,50,sh)
+        else:       # 穿裙子或短褲：腳踝一條橫帶，下面三列皮膚上畫交叉帶（X 形）
+            cv.paint(rows_mask({y:(x0,x1) for y in (48,49,50)}),sk,base=sk,warm=True)
+            cv.paint(rows_mask({47:(x0,x1)}),sh,base=sh)
+            for x in (x0,x1): cv.px(x,48,sh); cv.px(x,50,sh)
+            for x in range(x0+1,x1): cv.px(x,49,sh)
         cv.paint(rows_mask({51:(x0-1,x1+1)}),sh,base=sh)                                   # 鞋面與鞋底
         for x in range(x0-1,x1+2): cv.px(x,51,hi) if (x-x0)%2==0 else None                 # 鞋底花紋
 
