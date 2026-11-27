@@ -189,7 +189,8 @@ def build(P,want_log=False):
         for side in (0,1):
             x0,x1=legL() if side==0 else legR()
             sp={y:((x0-(1 if y>=45 else 0)),(x1+(1 if y>=45 else 0))) if True else None for y in range(30,49)}
-            sp={y:(x0-(1 if (y>=45 and side==0) else 0),x1+(1 if (y>=45 and side==1) else 0)) for y in range(30,49)}
+            ext=(lambda y: 0 if y<40 else (1 if y<44 else 2)) if bt.get('flare') else (lambda y: 1 if y>=45 else 0)   # 喇叭褲從膝下逐步外擴
+            sp={y:(x0-(ext(y) if side==0 else 0),x1+(ext(y) if side==1 else 0)) for y in range(30,49)}
             cv.paint(rows_mask(sp),diag(bt['base'],bt['hi'],bt['lo'],30,0.4),base=bt['base'])
         # waist band
         cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])

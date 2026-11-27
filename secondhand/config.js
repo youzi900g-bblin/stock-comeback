@@ -64,7 +64,8 @@ const CONFIG = {
     { id: "stripe", name: "條紋 T 恤" }, { id: "hoodie", name: "連帽 T" },
   ],
   BOTTOMS: [
-    { id: "jeans", name: "牛仔褲" }, { id: "track", name: "運動長褲" }, { id: "pleat", name: "百褶裙" },
+    { id: "jeans", name: "直筒牛仔褲" }, { id: "flare", name: "喇叭牛仔褲" }, { id: "ripped", name: "破洞牛仔褲" },
+    { id: "track", name: "運動長褲" }, { id: "pleat", name: "百褶裙" },
   ],
   EYES: [{ id: "closed", name: "瞇眼" }, { id: "normal", name: "一般" }, { id: "big", name: "大眼" }],
   MOUTHS: [{ id: "small", name: "小嘴" }, { id: "mid", name: "一般" }, { id: "wide", name: "大嘴" }],
