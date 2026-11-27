@@ -126,7 +126,7 @@ def packing_corner():
     sc.add(L_FLOOR, 82, lambda: (tape(28, 70, 46, 82), R(29, 75, 45, 75, KRD)))
     sc.add(L_FLOOR, 83, lambda: tape(50, 74, 66, 83))
     def roll():
-        R(100, 50, 103, 80, CORAL, True); R(100, 50, 103, 53, '#f4b8b0')
+        R(100, 50, 103, 80, KR, True); R(100, 50, 103, 53, KR3)
     sc.add(L_FLOOR, 80, roll)
     sc.add(L_LIGHT, 0, lambda: string_lights(sc, ('#f8e060', '#e87060', '#6cc0a8'), '#868a8c'))
     return sc.draw()
@@ -143,7 +143,7 @@ def cafe():
             for x in range(((y//4) % 2)*6, W, 12): R(x, y-3, x, y, BRICK2)
         R(0, 32, W-1, 32, '#f4ecd8'); R(0, 47, W-1, 47, '#5a2e22')
         for y in range(48, HH, 8):                  # 地板：米色與咖啡色棋盤磚（8×8）
-            for x in range(0, W, 8): R(x, y, x+7, y+7, '#e8d8b8' if ((x//8)+(y//8)) % 2 == 0 else '#8c5c3c')
+            for x in range(0, W, 8): R(x, y, x+7, y+7, '#e8d8b8' if ((x//8)+(y//8)) % 2 == 0 else '#dcc8a2')   # 兩個接近的米色，低對比，人物站上去才讀得出來
     sc.add(L_WALL, 0, walls)
     def window():   # 窗戶（中心 x=22）：街景、十字窗框、窗台與遮陽篷，條紋以中心對稱
         R(6, 12, 38, 38, '#a8d8e8', True)
@@ -208,8 +208,12 @@ def street():
     sc = Scene(); R = sc.R
     NEON_P, NEON_T, DARK = '#f060a8', '#40e0d0', '#2c2840'
     def sky():
-        for i, c in enumerate(['#2c2860', '#3c3478', '#5a4090', '#8a4a98', '#c0587c', '#e88860']):
-            R(0, i*8, W-1, i*8+7, c)
+        bands = ['#2c2860', '#3c3478', '#5a4090', '#8a4a98', '#c0587c', '#e88860']
+        for i, c in enumerate(bands): R(0, i*8, W-1, i*8+7, c)
+        for i in range(1, len(bands)):   # 色帶交界用抖色（棋盤式交錯）過渡
+            for x in range(W):
+                if (x+i) % 2 == 0: R(x, i*8-1, x, i*8-1, bands[i])
+                else: R(x, i*8, x, i*8, bands[i-1])
         for (x, y) in [(6, 3), (20, 8), (38, 4), (60, 6), (82, 2), (96, 9), (50, 12)]: R(x, y, x, y, '#f4f0ec')
         # 遠景天際線（兩層）
         for (x0, x1, y0) in [(0, 9, 30), (10, 22, 24), (23, 34, 32), (35, 48, 26), (49, 60, 33), (61, 75, 22), (76, 88, 30), (89, 103, 25)]:
