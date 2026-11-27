@@ -8,6 +8,7 @@ from PIL import Image
 from engine import H, BG, render, build
 from characters import A, B, C
 import room
+import scenes
 import player
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'art')
@@ -69,4 +70,6 @@ sheet(ims).save(os.path.join(OUT, '雀斑_各膚色.png'))
 player.build_all(OUT)
 # 房間
 room.build_room(OUT)
+# 其他場景背景（小套房夜晚與整理後、包貨角落、咖啡廳）
+scenes.build_scenes(OUT)
 print('done ->', os.path.abspath(OUT))

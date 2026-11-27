@@ -4,8 +4,8 @@ from characters import A,B,C
 OUT=H('#302430')
 import os
 
-def build_room(out_dir):
-
+def draw_room(tidy=False):
+    """小套房。tidy=True 是整理後：衣服依序掛好、沒有堆在地上的衣服與紙箱。"""
     W,Hh=104,96
     im=Image.new("RGB",(W,Hh),H('#c8b8d8')); d=ImageDraw.Draw(im)
     def R(x0,y0,x1,y1,f,o=None):
@@ -51,14 +51,15 @@ def build_room(out_dir):
     n=0
     while x<98:
         if x==88: x+=1; continue
-        R(x,31,x+2,31+8+(n*3)%6,cl[n%7],OUT); n+=1; x+=3
+        R(x,31,x+2,31+(12 if tidy else 8+(n*3)%6),cl[n%7],OUT); n+=1; x+=3
     R(78,30,98,30,H('#c8b090'))
     # overflow pile
-    for k,(px,py,pw,ph) in enumerate([(70,50,8,4),(74,52,9,4),(68,53,7,3),(78,54,8,3)]):
+    for k,(px,py,pw,ph) in enumerate([] if tidy else [(70,50,8,4),(74,52,9,4),(68,53,7,3),(78,54,8,3)]):
         R(px,py,px+pw,py+ph,cl[(k*2)%7],OUT)
     # boxes
-    R(84,56,98,66,H('#c89860'),OUT); R(90,56,92,66,H('#e0c898')); R(86,60,98,60,H('#a87840'))
-    R(88,48,98,56,H('#d8aa70'),OUT); R(92,48,93,56,H('#e8d0a0'))
+    if not tidy:
+        R(84,56,98,66,H('#c89860'),OUT); R(90,56,92,66,H('#e0c898')); R(86,60,98,60,H('#a87840'))
+        R(88,48,98,56,H('#d8aa70'),OUT); R(92,48,93,56,H('#e8d0a0'))
     # bed
     R(2,30,6,56,H('#6c4a50'),OUT)
     R(4,42,34,56,H('#6c4a50'),OUT)
@@ -72,7 +73,10 @@ def build_room(out_dir):
     # rug
     d.ellipse([34,60,72,70],fill=H('#e888b0'),outline=dk(H('#e888b0'),0.7))
     d.ellipse([38,62,68,68],fill=H('#f4d0e0'))
+    return im
 
+def build_room(out_dir):
+    im=draw_room()
     def to_grid(im): return [[im.getpixel((x,y)) for x in range(im.width)] for y in range(im.height)]
     RW,RH=im.width,im.height
     base=to_grid(im)
