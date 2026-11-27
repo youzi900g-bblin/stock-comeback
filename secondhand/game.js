@@ -79,7 +79,7 @@
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
     const i = F.atlas.keys.indexOf(`${q.hair}_${q.skin}_${q.top}_${q.bottom}`);
-    const cells = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? F.geo.freckles : F.geo.blush), ...F.geo.mouth[q.mouth]]
+    const cells = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? (q.eyes === "big" ? F.geo.freckles_big : F.geo.freckles) : F.geo.blush), ...F.geo.mouth[q.mouth]]
       .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${r === "iris" ? F.iris[q.iris] : col[r]}"/>`).join("");
     const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
     const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");

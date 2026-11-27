@@ -99,6 +99,7 @@ def face_data():
     geo['blush'] = [list(c) for c in allc if c[2] == 'blush']
     geo['nose'] = [list(c) for c in face_cells(player('bob', 's1')) if c[2] == 'nose']
     geo['freckles'] = [list(c) for c in allc if c[2] == 'freckle']
+    geo['freckles_big'] = [list(c) for c in face_cells(player('bob', 's1', eyes='big', freckles=True)) if c[2] == 'freckle']
     colors = {}
     for h in HAIR:
         for s in SKIN_TONES:

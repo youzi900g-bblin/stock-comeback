@@ -54,7 +54,8 @@ def face_cells(P):
         if not P.get('no_blush'): out+=[(CX+sd*3,12,'blush'),(CX+sd*4,12,'blush')]
     out.append((CX,12,'nose'))
     if P.get('freckles'):
-        out+=[(x,y,'freckle') for (x,y) in [(CX-3,11),(CX-1,11),(CX-2,12),(CX+3,11),(CX+1,11),(CX+2,12)]]
+        dy=1 if ey=='big' else 0   # 大眼多一排，雀斑整體下移一格避免蓋到眼睛
+        out+=[(x,y+dy,'freckle') for (x,y) in [(CX-3,11),(CX-1,11),(CX-2,12),(CX+3,11),(CX+1,11),(CX+2,12)]]
     m=P['mouth']
     if m=='small': out.append((CX,13,'lip'))
     elif m=='mid': out+=[(CX,13,'lip'),(CX+1,13,'lip')]
