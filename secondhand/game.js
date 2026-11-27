@@ -88,12 +88,13 @@
     const it = (id) => F.pal.item[id], pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor],
       shoe: it(q.shoesColor).base, shoe_lo: it(q.shoesColor).lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: it(q.bagColor).base, bag_hi: it(q.bagColor).hi, bag_lo: it(q.bagColor).lo };
     const bt = F.pal.btype[q.bottom];
+    const over = bt === "pants" && (q.bottom === "flare" || q.shoes === "boot"); // 喇叭褲與穿短靴的長褲，褲口蓋住鞋子
     const resolve = (spec) => {
       if (spec[0] === "#") return spec;
       const [role, op] = spec.split(":"), c = rgb(pal[role]);
       return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
     };
-    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers[over ? `bottom:${q.bottom}:over` : "bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
       ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear]), ...(q.socks === "none" || bt !== "skirt" ? [] : F.layers["socks:" + q.socks]),
       ...(q.jacket === "none" ? [] : F.layers["jacket:" + q.jacket]), ...(q.bag === "none" ? [] : F.layers["bag:" + q.bag]),
       ...["earring", "necklace", "bracelet"].filter((k) => q[k] === "on").flatMap((k) => F.layers["jewel:" + k])].sort((a, b) => a.z - b.z);

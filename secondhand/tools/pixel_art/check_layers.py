@@ -12,7 +12,8 @@ def compose(h,s,t,b,hc='darkbrown',hw=None,hwc='red',sh='canvas',shc='white',so=
     pl={**pal['skin'][s],**pal['hair'][hc],**pal['hw'][hwc],'shoe':it(shc)['base'],'shoe_lo':it(shc)['lo'],
         'sock':it(soc)['base'],'sock_lo':it(soc)['lo'],'bag':it(bgc)['base'],'bag_hi':it(bgc)['hi'],'bag_lo':it(bgc)['lo']}
     bt=pal['btype'][b]
-    layers=L['base']+L['hair:'+h]+L['top:'+t]+L['bottom:'+b]+L[f'shoes:{sh}:{bt}']
+    over=(bt=='pants' and (b=='flare' or sh=='boot'))
+    layers=L['base']+L['hair:'+h]+L['top:'+t]+L['bottom:'+b+(':over' if over else '')]+L[f'shoes:{sh}:{bt}']
     if hw: layers+=L['hw:'+hw]
     if so and bt=='skirt': layers+=L['socks:'+so]
     if jk: layers+=L['jacket:'+jk]

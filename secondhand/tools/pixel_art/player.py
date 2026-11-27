@@ -9,7 +9,7 @@ id 要與 config.js 的 HAIR_STYLES / SKIN_TONES / TOPS / BOTTOMS / EYES / MOUTH
 【佔位】髮色、衣服配色、五官樣式都是暫定值，尚未決定。
 """
 import json, os
-from engine import H, CX, dk, build, face_cells, face_colors, render_rgba
+from engine import H, CX, dk, diag, build, face_cells, face_colors, render_rgba
 
 # 與 config.js 的 SKIN_TONES 同色（網頁的膚色選鈕用 config.js；改色要兩邊一起改）
 SKIN_TONES = {'s1': '#f1cfb4', 's2': '#e3b38e', 's3': '#c68b62', 's4': '#8a5838', 's5': '#5f3b25'}
@@ -56,12 +56,21 @@ def _stripe(t):
     return lambda x, y: t['hi'] if y % 4 < 2 else t['base']
 
 # ---- 衣服細節規則：褶只用陰影／亮色，不描邊；領口、袖口、下擺下方各加一排陰影；褶要少而明確 ----
+def _torso_fill(t, y0=19):
+    """身體的明暗用 45 度斜線切：右上亮、左下暗，線條每格錯一格，沒有不規則的階梯。"""
+    return lambda x, y: t['hi'] if (x-CX)-(y-y0) >= 2 else (t['lo'] if (y-y0)-(x-CX+4) >= 6 else t['base'])
+
+def _sleeve_fill(t):
+    """袖子改成兩色直條（外側一欄暗、其餘底色），避免斜切陰影在 3 格寬的袖子上變成棋盤格。"""
+    def f(x, y):
+        xc = CX - (5 + int((y-20)*0.2)) if x < CX else CX + (5 + int((y-20)*0.2))
+        return t['lo'] if abs(x - xc) == 1 and ((x < CX and x < xc) or (x > CX and x > xc)) else t['base']
+    return f
+
 def _top_detail(t, hem, extra=None, folds=True):
     def f(cv, tw, h):
-        for x in range(CX-2, CX+3): cv.px(x, 19, t['lo'])                  # 領口
+        for x in range(CX-2, CX+3): cv.px(x, 20, t['lo'])
         for x in range(CX-tw, CX+tw+1): cv.px(x, h, t['lo'])              # 下擺陰影
-        if folds:
-            for (x, y) in [(CX-3, 25), (CX-2, 26), (CX+2, 27), (CX+3, 28)]: cv.px(x, y, t['lo'])   # 兩處斜褶（條紋上衣不加，避免和條紋混成雜點）
         if extra: extra(cv, t)
     return f
 
@@ -71,16 +80,16 @@ def _hoodie_extra(cv, t):
     for y in (21, 22): cv.px(CX-1, y, t['hi']); cv.px(CX+1, y, t['hi'])  # 抽繩
 
 def _top(tid):
-    if tid == 'white':  t = tone('#f4f1ea'); return dict(top=t, sleeve=dict(long=False, cuff=t['lo'], **t), torso_hem=30, detail=_top_detail(t, 30))
-    if tid == 'black':  t = tone('#2b2b30'); return dict(top=t, sleeve=dict(long=False, cuff=t['lo'], **t), torso_hem=30, detail=_top_detail(t, 30))
+    if tid == 'white':  t = tone('#f4f1ea'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], **t), torso_hem=30, detail=_top_detail(t, 30))
+    if tid == 'black':  t = tone('#2b2b30'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], **t), torso_hem=30, detail=_top_detail(t, 30))
     if tid == 'stripe':
         t = tone('#9db7d6'); f = _stripe(dict(base=t['base'], hi=H('#f4f1ea')))
         return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=f, cuff=t['lo'], **t), torso_hem=30, detail=_top_detail(t, 30, folds=False))
     if tid == 'hoodie':
-        t = tone('#e3b93c'); return dict(top=t, sleeve=dict(long=True, cuff=t['lo'], **t), torso_hem=31, hood=t['base'], detail=_top_detail(t, 31, _hoodie_extra))
+        t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], **t), torso_hem=31, hood=t['base'], detail=_top_detail(t, 31, _hoodie_extra))
     raise KeyError(tid)
 
-def _bottom(bid, skin=None):
+def _bottom(bid, skin=None, cover=False):
     if bid in ('jeans', 'flare', 'ripped', 'track'):
         t = tone({'track': '#4d4f58'}.get(bid, '#5f7fa8'))
         def det(cv):
@@ -92,10 +101,15 @@ def _bottom(bid, skin=None):
                 for x in (CX-4, CX-3):
                     for y in (38, 39): cv.px(x, y, skin)
                 cv.px(CX-4, 40, H('#f4f1ea')); cv.px(CX-3, 40, t['hi'])
-        return dict(type='pants', detail=det, flare=(bid == 'flare'), **t)
+        return dict(type='pants', detail=det, legfill=diag(t['base'], t['hi'], t['lo'], 30, 0.5), flare=(bid == 'flare'), cover=((49 if bid == 'flare' else 48) if cover else 0), **t)
+    if bid == 'shorts':   # 牛仔短褲：褲口在大腿中段，露出小腿；腿寬與裙子相同，所以襪子與短靴看得到
+        t = tone('#6c8bb3')
+        def det(cv):
+            for x in list(range(CX-5, CX-1)) + list(range(CX+2, CX+6)): cv.px(x, 38, t['lo'])   # 褲口陰影
+        return dict(type='skirt', shorts=True, base=t['base'], fill=diag(t['base'], t['hi'], t['lo'], 30, 0.4), skirt_end=38, flare=0, legL=3, skin_y0=39, detail=det)
     if bid == 'pleat':
         t = tone('#d98aa6')
-        return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else (t['hi'] if y < 33 else t['base']),
+        return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else (t['hi'] if y < 32 else t['base']),
                     skirt_end=37, flare=2, legL=3, skin_y0=36,
                     detail=lambda cv: [cv.px(x, 37, t['lo']) for x in range(CX-6, CX+7)])   # 下擺陰影
     raise KeyError(bid)
@@ -105,10 +119,10 @@ SHOES = ('canvas', 'sneaker', 'boot', 'sandal')
 SOCKS = ('short', 'long', 'stripe')
 JACKETS = {'cardigan': '#c9a98a', 'denim': '#6c8bb3', 'sport': '#4d4f58'}   # 配色取自基本款樣板【佔位】
 BAGS = ('cross', 'tote', 'pack')
-BTYPE = {'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
+BTYPE = {'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'shorts': 'skirt', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
 TOPS = ('white', 'black', 'stripe', 'hoodie')
-BOTTOMS = ('jeans', 'flare', 'ripped', 'track', 'pleat')
+BOTTOMS = ('jeans', 'flare', 'ripped', 'shorts', 'track', 'pleat')
 
 def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown', hair_color='darkbrown', hw_color='red',
            shoes='canvas', shoe_color='white', socks=None, sock_color='white', jacket=None, bag=None, bag_color='blue',
@@ -117,12 +131,13 @@ def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='
     shade, lip, blush = skin_colors(sk)
     P = dict(body='medium', skin=sk, skin_s=shade, blush=blush, lip=lip,
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
-        bottom=_bottom(bottom, sk), shoe=tone(HW_COLORS[shoe_color])['base'], shoe_hi=tone(HW_COLORS[shoe_color])['lo'], shoe_style=shoes, torso_len=0,
+        bottom=_bottom(bottom, sk, cover=(BTYPE[bottom] == 'pants' and (bottom == 'flare' or shoes == 'boot'))), shoe=tone(HW_COLORS[shoe_color])['base'], shoe_hi=tone(HW_COLORS[shoe_color])['lo'], shoe_style=shoes, torso_len=0,
         iris=H(IRIS[iris]), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
         nofeatures=not features, no_blush=bool(freckles), brow=dk(hair), wave=(hair_id == 'wavy'), fringe=FRINGE.get(hair_id))  # 有雀斑就不畫腮紅（美術規則）
     if hw: P['hw'] = dict(kind=hw, **tone(HW_COLORS[hw_color]))
     if socks: P['socks'] = dict(kind=socks, **tone(HW_COLORS[sock_color]))
-    if jacket: P['jacket'] = dict(kind=jacket, **tone(JACKETS[jacket]))
+    if jacket:
+        jt = tone(JACKETS[jacket]); P['jacket'] = dict(kind=jacket, fill=_torso_fill(jt), sfill=_sleeve_fill(jt), **jt)
     if bag: P['bag'] = dict(kind=bag, **tone(HW_COLORS[bag_color]))
     P['jewel'] = dict(earring=earring, necklace=necklace, bracelet=bracelet)
     P.update(_top(top))
@@ -176,7 +191,7 @@ def face_data():
 # 每個選項輸出自己的圖層（格子加色名），顏色在網頁上才套入。圖層依 Z 由小到大疊，
 # 順序與 engine.build 的繪製順序一致，所以疊出來的結果與整張重畫逐格相同（有比對測試）。
 Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt': 23,
-     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80, 'headwear': 90,
+     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80, 'headwear': 90, 'pants_over': 24,
      'bag_back': 15, 'jarms': 45, 'bracelet': 47, 'jacket': 55, 'bag_front': 57, 'necklace': 65, 'earring': 85}
 # 可換色的色名 → 標記色（引擎跑一遍後，由標記色反查是哪個色名；邊線色由標記色推得）
 MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7),
@@ -194,12 +209,12 @@ def _spec_table():
     assert len(t) == 3*len(MARK), '標記色的邊線色互相撞色'
     return t
 
-def _marked(hair_id, top, bottom, hw=None, shoes='canvas', socks=None, jacket=None, bag=None):
+def _marked(hair_id, top, bottom, hw=None, shoes='canvas', socks=None, jacket=None, bag=None, cover=False):
     P = player(hair_id, 's1', top, bottom, features=False, hw=hw, shoes=shoes, socks=socks, jacket=jacket, bag=bag,
                earring=True, necklace=True, bracelet=True)
     P.update(skin=MARK['skin'], skin_s=MARK['skin_s'], hair=MARK['hair'], hair_hi=MARK['hair_hi'],
              shoe=MARK['shoe'], shoe_hi=MARK['shoe_lo'])
-    P['bottom'] = _bottom(bottom, MARK['skin'])   # 破洞牛仔褲的破洞用膚色，要用色名標記
+    P['bottom'] = _bottom(bottom, MARK['skin'], cover)   # 破洞牛仔褲的破洞用膚色，要用色名標記
     if hw: P['hw'] = dict(kind=hw, base=MARK['hw'], hi=MARK['hw_hi'], lo=MARK['hw_lo'])
     if socks: P['socks'] = dict(kind=socks, base=MARK['sock'], lo=MARK['sock_lo'])
     if bag: P['bag'] = dict(kind=bag, base=MARK['bag'], hi=MARK['bag_hi'], lo=MARK['bag_lo'])
@@ -230,7 +245,9 @@ def layer_data():
     L = {'base': _layers(_marked('bob', 'white', 'jeans'), ('neck', 'face'))}
     for h in HAIR: L['hair:'+h] = _layers(_marked(h, 'white', 'jeans'), ('hair_back', 'hair_front'))
     for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso'))
-    for b in BOTTOMS: L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'skirt'))
+    for b in BOTTOMS:
+        L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'skirt'))
+        if BTYPE[b] == 'pants': L['bottom:'+b+':over'] = _layers(_marked('bob', 'white', b, cover=True), ('pants_over',))
     for st in SHOES:
         for bt, rep in (('pants', 'jeans'), ('skirt', 'pleat')): L[f'shoes:{st}:{bt}'] = _layers(_marked('bob', 'white', rep, shoes=st), ('shoes',))
     for k in SOCKS: L['socks:'+k] = _layers(_marked('bob', 'white', 'pleat', socks=k), ('socks',))

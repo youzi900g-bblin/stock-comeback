@@ -125,23 +125,42 @@ def fringe_new(kind,fw,hh,sd):
         hi=[]; seam=[]
     cells={(x,y) for y,segs in rows.items() for (a,b) in segs for x in range(a,b+1)}
     return cells,hi,seam
-def draw_shoes(cv,P,x0,x1):
-    """鞋子：canvas（低筒，原本的畫法）、sneaker（含腳踝）、boot（短靴，蓋住小腿下段）、sandal（只有鞋底與兩條帶子）。"""
-    st=P.get('shoe_style','canvas'); sh=P['shoe']; hi=P['shoe_hi']
-    if st=='canvas':
+def draw_shoes(cv,P,x0,x1,pants=False):
+    """鞋子，各款用輪廓與細節區分：
+    canvas 帆布鞋：低筒、鞋頭圓、白色鞋帶與一條細白鞋底；
+    sneaker 運動鞋：較高的鞋口、鞋帶往上錯開排列、側邊一道亮條、厚鞋底（兩色兩列）；
+    boot 短靴：靴筒到小腿、上緣反摺、沒有鞋帶、厚底加鞋跟（鞋底兩列深色）；
+    sandal 涼鞋：露出皮膚的腳，兩條橫帶（腳背、腳踝）加一條細鞋底。"""
+    st=P.get('shoe_style'); sh=P['shoe']; hi=P['shoe_hi']; sk=P['skin']
+    if st is None:   # NPC 沿用原本的畫法（不變）
         cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),sh,base=sh)
         for x in range(x0-1,x1+2): cv.px(x,50,hi)
+        return
+    wh=H('#f4f1ea')
+    if st=='canvas':
+        cv.paint(rows_mask({49:(x0-1,x1+1),50:(x0-1,x1+1)}),sh,base=sh)
+        cv.paint(rows_mask({51:(x0-1,x1+1)}),wh,base=wh)
+        for x in range(x0,x1+1): cv.px(x,49,wh if x%2==x0%2 else sh)          # 鞋帶（白、鞋色相間）
+        cv.px(x0-1,50,hi); cv.px(x1+1,50,hi)              # 鞋頭兩側壓線
     elif st=='sneaker':
-        cv.paint(rows_mask({48:(x0,x1),49:(x0-1,x1+1),50:(x0-1,x1+1),51:(x0-1,x1+1)}),sh,base=sh)
-        for x in range(x0-1,x1+2): cv.px(x,51,hi)
-        cv.px(x1,49,hi)
-    elif st=='boot':
-        cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(44,52)}),sh,base=sh)
-        for x in range(x0-1,x1+2): cv.px(x,44,hi); cv.px(x,51,hi)
+        cv.paint(rows_mask({48:(x0,x1),49:(x0,x1),50:(x0-1,x1+1)}),sh,base=sh)
+        cv.paint(rows_mask({51:(x0-1,x1+1)}),wh,base=wh)
+        for x in range(x0-1,x1+2): cv.px(x,50,hi)         # 中底
+        cv.px(x0,48,hi); cv.px(x1,48,hi)                  # 鞋口兩側
+        cv.px(x0+1,48,wh); cv.px(x1-1,49,wh)              # 鞋帶（上下錯開）
+        cv.px(x0,49,hi) if x1-x0>=3 else None             # 側邊亮條
+    elif st=='boot':   # 牛仔靴：靴筒貼腿（上緊）、腳背處放寬（下鬆）、尖頭、有跟
+        cv.paint(rows_mask({y:(x0,x1) for y in range(44,49)}),sh,base=sh)
+        cv.paint(rows_mask({49:(x0-1,x1+1),50:(x0-1,x1+1),51:(x0,x1)}),sh,base=sh)
+        for x in range(x0,x1+1): cv.px(x,44,hi)                       # 上緣反摺
+        for x in range(x0-1,x1+2): cv.px(x,50,hi)                     # 鞋跟與厚底（深色兩列）
+        cv.px(x0-1,51,hi); cv.px(x1+1,51,hi)                          # 鞋跟兩角
     elif st=='sandal':
-        cv.paint(rows_mask({50:(x0-1,x1+1),51:(x0-1,x1+1)}),sh,base=sh)
-        for x in range(x0-1,x1+2): cv.px(x,51,hi)
-        cv.px(x0,49,sh); cv.px(x1,49,sh)
+        cv.paint(rows_mask({49:(x0,x1),50:(x0,x1)}),sk,base=sk,warm=True)   # 腳
+        cv.paint(rows_mask({51:(x0-1,x1+1)}),sh,base=sh)
+        for x in range(x0,x1+1): cv.px(x,49,sh)           # 腳背橫帶
+        if not pants: cv.paint(rows_mask({47:(x0,x1)}),sh,base=sh)      # 腳踝帶（穿長褲時被褲管蓋住，不畫）
+        cv.px(x0,50,hi) if False else None
 def build(P,want_log=False):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
@@ -183,7 +202,7 @@ def build(P,want_log=False):
     cv.L='bag_back'
     bg=P.get('bag')
     if bg and bg['kind']=='pack':   # 後背包的背面：圓頂從肩膀後方探出，頂部加一個提把
-        cv.paint(rows_mask({16:(CX-2,CX+2),17:(CX-4,CX+4),**{y:(CX-5,CX+5) for y in range(18,30)},30:(CX-4,CX+4),31:(CX-4,CX+4)}),bg['base'],base=bg['base'])
+        cv.paint(rows_mask({16:(CX-3,CX+3),17:(CX-5,CX+5),**{y:(CX-5,CX+5) for y in range(18,30)},30:(CX-4,CX+4),31:(CX-4,CX+4)}),bg['base'],base=bg['base'])
         for x in range(CX-3,CX): cv.px(x,17,bg['hi'])
         for x in range(CX-1,CX+2): cv.px(x,15,bg['lo'])
     # --- legs/bottom/shoes
@@ -192,34 +211,38 @@ def build(P,want_log=False):
     bt=P['bottom']
     hemy=ytop+ (P['torso_len'])  # not used
     if bt['type']=='pants':
-        cv.L='pants'
-        for side in (0,1):
-            x0,x1=legL() if side==0 else legR()
-            sp={y:((x0-(1 if y>=45 else 0)),(x1+(1 if y>=45 else 0))) if True else None for y in range(30,49)}
-            if bt.get('flare'):   # 喇叭褲：大腿貼腿、膝蓋最窄（外側內收 1 格），膝下逐步變寬，褲口最寬（外 2 格、內 1 格）
-                def prof(y):   # (外側外擴格數, 內側內擴格數)，負值為內收
-                    if y<35: return (0,0)
-                    if y<41: return (-1,0)
-                    if y<43: return (0,0)
-                    if y<45: return (1,0)
-                    if y<47: return (1,1)
-                    return (2,1)
-                sp={}
-                for y in range(30,49):
-                    o,i=prof(y)
-                    sp[y]=(x0-o,x1+i) if side==0 else (x0-i,x1+o)
-            else:
-                ext=lambda y: 1 if y>=45 else 0
-                sp={y:(x0-(ext(y) if side==0 else 0),x1+(ext(y) if side==1 else 0)) for y in range(30,49)}
-            cv.paint(rows_mask(sp),diag(bt['base'],bt['hi'],bt['lo'],30,0.4),base=bt['base'])
-        # waist band
-        cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])
-        if bt.get('detail'): bt['detail'](cv)
-        # shoes
-        cv.L='shoes'
-        for side in (0,1):
-            x0,x1=legL() if side==0 else legR()
-            draw_shoes(cv,P,x0,x1)
+        end=bt.get('cover') or 48   # 蓋住鞋子的長褲：褲口往下延伸，並畫在鞋子之上
+        def paint_pants():
+            for side in (0,1):
+                x0,x1=legL() if side==0 else legR()
+                if bt.get('flare'):   # 喇叭褲：大腿貼腿、膝蓋最窄（外側內收 1 格），膝下逐步變寬，褲口最寬（外 2 格、內 1 格）
+                    def prof(y):   # (外側外擴格數, 內側內擴格數)，負值為內收
+                        if y<35: return (0,0)
+                        if y<41: return (-1,0)
+                        if y<43: return (0,0)
+                        if y<45: return (1,0)
+                        if y<47: return (1,1)
+                        return (2,1)
+                    sp={}
+                    for y in range(30,end+1):
+                        o,i=prof(y)
+                        sp[y]=(x0-o,x1+i) if side==0 else (x0-i,x1+o)
+                else:
+                    ext=lambda y: 1 if y>=45 else 0
+                    sp={y:(x0-(ext(y) if side==0 else 0),x1+(ext(y) if side==1 else 0)) for y in range(30,end+1)}
+                cv.paint(rows_mask(sp),bt.get('legfill') or diag(bt['base'],bt['hi'],bt['lo'],30,0.4),base=bt['base'])
+            cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])   # 腰帶
+            if bt.get('detail'): bt['detail'](cv)
+        def paint_shoes():
+            for side in (0,1):
+                x0,x1=legL() if side==0 else legR()
+                draw_shoes(cv,P,x0,x1,pants=True)
+        if bt.get('cover'):
+            cv.L='shoes'; paint_shoes()
+            cv.L='pants_over'; paint_pants()
+        else:
+            cv.L='pants'; paint_pants()
+            cv.L='shoes'; paint_shoes()
     else:
         LL=bt['legL']
         for side in (0,1):
@@ -246,7 +269,11 @@ def build(P,want_log=False):
             t=(y-top)/(bot-top)
             half=tw+int(round(t*bt['flare']))
             sp[y]=(CX-half,CX+half)
-        cv.paint(rows_mask(sp),bt['fill'],base=bt['base'])
+        if bt.get('shorts'):   # 短褲：腰到臀一整塊，再分成兩條短褲管
+            cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(30,33)}),bt['fill'],base=bt['base'])
+            for (a_,b_) in ((CX-5,CX-2),(CX+2,CX+5)): cv.paint(rows_mask({y:(a_,b_) for y in range(33,bot+1)}),bt['fill'],base=bt['base'])
+        else:
+            cv.paint(rows_mask(sp),bt['fill'],base=bt['base'])
         if bt.get('detail'): bt['detail'](cv)
     # --- hood (behind neck)
     cv.L='hood'
@@ -277,7 +304,7 @@ def build(P,want_log=False):
     if jk:
         cv.L='jarms'
         for side in (-1,1):
-            cv.paint(arm_cells(side,20,31),diag(jk['base'],jk['hi'],jk['lo'],20),base=jk['base'])
+            cv.paint(arm_cells(side,20,31),jk.get('sfill') or diag(jk['base'],jk['hi'],jk['lo'],20),base=jk['base'])
             cv.paint(arm_cells(side,30,31),jk['lo'],base=jk['lo'])
     cv.L='bracelet'
     if P.get('jewel',{}).get('bracelet'):
@@ -292,15 +319,13 @@ def build(P,want_log=False):
         cv.L='jacket'
         kd=jk['kind']; h2=30+{'cardigan':3,'denim':1,'sport':2}[kd]
         if kd=='cardigan':   # 開襟：中間 3 格露出裡面的上衣
-            cv.paint(rows_mask({y:(CX-tw,CX-2) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
-            cv.paint(rows_mask({y:(CX+2,CX+tw) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
-            for y in (22,25,28): cv.px(CX-2,y,jk['lo'])
+            cv.paint(rows_mask({y:(CX-tw,CX-2) for y in range(19,h2+1)}),(jk.get('fill') or diag(jk['base'],jk['hi'],jk['lo'],19)),base=jk['base'])
+            cv.paint(rows_mask({y:(CX+2,CX+tw) for y in range(19,h2+1)}),(jk.get('fill') or diag(jk['base'],jk['hi'],jk['lo'],19)),base=jk['base'])
         else:
-            cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
+            cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,h2+1)}),(jk.get('fill') or diag(jk['base'],jk['hi'],jk['lo'],19)),base=jk['base'])
             for y in range(19,h2+1): cv.px(CX,y,jk['lo'])
             for x in range(CX-3,CX+4): cv.px(x,19,jk['hi'])
             if kd=='denim':
-                for y in (22,25,28): cv.px(CX,y,jk['hi'])
                 for sd in (-1,1): cv.px(CX+sd*3,26,jk['lo']); cv.px(CX+sd*3,27,jk['lo'])
             else:
                 for x in range(CX-tw,CX+tw+1): cv.px(x,h2,jk['lo'])
@@ -314,20 +339,18 @@ def build(P,want_log=False):
             cv.paint(rows_mask({y:(CX+3,CX+8) for y in range(29,35)}),bg['base'],base=bg['base'])
             for x in range(CX+3,CX+9): cv.px(x,29,bg['hi']); cv.px(x,30,bg['lo'])      # 包蓋
             cv.px(CX+5,31,bg['hi']); cv.px(CX+6,31,bg['hi'])                               # 扣子
-        elif k=='tote':   # 托特包：提把掛在右手，方形大包身，上緣一道亮帶
-            for x in range(CX+7,CX+11): cv.px(x,31,bg['lo'])
-            for y in (32,33): cv.px(CX+7,y,bg['lo']); cv.px(CX+10,y,bg['lo'])
-            cv.paint(rows_mask({y:(CX+5,CX+11) for y in range(34,42)}),bg['base'],base=bg['base'])
-            for x in range(CX+5,CX+12): cv.px(x,34,bg['hi'])
-            for x in range(CX+5,CX+12): cv.px(x,41,bg['lo'])
+        elif k=='tote':   # 托特包：提把是接在包身上緣的圓拱，包身方正，上緣一道亮帶
+            for x in range(CX+6,CX+10): cv.px(x,29,bg['lo'])
+            cv.px(CX+6,30,bg['lo']); cv.px(CX+9,30,bg['lo'])
+            cv.paint(rows_mask({y:(CX+5,CX+10) for y in range(31,40)}),bg['base'],base=bg['base'])
+            for x in range(CX+5,CX+11): cv.px(x,31,bg['hi']); cv.px(x,39,bg['lo'])
         elif k=='pack':   # 後背包的肩帶：從肩頭越過手臂與身體的交界，沿身側下垂（上寬下窄），在腋下轉向身後
-            for sd in (-1,1):   # 肩帶蓋住身體與手臂的交界，整條實心（不露出衣服色）
-                for y in range(19,21):
+            for sd in (-1,1):   # 肩帶從露出的背包頂部接下來，越過肩頭，沿身側下垂（上寬下窄），止於腋下，不插進手臂
+                for y in range(18,21):
                     for dx in (3,4,5): cv.px(CX+sd*dx,y,bg['lo'])
-                for y in range(21,28):
-                    for dx in (4,5): cv.px(CX+sd*dx,y,bg['lo'])
-                for dx in (4,5,6): cv.px(CX+sd*dx,28,bg['lo'])
-                cv.px(CX+sd*4,24,bg['hi']); cv.px(CX+sd*5,24,bg['hi'])
+                for y in range(21,26):
+                    for dx in (3,4): cv.px(CX+sd*dx,y,bg['lo'])
+                for y in range(26,28): cv.px(CX+sd*4,y,bg['lo'])
     # --- neck
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
