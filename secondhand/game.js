@@ -74,16 +74,29 @@
 
   // ---------- 工具 ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  // 玩家圖由 tools/pixel_art/player.py 產生（與 NPC 同一套引擎）
-  // 玩家圖：身體底圖（art/player/）加上用 SVG 疊的五官格子（art/player/face.js），27×53 格
+  // 玩家圖由 tools/pixel_art/player.py 輸出圖層資料（art/player/face.js），網頁依 Z 順序用 SVG 疊出，27×53 格。
+  // 邊線色的算法要與 tools/pixel_art/engine.py 的 dk、warm 相同。
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const toHex = (c) => "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+  const dk = (c) => [Math.min(255, Math.floor(c[0] * 0.6) + 4), Math.min(255, Math.floor(c[1] * 0.6 * 0.95)), Math.min(255, Math.floor(c[2] * 0.6) + 14)];
+  const warm = (c) => [Math.floor(c[0] * 0.72), Math.floor(c[1] * 0.58), Math.floor(c[2] * 0.56)];
+  const rect = (x, y, w, c) => `<rect x="${x}" y="${y}" width="${w}" height="1" fill="${c}"/>`;
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
-    const i = F.atlas.keys.indexOf(`${q.hair}_${q.skin}_${q.top}_${q.bottom}`);
-    const cells = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? (q.eyes === "big" ? F.geo.freckles_big : F.geo.freckles) : F.geo.blush), ...F.geo.mouth[q.mouth]]
-      .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${r === "iris" ? F.iris[q.iris] : col[r]}"/>`).join("");
-    const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
-    const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
-    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/atlas.png" x="${-(i % F.atlas.cols) * 27}" y="${-Math.floor(i / F.atlas.cols) * 53}" width="${F.atlas.cols * 27}" height="${Math.ceil(F.atlas.keys.length / F.atlas.cols) * 53}"/>${hw}${cells}${gl}</svg>`;
+    const pal = { ...F.pal.skin[q.skin], ...F.pal.hair[q.hair] };
+    const resolve = (spec) => {
+      if (spec[0] === "#") return spec;
+      const [role, op] = spec.split(":"), c = rgb(pal[role]);
+      return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
+    };
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom]].sort((a, b) => a.z - b.z);
+    const body = layers.map((l) => { const cols = l.cols.map(resolve); return l.runs.map(([x, y, w, ci]) => rect(x, y, w, cols[ci])).join(""); }).join("");
+    const cell = ([x, y, c]) => rect(x, y, 1, c);
+    const face = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? (q.eyes === "big" ? F.geo.freckles_big : F.geo.freckles) : F.geo.blush), ...F.geo.mouth[q.mouth]]
+      .map(([x, y, r]) => rect(x, y, 1, r === "iris" ? F.iris[q.iris] : col[r])).join("");
+    const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(cell).join("");
+    const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(cell).join("");
+    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}">${body}${hw}${face}${gl}</svg>`;
   };
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
@@ -404,6 +417,6 @@
   }
 
   // 供自我檢查與測試使用
-  window.__game = { get state() { return S; }, waitDays, marketPrice };
+  window.__game = { get state() { return S; }, waitDays, marketPrice, sprite };
   render();
 })();

@@ -12,7 +12,10 @@ def mask_poly(kind,*a):
 def rows_mask(spec):  # {y:(x0,x1)}
     return {(x,y) for y,(a,b) in spec.items() for x in range(a,b+1)}
 class Cv:
-    def __init__(s): s.c=[[None]*W for _ in range(HH)]
+    def __init__(s): s.c=[[None]*W for _ in range(HH)]; s.L=None; s.log={}   # L：目前的圖層名；log：各圖層寫過的格子（供分層輸出）
+    def _w(s,x,y,col):
+        s.c[y][x]=col
+        if s.L is not None: s.log.setdefault(s.L,{})[(x,y)]=col
     def paint(s,mask,fill,base=None,outline=True,warm=False):
         if not mask: return
         if outline:
@@ -21,10 +24,10 @@ class Cv:
             for (x,y) in mask:
                 for dx,dy in((1,0),(-1,0),(0,1),(0,-1)):
                     nx,ny=x+dx,y+dy
-                    if 0<=nx<W and 0<=ny<HH and (nx,ny) not in mask: s.c[ny][nx]=oc
-        for (x,y) in mask: s.c[y][x]=fill(x,y) if callable(fill) else fill
+                    if 0<=nx<W and 0<=ny<HH and (nx,ny) not in mask: s._w(nx,ny,oc)
+        for (x,y) in mask: s._w(x,y,fill(x,y) if callable(fill) else fill)
     def px(s,x,y,col):
-        if 0<=x<W and 0<=y<HH: s.c[y][x]=col
+        if 0<=x<W and 0<=y<HH: s._w(x,y,col)
 BODY={'slim':dict(tw=3,nw=1,L=4,arm=3),'medium':dict(tw=4,nw=1,L=4,arm=3),'chubby':dict(tw=5,nw=2,L=5,arm=4)}
 def diag(base,hi,lo,y0,k=0.6):
     def f(x,y):
@@ -87,12 +90,13 @@ def headwear(cv,hw):
     elif k=='star':
         for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,b)
         cv.px(CX+4,4,hi)
-def build(P):
+def build(P,want_log=False):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
     fw=5 if P.get('round') else 4
     hair=P['hair']; hh=P['hair_hi']
     # --- back hair
+    cv.L='hair_back'
     if P['hs']=='puffs':
         cv.paint(mask_poly('ell',[CX-10,2,CX-2,10]),hair,outline=True)
         cv.paint(mask_poly('ell',[CX+2,2,CX+10,10]),hair)
@@ -118,6 +122,7 @@ def build(P):
     bt=P['bottom']
     hemy=ytop+ (P['torso_len'])  # not used
     if bt['type']=='pants':
+        cv.L='pants'
         for side in (0,1):
             x0,x1=legL() if side==0 else legR()
             sp={y:((x0-(1 if y>=45 else 0)),(x1+(1 if y>=45 else 0))) if True else None for y in range(30,49)}
@@ -126,6 +131,7 @@ def build(P):
         # waist band
         cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])
         # shoes
+        cv.L='shoes'
         for side in (0,1):
             x0,x1=legL() if side==0 else legR()
             cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),P['shoe'],base=P['shoe'])
@@ -136,12 +142,16 @@ def build(P):
         for side in (0,1):
             x0=CX-1-LL if side==0 else CX+2
             x1=CX-2 if side==0 else CX+1+LL
+            cv.L='legs'
             cv.paint(rows_mask({y:(x0,x1) for y in range(bt['skin_y0'],49)}),sk,base=sk,warm=True)
+            cv.L='socks'
             if bt.get('sock'):
                 cv.paint(rows_mask({y:(x0,x1) for y in range(bt['sock_y0'],49)}),bt['sock'],base=bt['sock'],outline=True)
                 for x in range(x0,x1+1): cv.px(x,bt['sock_y0'],bt['sock_hi'])
+            cv.L='shoes'
             cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),P['shoe'],base=P['shoe'])
             for x in range(x0-1,x1+2): cv.px(x,50,P['shoe_hi'])
+        cv.L='skirt'
         sp={}
         top,bot=30,bt['skirt_end']
         for y in range(top,bot+1):
@@ -150,9 +160,11 @@ def build(P):
             sp[y]=(CX-half,CX+half)
         cv.paint(rows_mask(sp),bt['fill'],base=bt['base'])
     # --- hood (behind neck)
+    cv.L='hood'
     if P.get('hood'):
         cv.paint(mask_poly('ell',[CX-nw-4,15,CX+nw+4,21]),P['hood'])
     # --- sleeves / arms / hands
+    cv.L='arms'
     for side in (-1,1):
         for y in range(20,32):
             pass
@@ -173,18 +185,22 @@ def build(P):
         hy=arm_cells(side,32,34)
         cv.paint(hy,sk,base=sk,warm=True)
     # --- torso
+    cv.L='torso'
     tb=P['top']; hem=P['torso_hem']
     cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),tb.get('fill') or diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
     if 'detail' in P: P['detail'](cv,tw,hem)
     # --- neck
+    cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
     cv.paint(rows_mask(sp),lambda x,y: sks if y<=16 else sk,base=sk,warm=True)
     # --- face
+    cv.L='face'
     fsp={}
     for y in range(5,14): fsp[y]=(CX-fw,CX+fw)
     fsp[13]=(CX-fw+1,CX+fw-1); fsp[14]=(CX-fw+2,CX+fw-2); fsp[15]=(CX-max(1,fw-3),CX+max(1,fw-3))
     cv.paint(rows_mask(fsp),lambda x,y: sks if (x==CX+fw and 8<=y<=13) or y==15 else sk,base=sk,warm=True)
     # --- front hair
+    cv.L='hair_front'
     if P['hs']=='puffs':
         m=mask_poly('ell',[CX-6,1,CX+6,13]); m={(x,y) for (x,y) in m if y<=5}
         m|={(CX-fw-2,y) for y in range(6,10)}|{(CX+fw+2,y) for y in range(6,10)}
@@ -230,12 +246,14 @@ def build(P):
             cv.px(CX+4,4,bk)
             cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
     # --- 頭飾（玩家用，與髮型無關；NPC 用上面的 hp）
+    cv.L='headwear'
     if P.get('hw'): headwear(cv,P['hw'])
     # --- face features（與 face_cells 共用，確保遊戲內疊圖與整張圖一致）
+    cv.L='features'
     if not P.get('nofeatures'):
         cols=face_colors(P)
         for (x,y,r) in face_cells(P): cv.px(x,y,cols[r])
-    return cv.c
+    return (cv.c,cv.log) if want_log else cv.c
 OUTL=H('#2a1c26')
 def render(c,S=8,box=None):
     h=len(c);w=len(c[0])

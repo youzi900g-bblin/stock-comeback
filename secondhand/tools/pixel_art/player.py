@@ -2,8 +2,7 @@
 
 規則出處：docs/系統設計.md「八-1、角色美術規格」、docs/美術製作指南.md。
 輸出（art/player/）：
-  atlas.png  所有身體底圖合成一張（每格 27×53、1 格 1 像素、透明背景、不含五官；網頁以整數倍放大）
-  face.js    atlas 的索引、五官／頭飾／眼鏡的格子與顏色，網頁用 SVG 疊在底圖上
+  face.js    各選項的圖層（格子與色名）、色票、五官／頭飾／眼鏡的格子，網頁用 SVG 依序疊出角色
 id 要與 config.js 的 HAIR_STYLES / SKIN_TONES / TOPS / BOTTOMS / EYES / MOUTHS 一致。
 體型固定為中等（不開放玩家改，避免衣服要跟著改版）。
 
@@ -136,22 +135,66 @@ def face_data():
             [c for dx in (0, -6) for c in ([CX+4+dx, 9, '#e4e4ff'], [CX+3+dx, 10, '#a8a8e0'], [CX+2+dx, 11, '#6a6aa0'], [CX+4+dx, 11, '#5a5a90'])])
     return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
-COLS = 20
+# ---- 分層輸出 ----
+# 每個選項輸出自己的圖層（格子加色名），顏色在網頁上才套入。圖層依 Z 由小到大疊，
+# 順序與 engine.build 的繪製順序一致，所以疊出來的結果與整張重畫逐格相同（有比對測試）。
+Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt': 23,
+     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80}
+# 可換色的色名 → 標記色（引擎跑一遍後，由標記色反查是哪個色名；邊線色由標記色推得）
+MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7)}
 
-def build_all(out_dir, scale=1):
-    """所有底圖合成一張 atlas.png（每格 27×53，依 face.js 的 keys 順序由左到右、由上到下），避免幾百個小檔。"""
-    from PIL import Image
-    from engine import W, HH
+def _dk(c, f=0.6): return (min(255, int(c[0]*f)+4), min(255, int(c[1]*f*0.95)), min(255, int(c[2]*f)+14))
+def _warm(b): return (int(b[0]*.72), int(b[1]*.58), int(b[2]*.56))
+
+def _spec_table():
+    t = {}
+    for role, m in MARK.items():
+        t[m] = role; t[_dk(m)] = role + ':dk'; t[_warm(m)] = role + ':warm'
+    assert len(t) == 3*len(MARK), '標記色的邊線色互相撞色'
+    return t
+
+def _marked(hair_id, top, bottom):
+    P = player(hair_id, 's1', top, bottom, features=False)
+    P.update(skin=MARK['skin'], skin_s=MARK['skin_s'], hair=MARK['hair'], hair_hi=MARK['hair_hi'])
+    return P
+
+def _layers(P, names):
+    """回傳指定圖層名的 [{z, cols, runs}]；runs 為 [x, y, 寬, 色索引]（同列同色合併）。"""
+    _, log = build(P, want_log=True)
+    table = _spec_table(); out = []
+    for n in names:
+        if n not in log: continue
+        cols, runs, idx = [], [], {}
+        cells = log[n]
+        for y in range(53):
+            x = 0
+            while x < 27:
+                c = cells.get((x, y))
+                if c is None: x += 1; continue
+                spec = table.get(tuple(c)) or _hex(c)
+                x2 = x
+                while x2+1 < 27 and cells.get((x2+1, y)) == c: x2 += 1
+                if spec not in idx: idx[spec] = len(cols); cols.append(spec)
+                runs.append([x, y, x2-x+1, idx[spec]]); x = x2+1
+        out.append(dict(z=Z[n], cols=cols, runs=runs))
+    return out
+
+def layer_data():
+    L = {'base': _layers(_marked('bob', 'white', 'jeans'), ('neck', 'face'))}
+    for h in HAIR: L['hair:'+h] = _layers(_marked(h, 'white', 'jeans'), ('hair_back', 'hair_front'))
+    for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso'))
+    for b in BOTTOMS: L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'socks', 'shoes', 'skirt'))
+    pal = dict(skin={}, hair={})
+    for s, hexc in SKIN_TONES.items():
+        P = player('bob', s); pal['skin'][s] = dict(skin=_hex(P['skin']), skin_s=_hex(P['skin_s']))
+    for h, (hs, hc) in HAIR.items():
+        c = H(hc); pal['hair'][h] = dict(hair=_hex(c), hair_hi=_hex(hi_of(c)))
+    return L, pal
+
+def build_all(out_dir):
     d = os.path.join(out_dir, 'player'); os.makedirs(d, exist_ok=True)
     for f in os.listdir(d): os.remove(os.path.join(d, f))
-    keys = [f'{h}_{s}_{t}_{b}' for h in HAIR for s in SKIN_TONES for t in TOPS for b in BOTTOMS]
-    rows = -(-len(keys) // COLS)
-    atlas = Image.new('RGBA', (COLS*W, rows*HH), (0, 0, 0, 0))
-    for i, k in enumerate(keys):
-        h, s, t, b = k.split('_')
-        atlas.paste(render_rgba(build(player(h, s, t, b, features=False)), 1), ((i % COLS)*W, (i//COLS)*HH))
-    atlas.save(os.path.join(d, 'atlas.png'))
-    data = face_data(); data['atlas'] = dict(cols=COLS, keys=keys)
+    data = face_data(); data['layers'], data['pal'] = layer_data()
     with open(os.path.join(d, 'face.js'), 'w') as f:
         f.write('window.PLAYER_FACE=' + json.dumps(data, separators=(',', ':')) + ';\n')
     return d
