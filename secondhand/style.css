@@ -134,6 +134,8 @@ body.contrast .btn.alt { background: #fff; }
   width: 100%; min-height: 48px; padding: 6px 10px; font: inherit;
   border: 3px solid; border-color: var(--line) #fff #fff var(--line); background: #fff; color: #000; border-radius: 0;
 }
+.namerow { display: flex; gap: 8px; }
+.namerow input { flex: 1; min-width: 0; }
 .opts { display: flex; flex-wrap: wrap; gap: 8px; }
 .opt {
   min-height: 44px; min-width: 44px; padding: 4px 12px; background: #fff; cursor: pointer;

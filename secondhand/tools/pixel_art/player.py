@@ -68,17 +68,20 @@ def _bottom(bid):
                     skirt_end=37, flare=2, legL=3, skin_y0=36)
     raise KeyError(bid)
 
+HEADWEAR = {'beret': '#f080b0', 'bow': '#c85088', 'band': '#88c0f0', 'star': '#f8d838'}  # 【佔位色】
+IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
 TOPS = ('white', 'black', 'stripe', 'hoodie')
 BOTTOMS = ('jeans', 'track', 'pleat')
 
-def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True):
+def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown'):
     sk = H(SKIN_TONES[skin_id]); hs, hc = HAIR[hair_id]; hair = H(hc)
     shade, lip, blush = skin_colors(sk)
     P = dict(body='medium', skin=sk, skin_s=shade, blush=blush, lip=lip,
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
         bottom=_bottom(bottom), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'), torso_len=0,
-        iris=H('#3a2a28'), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
+        iris=H(IRIS[iris]), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
         nofeatures=not features)
+    if hw: t = tone(HEADWEAR[hw]); P['hw'] = dict(kind=hw, **t)
     P.update(_top(top))
     return P
 
@@ -100,7 +103,26 @@ def face_data():
         for s in SKIN_TONES:
             P = player(h, s, freckles=True)
             colors[f'{h}_{s}'] = {k: _hex(v) for k, v in face_colors(P).items()}
-    return dict(geo=geo, colors=colors)
+    # 頭飾：與「無頭飾」的底圖逐格比對，只留不同的格子（含自動邊線），不需另做圖檔
+    hw = {}
+    for h in HAIR:
+        ref = build(player(h, 's1', features=False))
+        for k in HEADWEAR:
+            cur = build(player(h, 's1', features=False, hw=k))
+            hw[f'{h}_{k}'] = [[x, y, _hex(cur[y][x])] for y in range(len(cur)) for x in range(len(cur[0])) if cur[y][x] != ref[y][x]]
+    # 眼鏡：畫在五官之上；鏡框圍住眼睛（x 為 CX±1..±4、y 8..11），墨鏡把鏡片填滿
+    fr, ln = '#8a5a7a', '#2a2430'
+    def box(corners, fill):
+        out = []
+        for sd in (-1, 1):
+            for y in range(8, 12):
+                for dx in range(1, 5):
+                    edge = y in (8, 11) or dx in (1, 4)
+                    corner = y in (8, 11) and dx in (1, 4)
+                    if fill or (edge and (corners or not corner)): out.append([CX + sd*dx, y, ln if fill else fr])
+        return out + [[CX, 9, fr]]
+    geo['glasses'] = dict(round=box(False, False), square=box(True, False), sun=box(True, True))
+    return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
 def build_all(out_dir, scale=1):
     d = os.path.join(out_dir, 'player'); os.makedirs(d, exist_ok=True)

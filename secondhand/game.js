@@ -79,8 +79,10 @@
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
     const cells = [...F.geo.eyes[q.eyes], ...F.geo.blush, ...(q.freckles === "on" ? F.geo.freckles : []), ...F.geo.mouth[q.mouth]]
-      .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${col[r]}"/>`).join("");
-    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/${q.hair}_${q.skin}_${q.top}_${q.bottom}.png" width="27" height="53"/>${cells}</svg>`;
+      .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${r === "iris" ? F.iris[q.iris] : col[r]}"/>`).join("");
+    const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
+    const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(([x, y, c]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`).join("");
+    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/${q.hair}_${q.skin}_${q.top}_${q.bottom}.png" width="27" height="53"/>${hw}${cells}${gl}</svg>`;
   };
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
@@ -156,11 +158,12 @@
       <div class="win"><h2>創角</h2><div class="body">
         <p class="muted" style="margin-top:0">你愛買衣服，衣櫃早就塞不下了。先決定自己的樣子。</p>
         <div class="preview">${sprite(draft)}</div>
-        <div class="field"><label for="nm">名字</label><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"></div>
+        <div class="field"><label for="nm">名字</label><div class="namerow"><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"><button class="btn alt" id="rnd-name">隨機名字</button></div></div>
+        <button class="btn alt block" id="rnd-look">隨機外觀</button>
         ${group("hair", "髮型", C.HAIR_STYLES)}
         <div class="field"><span class="lab">膚色</span><div class="opts">${skins}</div></div>
-        ${group("eyes", "眼睛", C.EYES)}${group("mouth", "嘴巴", C.MOUTHS)}${group("freckles", "雀斑", C.FRECKLES)}
-        ${group("top", "上衣", C.TOPS)}${group("bottom", "下身", C.BOTTOMS)}
+        ${group("eyes", "眼睛", C.EYES)}${group("iris", "眼珠顏色", C.EYE_COLORS)}${group("mouth", "嘴巴", C.MOUTHS)}${group("freckles", "雀斑", C.FRECKLES)}
+        ${group("headwear", "頭飾", C.HEADWEAR)}${group("glasses", "眼鏡", C.GLASSES)}${group("top", "上衣", C.TOPS)}${group("bottom", "下身", C.BOTTOMS)}
         <button class="btn block" id="start" ${ok ? "" : "disabled"}>開始</button>
         <p class="why" id="why" ${ok ? "hidden" : ""}>請先輸入名字。</p>
       </div></div>`;
@@ -296,6 +299,13 @@
         $("#start").disabled = !ok; $("#why").hidden = ok;
       });
       all("[data-look]", (b) => b.onclick = () => { const [k, v] = b.dataset.look.split(":"); draft[k] = v; render(); });
+      const pick = (a) => a[Math.floor(Math.random() * a.length)].id;
+      $("#rnd-name").onclick = () => { draft.name = C.RANDOM_NAMES[Math.floor(Math.random() * C.RANDOM_NAMES.length)]; render(); };
+      $("#rnd-look").onclick = () => {
+        Object.assign(draft, { hair: pick(C.HAIR_STYLES), skin: pick(C.SKIN_TONES), eyes: pick(C.EYES), iris: pick(C.EYE_COLORS), mouth: pick(C.MOUTHS),
+          freckles: pick(C.FRECKLES), headwear: pick(C.HEADWEAR), glasses: pick(C.GLASSES), top: pick(C.TOPS), bottom: pick(C.BOTTOMS) });
+        render();
+      };
       $("#start").onclick = () => {
         if (!draft.name.trim()) return;
         S = newGame({ ...draft, name: draft.name.trim() });

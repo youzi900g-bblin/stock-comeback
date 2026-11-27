@@ -51,8 +51,13 @@ const CONFIG = {
   ],
   EYES: [{ id: "closed", name: "瞇眼" }, { id: "normal", name: "一般" }, { id: "big", name: "大眼" }],
   MOUTHS: [{ id: "small", name: "小嘴" }, { id: "mid", name: "一般" }, { id: "wide", name: "大嘴" }],
+  EYE_COLORS: [{ id: "brown", name: "深褐" }, { id: "blue", name: "藍" }, { id: "green", name: "綠" }, { id: "violet", name: "紫" }],
+  HEADWEAR: [{ id: "none", name: "無" }, { id: "beret", name: "貝雷帽" }, { id: "bow", name: "蝴蝶結" }, { id: "band", name: "髮帶" }, { id: "star", name: "星星髮夾" }],
+  // 隨機名字用的名單【佔位】，每個不超過 8 字
+  RANDOM_NAMES: ["小雨", "小晴", "阿橘", "小米", "糖糖", "心心", "小柚", "莓莓", "芝芝", "嘟嘟", "小布", "阿福", "柚子", "小滿", "圓圓", "小棠", "咪咪", "阿秋", "小暖", "豆豆"],
+  GLASSES: [{ id: "none", name: "無" }, { id: "round", name: "圓框" }, { id: "square", name: "方框" }, { id: "sun", name: "墨鏡" }],
   FRECKLES: [{ id: "off", name: "無" }, { id: "on", name: "有" }],
-  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off" },
+  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off", headwear: "none", iris: "brown", glasses: "none" },
   // 膚色：選鈕的顏色，要與 tools/pixel_art/player.py 的 SKIN_TONES 一致【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
   // 玩家圖由 tools/pixel_art/player.py 產生；髮色與預設服裝也定義在那裡（皆為佔位）
   SKIN_TONES: [

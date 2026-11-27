@@ -60,6 +60,19 @@ def face_cells(P):
     elif m=='mid': out+=[(CX,13,'lip'),(CX+1,13,'lip')]
     elif m=='wide': out+=[(CX-1,13,'lip'),(CX,13,'lip'),(CX+1,13,'lip')]
     return out
+def headwear(cv,hw):
+    k,b,hi,lo=hw['kind'],hw['base'],hw['hi'],hw['lo']
+    if k=='beret':
+        cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(b,hi,b,0,0.2),base=b); cv.px(CX-1,0,lo)
+    elif k=='bow':
+        for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,b)
+        cv.px(CX+4,4,lo)
+    elif k=='band':
+        cv.paint(rows_mask({3:(CX-6,CX+6),4:(CX-6,CX+6)}),b,base=b)
+        for x in range(CX-5,CX+6,3): cv.px(x,3,hi)
+    elif k=='star':
+        for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,b)
+        cv.px(CX+4,4,hi)
 def build(P):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
@@ -202,6 +215,8 @@ def build(P):
             for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,bw)
             cv.px(CX+4,4,bk)
             cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
+    # --- 頭飾（玩家用，與髮型無關；NPC 用上面的 hp）
+    if P.get('hw'): headwear(cv,P['hw'])
     # --- face features（與 face_cells 共用，確保遊戲內疊圖與整張圖一致）
     if not P.get('nofeatures'):
         cols=face_colors(P)
