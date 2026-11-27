@@ -141,12 +141,10 @@ def draw_shoes(cv,P,x0,x1,pants=False):
         cv.paint(rows_mask({49:(x0-1,x1+1),50:(x0-1,x1+1)}),sh,base=sh)
         cv.paint(rows_mask({51:(x0-1,x1+1)}),wh,base=wh)
         for x in range(x0,x1+1): cv.px(x,49,wh if x%2==x0%2 else sh)          # 鞋帶（白、鞋色相間）
-        cv.px(x0-1,50,hi); cv.px(x1+1,50,hi)              # 鞋頭兩側壓線
     elif st=='sneaker':
         cv.paint(rows_mask({48:(x0,x1),49:(x0,x1),50:(x0-1,x1+1)}),sh,base=sh)
         cv.paint(rows_mask({51:(x0-1,x1+1)}),wh,base=wh)
         for x in range(x0-1,x1+2): cv.px(x,50,hi)         # 中底
-        cv.px(x0,48,hi); cv.px(x1,48,hi)                  # 鞋口兩側
         cv.px(x0+1,48,wh); cv.px(x1-1,49,wh)              # 鞋帶（上下錯開）
         cv.px(x0,49,hi) if x1-x0>=3 else None             # 側邊亮條
     elif st=='boot':   # 牛仔靴：靴筒貼腿（上緊）、腳背處放寬（下鬆）、尖頭、有跟
@@ -297,7 +295,7 @@ def build(P,want_log=False):
         sleeve_end=31 if sl['long'] else 24
         cv.paint(arm_cells(side,20,sleeve_end),sl.get('fill') or diag(sl['base'],sl['hi'],sl['lo'],20),base=sl['base'])
         if sl.get('cuff'):
-            cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'])
+            cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'],outline=sl.get('cuff_outline',True))
         hy=arm_cells(side,32,34)
         cv.paint(hy,sk,base=sk,warm=True)
     jk=P.get('jacket')
