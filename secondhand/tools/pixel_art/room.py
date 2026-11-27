@@ -29,7 +29,7 @@ def draw_room(tidy=False):
     R(51,8,53,30,H('#f4f0ec')); R(40,18,64,20,H('#f4f0ec'))
     R(38,30,66,32,H('#f4f0ec'),OUT)
     # curtains
-    for x0 in (34,64):
+    for x0 in (34,65):
         R(x0,6,x0+5,33,H('#e888b0'),OUT)
         for k in range(x0+1,x0+5,2): R(k,8,k,32,H('#c85088'))
     R(32,5,72,6,H('#6c4a50'),OUT)
