@@ -6,7 +6,7 @@
 import os, sys
 from PIL import Image
 from engine import H, BG, render, build
-from characters import A, B, C
+from characters import A, B, C, D
 import room
 import scenes
 import player
@@ -36,6 +36,8 @@ def crop(P, s=16):
 chars = (A, B, C)
 # 三位角色全身
 sheet([render(build(f()), 8) for f in chars]).save(os.path.join(OUT, '三位角色.png'))
+# 林（作者彩蛋 NPC，單獨輸出，不影響前三位的圖）
+render(build(D()), 8).save(os.path.join(OUT, '林.png'))
 # 三張臉
 sheet([head(f()) for f in chars]).save(os.path.join(OUT, '三個臉.png'))
 # 3x3 眼睛與嘴巴

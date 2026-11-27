@@ -62,7 +62,7 @@ def D():
     色碼皆為【佔位色】。"""
     sk=H('#f0d0b0'); sks=H('#d8a888')
     gy=dict(base=H('#dcdee0'),hi=H('#f0f1f2'),lo=H('#aeb2b8'))
-    blk=H('#2a2a30'); silver=H('#c8ccd4')
+    hair_c=H('#3a2418'); blk=H('#2a2a30'); silver=H('#c8ccd4')
     cam=[H('#4a4030'),H('#3a3226'),H('#5a5238'),H('#2c261e')]
     def camo(x,y):
         v=(x*7+y*13+(x*y)%5)%11
@@ -72,10 +72,18 @@ def D():
             for x in range(CX+2+(y-19),CX+tw+1): cv.px(x,y,sk)
         for y in (19,20,21,22): cv.px(CX+2,y,blk) if False else None
         for y in (19,20): cv.px(CX+tw-1,y,blk);cv.px(CX+tw,y,blk)  # 黑色蕾絲細肩帶（兩格寬）
-        for i,x in enumerate(range(CX-3,CX+2)): cv.px(x,19+i//2+1,blk)  # 斜領黑滾邊
-        for x in range(CX-tw,CX+tw+1): cv.px(x,hem,gy['lo'])  # 下擺陰影
+        for (x,y) in [(9,19),(10,19),(10,20),(11,20),(12,20),(13,21),(14,21),(15,21),(16,21),(17,21),(18,21)]: cv.px(x,y,blk)  # 蕾絲肩帶：左肩斜過胸前到右肩
+        for x in range(CX-tw,CX+tw+1): cv.px(x,hem,blk)      # 下擺黑滾邊
+        # 右耳後一小撮頭髮（低綁）加灰白髮夾
+        tuft={8:(22,23),9:(22,23),10:(22,23),11:(19,22),12:(18,21),13:(17,20),14:(17,20),15:(17,19),16:(18,19)}
+        cells={(x,y) for y,(a_,b_) in tuft.items() for x in range(a_,b_+1)}
+        edge=dk(hair_c)
+        for (x,y) in cells: cv.px(x,y,hair_c)
+        for (x,y) in [(x+dx,y+dy) for (x,y) in cells for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))]:
+            if (x,y) not in cells and x>=18: cv.px(x,y,edge)
+        for y in (10,11,12):
+            for x in (20,21): cv.px(x,y,H('#e8e8ec'))          # 髮夾
         cv.px(CX+1,24,H('#8a5a38'))                          # 胸前小徽章
-        for y in (21,22,23): cv.px(CX-2,y,blk) if False else None
         for y in (12,13,14): cv.px(CX-5,y,silver)             # 垂墜耳環
     def pockets(cv):
         for sd in (-1,1):
@@ -83,7 +91,7 @@ def D():
                 for x in (CX+sd*4,CX+sd*5): cv.px(x,y,cam[2])
         for y in range(30,32): pass
     return dict(body='slim',skin=sk,skin_s=sks,blush=H('#eba098'),lip=H('#d8707c'),
-      hair=H('#3a2418'),hair_hi=H('#5a4030'),hs='lpony',tail_end=21,fringe='jag',hp=None,
+      hair=H('#3a2418'),hair_hi=H('#5a4030'),hs='lpony',tail_end=11,fringe='jag',hp=None,
       bottom=dict(type='pants',base=cam[0],hi=cam[2],lo=cam[3],legfill=camo,flare=True,detail=pockets),
       shoe=blk,shoe_hi=H('#52525c'),
       sleeve=dict(long=False,base=gy['base'],hi=gy['hi'],lo=gy['lo'],cuff=gy['lo']),
