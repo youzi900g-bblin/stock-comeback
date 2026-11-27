@@ -177,7 +177,7 @@ def face_data():
 # 順序與 engine.build 的繪製順序一致，所以疊出來的結果與整張重畫逐格相同（有比對測試）。
 Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt': 23,
      'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80, 'headwear': 90,
-     'bag_back': 36, 'jarms': 45, 'bracelet': 47, 'jacket': 55, 'bag_front': 57, 'necklace': 65, 'earring': 85}
+     'bag_back': 15, 'jarms': 45, 'bracelet': 47, 'jacket': 55, 'bag_front': 57, 'necklace': 65, 'earring': 85}
 # 可換色的色名 → 標記色（引擎跑一遍後，由標記色反查是哪個色名；邊線色由標記色推得）
 MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7),
         'hw': (250, 250, 3), 'hw_hi': (250, 250, 9), 'hw_lo': (250, 250, 15),

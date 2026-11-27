@@ -179,6 +179,13 @@ def build(P,want_log=False):
         wv=lambda y: ((0,1,2,1)[(y//2)%4] if P.get('wave') and y>=12 else 0)   # 波浪：下半段每 8 格一個起伏，最寬多 2 格
         for y in range(5,30): sp[y]=(CX-7-wv(y),CX+7+wv(y)) if y<16 else ((CX-6-wv(y),CX+6+wv(y)) if y<27 else (CX-5-wv(y),CX+5+wv(y)))
         cv.paint(rows_mask(sp),hair)
+    # --- 包包（身後的部分）：在褲子、裙子與手臂之下，所以腰部以下由褲子直接接上衣服
+    cv.L='bag_back'
+    bg=P.get('bag')
+    if bg and bg['kind']=='pack':   # 後背包的背面：圓頂從肩膀後方探出，頂部加一個提把
+        cv.paint(rows_mask({16:(CX-2,CX+2),17:(CX-4,CX+4),**{y:(CX-5,CX+5) for y in range(18,30)},30:(CX-4,CX+4),31:(CX-4,CX+4)}),bg['base'],base=bg['base'])
+        for x in range(CX-3,CX): cv.px(x,17,bg['hi'])
+        for x in range(CX-1,CX+2): cv.px(x,15,bg['lo'])
     # --- legs/bottom/shoes
     ytop=30
     legL=lambda: (CX-1-L,CX-2); legR=lambda:(CX+2,CX+1+L)
@@ -245,13 +252,6 @@ def build(P,want_log=False):
     cv.L='hood'
     if P.get('hood'):
         cv.paint(mask_poly('ell',[CX-nw-4,15,CX+nw+4,21]),P['hood'])
-    # --- 包包（身後的部分）
-    cv.L='bag_back'
-    bg=P.get('bag')
-    if bg and bg['kind']=='pack':   # 後背包的背面：圓頂從肩膀後方探出，頂部加一個提把
-        cv.paint(rows_mask({16:(CX-2,CX+2),17:(CX-4,CX+4),**{y:(CX-5,CX+5) for y in range(18,32)}}),bg['base'],base=bg['base'])
-        for x in range(CX-3,CX): cv.px(x,17,bg['hi'])
-        for x in range(CX-1,CX+2): cv.px(x,15,bg['lo'])
     # --- sleeves / arms / hands
     cv.L='arms'
     for side in (-1,1):
