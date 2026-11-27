@@ -118,7 +118,7 @@ body.contrast .btn.alt { background: #fff; }
 .primary-bar .btn { pointer-events: auto; min-height: 56px; padding: 6px 24px; }
 
 /* 首頁 */
-.room { width: 100%; display: block; border-bottom: 2px solid var(--line); }
+.room { width: 100%; height: auto; aspect-ratio: 832 / 576; display: block; border-bottom: 2px solid var(--line); }
 .me { display: flex; gap: 12px; align-items: center; }
 .muted { color: var(--muted); }
 
