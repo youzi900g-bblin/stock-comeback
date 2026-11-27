@@ -1,18 +1,24 @@
-"""玩家角色：用與 NPC 相同的引擎（engine.py）產生，輸出透明背景 PNG。
+"""玩家角色：用與 NPC 相同的引擎（engine.py）產生。
 
 規則出處：docs/系統設計.md「八-1、角色美術規格」、docs/美術製作指南.md。
-輸出：art/player/<髮型>_<膚色>.png，髮型與膚色的 id 要與 config.js 一致。
+輸出（art/player/）：
+  <髮型>_<膚色>_<上衣>_<下身>.png  身體底圖（27×53 格、1 格 1 像素、透明背景、不含五官；網頁以整數倍放大）
+  face.js                          五官格子與各髮色膚色組合的顏色，網頁用 SVG 疊在底圖上
+id 要與 config.js 的 HAIR_STYLES / SKIN_TONES / TOPS / BOTTOMS / EYES / MOUTHS 一致。
+體型固定為中等（不開放玩家改，避免衣服要跟著改版）。
 
-【佔位】髮色、預設服裝（白 T 加牛仔褲）、體型（中等）、五官（一般眼、2 格嘴）
-都是第一階段的暫定值，尚未決定。
+【佔位】髮色、衣服配色、五官樣式都是暫定值，尚未決定。
 """
-import os
-from engine import H, build, render_rgba
+import json, os
+from engine import H, CX, build, face_cells, face_colors, render_rgba
 
 # 與 config.js 的 SKIN_TONES 同色（網頁的膚色選鈕用 config.js；改色要兩邊一起改）
 SKIN_TONES = {'s1': '#f1cfb4', 's2': '#e3b38e', 's3': '#c68b62', 's4': '#8a5838', 's5': '#5f3b25'}
-# id 與 config.js 的 HAIR_STYLES 一致；hs 是 engine.py 的髮型名稱。髮色為【佔位值】
-HAIR = {'bob': ('bob', '#4a3426'), 'long': ('long', '#2a2230'), 'buns': ('puffs', '#2f2420')}
+# hs 是 engine.py 的髮型名稱；髮色為【佔位值】
+HAIR = {'bob': ('bob', '#4a3426'), 'long': ('long', '#2a2230'), 'buns': ('puffs', '#2f2420'),
+        'short': ('short', '#3a2c26'), 'twin': ('twin', '#5a3a2a')}
+EYES = ('closed', 'normal', 'big')
+MOUTHS = ('small', 'mid', 'wide')
 
 def _w(sk):
     """膚色的淺深權重：0＝深膚色，1＝淺膚色（與 engine 雀斑的算法相同）。"""
@@ -35,24 +41,76 @@ def skin_colors(sk):
     blush = _mul(sk, _lerp((168/138, 76/88, 68/56), (236/246, 144/216, 144/200), w))
     return shade, lip, blush
 
-def hi_of(c):
-    return tuple(min(255, int(v*1.28)+8) for v in c)
+def hi_of(c): return tuple(min(255, int(v*1.28)+8) for v in c)
+def lo_of(c): return tuple(int(v*0.72) for v in c)
+def tone(hexc):
+    b = H(hexc); return dict(base=b, hi=hi_of(b), lo=lo_of(b))
 
-def player(hair_id, skin_id):
+def _stripe(t):
+    return lambda x, y: t['hi'] if y % 4 < 2 else t['base']
+
+def _top(tid):
+    if tid == 'white':  t = tone('#f4f1ea'); return dict(top=t, sleeve=dict(long=False, **t), torso_hem=30)
+    if tid == 'black':  t = tone('#2b2b30'); return dict(top=t, sleeve=dict(long=False, **t), torso_hem=30)
+    if tid == 'stripe':
+        t = tone('#9db7d6'); f = _stripe(dict(base=t['base'], hi=H('#f4f1ea')))
+        return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=f, **t), torso_hem=30)
+    if tid == 'hoodie':
+        t = tone('#e3b93c'); return dict(top=t, sleeve=dict(long=True, cuff=t['lo'], **t), torso_hem=31, hood=t['base'])
+    raise KeyError(tid)
+
+def _bottom(bid):
+    if bid in ('jeans', 'track'):
+        t = tone({'jeans': '#5f7fa8', 'track': '#4d4f58'}[bid]); return dict(type='pants', **t)
+    if bid == 'pleat':
+        t = tone('#d98aa6')
+        return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else (t['hi'] if y < 33 else t['base']),
+                    skirt_end=37, flare=2, legL=3, skin_y0=36)
+    raise KeyError(bid)
+
+TOPS = ('white', 'black', 'stripe', 'hoodie')
+BOTTOMS = ('jeans', 'track', 'pleat')
+
+def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True):
     sk = H(SKIN_TONES[skin_id]); hs, hc = HAIR[hair_id]; hair = H(hc)
     shade, lip, blush = skin_colors(sk)
-    tee = dict(base=H('#ece8e0'), hi=H('#f8f4ec'), lo=H('#c4c0b8'))
-    jeans = dict(base=H('#6c8bb3'), hi=H('#94b0d4'), lo=H('#4a6590'))
-    return dict(body='medium', skin=sk, skin_s=shade, blush=blush, lip=lip,
+    P = dict(body='medium', skin=sk, skin_s=shade, blush=blush, lip=lip,
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
-        bottom=dict(type='pants', **jeans), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'),
-        sleeve=dict(long=False, base=tee['base'], hi=tee['hi'], lo=tee['lo']),
-        top=tee, torso_hem=30, torso_len=0,
-        iris=H('#3a2a28'), eyes='normal', mouth='mid')
+        bottom=_bottom(bottom), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'), torso_len=0,
+        iris=H('#3a2a28'), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
+        nofeatures=not features)
+    P.update(_top(top))
+    return P
 
-def build_all(out_dir, scale=8):
-    d = os.path.join(out_dir, 'player'); os.makedirs(d, exist_ok=True)
+def _hex(c): return '#%02x%02x%02x' % tuple(int(v) for v in c)
+
+def face_data():
+    """五官格子（只含位置與色名）與每個髮型×膚色的顏色表。"""
+    geo = {}
+    for k, kw in (('eyes', EYES), ('mouth', MOUTHS)):
+        for v in kw:
+            # 只取該選項新增或不同的格子：眼睛只留 y<=11 且非腮紅，嘴只留 y==13
+            pick = (lambda c: c[2] in ('brow', 'white', 'iris')) if k == 'eyes' else (lambda c: c[2] == 'lip')
+            geo.setdefault(k, {})[v] = [list(c) for c in face_cells(player('bob', 's1', **{k: v})) if pick(c)]
+    allc = face_cells(player('bob', 's1', freckles=True))
+    geo['blush'] = [list(c) for c in allc if c[2] in ('blush', 'nose')]
+    geo['freckles'] = [list(c) for c in allc if c[2] == 'freckle']
+    colors = {}
     for h in HAIR:
         for s in SKIN_TONES:
-            render_rgba(build(player(h, s)), scale).save(os.path.join(d, f'{h}_{s}.png'))
+            P = player(h, s, freckles=True)
+            colors[f'{h}_{s}'] = {k: _hex(v) for k, v in face_colors(P).items()}
+    return dict(geo=geo, colors=colors)
+
+def build_all(out_dir, scale=1):
+    d = os.path.join(out_dir, 'player'); os.makedirs(d, exist_ok=True)
+    for f in os.listdir(d):
+        if f.endswith('.png'): os.remove(os.path.join(d, f))
+    for h in HAIR:
+        for s in SKIN_TONES:
+            for t in TOPS:
+                for b in BOTTOMS:
+                    render_rgba(build(player(h, s, t, b, features=False)), scale).save(os.path.join(d, f'{h}_{s}_{t}_{b}.png'))
+    with open(os.path.join(d, 'face.js'), 'w') as f:
+        f.write('window.PLAYER_FACE=' + json.dumps(face_data(), separators=(',', ':')) + ';\n')
     return d

@@ -38,7 +38,21 @@ const CONFIG = {
     { id: "bob", name: "短鮑伯" },
     { id: "long", name: "長直髮" },
     { id: "buns", name: "丸子頭" },
+    { id: "short", name: "短髮" },
+    { id: "twin", name: "雙馬尾" },
   ],
+  // 上衣、下身、五官：id 要與 tools/pixel_art/player.py 一致；名稱與配色取自基本款【佔位】。體型固定為中等，不開放選擇
+  TOPS: [
+    { id: "white", name: "白 T 恤" }, { id: "black", name: "黑 T 恤" },
+    { id: "stripe", name: "條紋 T 恤" }, { id: "hoodie", name: "連帽 T" },
+  ],
+  BOTTOMS: [
+    { id: "jeans", name: "牛仔褲" }, { id: "track", name: "運動長褲" }, { id: "pleat", name: "百褶裙" },
+  ],
+  EYES: [{ id: "closed", name: "瞇眼" }, { id: "normal", name: "一般" }, { id: "big", name: "大眼" }],
+  MOUTHS: [{ id: "small", name: "小嘴" }, { id: "mid", name: "一般" }, { id: "wide", name: "大嘴" }],
+  FRECKLES: [{ id: "off", name: "無" }, { id: "on", name: "有" }],
+  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off" },
   // 膚色：選鈕的顏色，要與 tools/pixel_art/player.py 的 SKIN_TONES 一致【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
   // 玩家圖由 tools/pixel_art/player.py 產生；髮色與預設服裝也定義在那裡（皆為佔位）
   SKIN_TONES: [

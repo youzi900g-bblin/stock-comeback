@@ -31,6 +31,35 @@ def diag(base,hi,lo,y0,k=0.6):
         v=(x-CX)-(y-y0)*k
         return hi if v>1 else (lo if v<-3 else base)
     return f
+def face_colors(P):
+    sk=P['skin']; fc=P.get('freckles')
+    if fc=='auto':
+        lum=0.3*sk[0]+0.59*sk[1]+0.11*sk[2]
+        w=max(0.0,min(1.0,(lum-110)/(190-110)))   # 0=深膚色 1=淺膚色
+        pink=(190,100,104); dark=(110,56,34)
+        br=tuple(dark[k]*(1-w)+pink[k]*w for k in range(3))
+        t=0.26-0.02*w
+        fc=tuple(int(sk[k]*(1-t)+br[k]*t) for k in range(3))
+    return dict(brow=P['hair'],white=WHITE,iris=P['iris'],blush=P['blush'],nose=P.get('nose',P['skin_s']),freckle=fc,lip=P['lip'])
+def face_cells(P):
+    """五官的格子清單 [(x,y,色名)]，依繪製順序（後面蓋前面）。"""
+    out=[]; ey=P['eyes']
+    for sd in (-1,1):
+        o=CX+sd*3; i2=CX+sd*2
+        wc,dc=(o,i2) if sd==-1 else (i2,o)
+        if ey=='closed': out+=[(o,10,'brow'),(i2,10,'brow')]
+        else:
+            out+=[(wc,9,'brow'),(dc,9,'brow'),(wc,10,'white'),(dc,10,'iris')]
+            if ey=='big': out+=[(wc,11,'white'),(dc,11,'iris')]
+        if not P.get('no_blush'): out+=[(CX+sd*3,12,'blush'),(CX+sd*4,12,'blush')]
+    out.append((CX,12,'nose'))
+    if P.get('freckles'):
+        out+=[(x,y,'freckle') for (x,y) in [(CX-3,11),(CX-1,11),(CX-2,12),(CX+3,11),(CX+1,11),(CX+2,12)]]
+    m=P['mouth']
+    if m=='small': out.append((CX,13,'lip'))
+    elif m=='mid': out+=[(CX,13,'lip'),(CX+1,13,'lip')]
+    elif m=='wide': out+=[(CX-1,13,'lip'),(CX,13,'lip'),(CX+1,13,'lip')]
+    return out
 def build(P):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
@@ -46,6 +75,12 @@ def build(P):
         sp={}
         for y in range(5,18): sp[y]=(CX-7,CX+7) if y<15 else (CX-6,CX+6)
         cv.paint(rows_mask(sp),hair)
+    elif P['hs']=='short':
+        cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
+    elif P['hs']=='twin':
+        cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
+        cv.paint(mask_poly('ell',[CX-11,8,CX-7,24]),hair)
+        cv.paint(mask_poly('ell',[CX+7,8,CX+11,24]),hair)
     elif P['hs']=='long':
         sp={}
         for y in range(5,30): sp[y]=(CX-7,CX+7) if y<16 else ((CX-6,CX+6) if y<27 else (CX-5,CX+5))
@@ -105,14 +140,14 @@ def build(P):
     for side in (-1,1):
         cv.paint(arm_cells(side,20,31),sk,base=sk,warm=True)   # bare arm
         sleeve_end=31 if sl['long'] else 24
-        cv.paint(arm_cells(side,20,sleeve_end),diag(sl['base'],sl['hi'],sl['lo'],20),base=sl['base'])
+        cv.paint(arm_cells(side,20,sleeve_end),sl.get('fill') or diag(sl['base'],sl['hi'],sl['lo'],20),base=sl['base'])
         if sl.get('cuff'):
             cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'])
         hy=arm_cells(side,32,34)
         cv.paint(hy,sk,base=sk,warm=True)
     # --- torso
     tb=P['top']; hem=P['torso_hem']
-    cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
+    cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),tb.get('fill') or diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
     if 'detail' in P: P['detail'](cv,tw,hem)
     # --- neck
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
@@ -143,6 +178,15 @@ def build(P):
         if P.get('hp'):
             cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(P['hp'][0],P['hp'][1],P['hp'][0],0,0.2),base=P['hp'][0])
             cv.px(CX-1,-1+1,P['hp'][2])
+    elif P['hs'] in ('short','twin'):
+        m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=6}
+        for y,(a,b2) in {7:(CX-fw,CX+1),8:(CX-fw,CX-1),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
+        m|={(CX+fw+2,y) for y in range(7,11)}|{(CX-fw-2,y) for y in range(7,11)}
+        cv.paint(m,hair)
+        for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,8),(CX+5,8)]: cv.px(x,y,hh)
+        if P['hs']=='twin':
+            for sd in (-1,1):
+                for dy in (0,1): cv.px(CX+sd*(fw+3),8+dy,hh)
     elif P['hs']=='long':
         m={(x,y) for y in range(3,8) for x in range(CX-fw-2,CX+fw+3)}
         m|={(x,y) for y in range(3,5) for x in range(CX-fw,CX+fw+1)}
@@ -158,38 +202,10 @@ def build(P):
             for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,bw)
             cv.px(CX+4,4,bk)
             cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
-    # --- face features
-    iris=P['iris']; ey=P['eyes']; hc=P['hair']
-    for sd in (-1,1):
-        o=CX+sd*3; i2=CX+sd*2
-        wc,dc=(o,i2) if sd==-1 else (i2,o)
-        if ey=='closed':
-            cv.px(o,10,hc);cv.px(i2,10,hc)
-        else:
-            cv.px(wc,9,hc);cv.px(dc,9,hc)
-            cv.px(wc,10,WHITE);cv.px(dc,10,iris)
-            if ey=='big':
-                cv.px(wc,11,WHITE);cv.px(dc,11,iris)
-        if not P.get('no_blush'):
-            cv.px(CX+sd*3,12,blush)
-            cv.px(CX+sd*4,12,blush)
-    cv.px(CX,12,P.get('nose',sks))
-    if P.get('freckles'):
-        fc=P['freckles']
-        if fc=='auto':
-            lum=0.3*sk[0]+0.59*sk[1]+0.11*sk[2]
-            w=max(0.0,min(1.0,(lum-110)/(190-110)))   # 0=深膚色 1=淺膚色
-            pink=(190,100,104); dark=(110,56,34)
-            br=tuple(dark[k]*(1-w)+pink[k]*w for k in range(3))
-            t=0.26-0.02*w
-            fc=tuple(int(sk[k]*(1-t)+br[k]*t) for k in range(3))
-        P=dict(P,freckles=fc)
-        for (x,y) in [(CX-3,11),(CX-1,11),(CX-2,12),(CX+3,11),(CX+1,11),(CX+2,12)]: cv.px(x,y,P['freckles'])
-    m=P['mouth']
-    if m=='small': cv.px(CX,13,lip)
-    elif m=='mid': cv.px(CX,13,lip);cv.px(CX+1,13,lip)
-    elif m=='wide':
-        for x in (CX-1,CX,CX+1): cv.px(x,13,lip)
+    # --- face features（與 face_cells 共用，確保遊戲內疊圖與整張圖一致）
+    if not P.get('nofeatures'):
+        cols=face_colors(P)
+        for (x,y,r) in face_cells(P): cv.px(x,y,cols[r])
     return cv.c
 OUTL=H('#2a1c26')
 def render(c,S=8,box=None):

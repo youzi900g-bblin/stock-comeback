@@ -6,7 +6,7 @@ import os
 
 def build_room(out_dir):
 
-    W,Hh=104,72
+    W,Hh=104,96
     im=Image.new("RGB",(W,Hh),H('#c8b8d8')); d=ImageDraw.Draw(im)
     def R(x0,y0,x1,y1,f,o=None):
         if o is not None:

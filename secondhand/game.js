@@ -13,7 +13,7 @@
   let modal = null;    // {type, ...}
   let toast = "";
   let flashMoney = false;
-  let draft = { name: "", hair: C.HAIR_STYLES[0].id, skin: C.SKIN_TONES[1].id };
+  let draft = { name: "", hair: C.HAIR_STYLES[0].id, skin: C.SKIN_TONES[1].id, ...C.DEFAULT_LOOK };
 
   function load() {
     try {
@@ -75,7 +75,13 @@
   // ---------- 工具 ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // 玩家圖由 tools/pixel_art/player.py 產生（與 NPC 同一套引擎）
-  const sprite = (p) => `<img class="sprite" src="art/player/${p.hair}_${p.skin}.png" alt="${esc(p.name || "你的角色")}" width="216" height="424">`;
+  // 玩家圖：身體底圖（art/player/）加上用 SVG 疊的五官格子（art/player/face.js），27×53 格
+  const sprite = (p) => {
+    const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
+    const cells = [...F.geo.eyes[q.eyes], ...F.geo.blush, ...(q.freckles === "on" ? F.geo.freckles : []), ...F.geo.mouth[q.mouth]]
+      .map(([x, y, r]) => `<rect x="${x}" y="${y}" width="1" height="1" fill="${col[r]}"/>`).join("");
+    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}"><image href="art/player/${q.hair}_${q.skin}_${q.top}_${q.bottom}.png" width="27" height="53"/>${cells}</svg>`;
+  };
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
   // ---------- 畫面 ----------
@@ -143,16 +149,18 @@
   }
 
   function createView() {
-    const hairs = C.HAIR_STYLES.map((h) => `<button class="opt ${draft.hair === h.id ? "on" : ""}" aria-pressed="${draft.hair === h.id}" data-hair="${h.id}">${h.name}</button>`).join("");
-    const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" aria-pressed="${draft.skin === s.id}" data-skin="${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
+    const group = (key, label, list) => `<div class="field"><span class="lab">${label}</span><div class="opts">${list.map((o) => `<button class="opt ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}">${o.name}</button>`).join("")}</div></div>`;
+    const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" aria-pressed="${draft.skin === s.id}" data-look="skin:${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
     const ok = !!draft.name.trim();
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
       <div class="win"><h2>創角</h2><div class="body">
         <p class="muted" style="margin-top:0">你愛買衣服，衣櫃早就塞不下了。先決定自己的樣子。</p>
-        <div class="preview">${sprite({ hair: draft.hair, skin: draft.skin })}</div>
+        <div class="preview">${sprite(draft)}</div>
         <div class="field"><label for="nm">名字</label><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"></div>
-        <div class="field"><span class="lab">髮型</span><div class="opts">${hairs}</div></div>
+        ${group("hair", "髮型", C.HAIR_STYLES)}
         <div class="field"><span class="lab">膚色</span><div class="opts">${skins}</div></div>
+        ${group("eyes", "眼睛", C.EYES)}${group("mouth", "嘴巴", C.MOUTHS)}${group("freckles", "雀斑", C.FRECKLES)}
+        ${group("top", "上衣", C.TOPS)}${group("bottom", "下身", C.BOTTOMS)}
         <button class="btn block" id="start" ${ok ? "" : "disabled"}>開始</button>
         <p class="why" id="why" ${ok ? "hidden" : ""}>請先輸入名字。</p>
       </div></div>`;
@@ -161,7 +169,7 @@
   function homeView() {
     const stale = staleListings().length;
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="576">
+    return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="768">
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(S.player)}
         <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
@@ -287,11 +295,10 @@
         const ok = !!nm.value.trim();
         $("#start").disabled = !ok; $("#why").hidden = ok;
       });
-      all("[data-hair]", (b) => b.onclick = () => { draft.hair = b.dataset.hair; render(); });
-      all("[data-skin]", (b) => b.onclick = () => { draft.skin = b.dataset.skin; render(); });
+      all("[data-look]", (b) => b.onclick = () => { const [k, v] = b.dataset.look.split(":"); draft[k] = v; render(); });
       $("#start").onclick = () => {
         if (!draft.name.trim()) return;
-        S = newGame({ name: draft.name.trim(), hair: draft.hair, skin: draft.skin });
+        S = newGame({ ...draft, name: draft.name.trim() });
         view = "home"; save(); render();
       };
       return;

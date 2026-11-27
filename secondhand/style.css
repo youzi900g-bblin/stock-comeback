@@ -118,12 +118,13 @@ body.contrast .btn.alt { background: #fff; }
 .primary-bar .btn { pointer-events: auto; min-height: 56px; padding: 6px 24px; }
 
 /* 首頁 */
-.room { width: 100%; height: auto; aspect-ratio: 832 / 576; display: block; border-bottom: 2px solid var(--line); }
+.room { width: 100%; height: auto; aspect-ratio: 832 / 768; display: block; border-bottom: 2px solid var(--line); }
 .me { display: flex; gap: 12px; align-items: center; }
 .muted { color: var(--muted); }
 
-/* 玩家角色：art/player/ 的像素圖（27×53 格，以 8 倍輸出）。顯示尺寸取 8 倍圖的 1/4（2 倍）與 1/2（4 倍），皆為整數比例。 */
-.sprite { image-rendering: pixelated; display: block; }
+/* 玩家角色：art/player/ 的像素圖（27×53 格）。顯示尺寸為整數倍：2 倍（54×106）、3 倍（81×159）。 */
+.sprite { image-rendering: pixelated; shape-rendering: crispEdges; display: block; }
+.sprite image { image-rendering: pixelated; }
 .me .sprite { width: 54px; height: 106px; flex: none; }
 
 /* 創角 */
@@ -141,8 +142,8 @@ body.contrast .btn.alt { background: #fff; }
 .opt.on { background: var(--accent); color: #fff; border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 .swatch { width: 48px; height: 48px; padding: 0; }
 .swatch.on { outline: 3px solid var(--accent); outline-offset: 2px; }
-.preview { display: flex; justify-content: center; background: #e8e1f0; padding: 8px 0; }
-.preview .sprite { width: 108px; height: 212px; }
+.preview { display: flex; justify-content: center; background: #e8e1f0; padding: 8px 0; position: sticky; top: 46px; z-index: 4; border-bottom: 2px solid var(--line); }
+.preview .sprite { width: 81px; height: 159px; }
 
 /* 衣櫃與賣場 */
 .tabs { display: flex; gap: 6px; padding: 12px 12px 0; overflow-x: auto; }
