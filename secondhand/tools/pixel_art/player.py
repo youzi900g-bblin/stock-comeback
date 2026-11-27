@@ -121,8 +121,8 @@ def face_data():
                     if edge and rnd and y in (8, 12) and dx in (1, 5): continue
                     if edge: out.append([CX + sd*dx, y, frame])
                     else: out.append([CX + sd*dx, y, lens])
-            out.append([CX + sd*4, 9, glint])
-        return out + [[CX, 9, frame]]
+        # 反光不對稱：兩片鏡片的亮點都在右上，光源方向一致
+        return out + [[CX, 9, frame], [CX+4, 9, glint], [CX-2, 9, glint]]
     geo['glasses'] = dict(
         round=glasses('#7a4a2a', '#d8ecf8a0', True, '#ffffffd0'),
         square=glasses('#5a5470', '#d8ecf8a0', False, '#ffffffd0'),
@@ -130,8 +130,8 @@ def face_data():
         gold=glasses('#e0b040', '#f8f0d070', True, '#ffffffd0'),
         pink=glasses('#f080b0', '#f8d8ec80', True, '#ffffffd0'),
         sun=glasses('#6a6488', '#34304a', False, '#a8a8d0') +
-            # 墨鏡反光：每片鏡片一道斜線（亮→暗三格）加一個小亮點
-            [c for sd in (-1, 1) for c in ([CX+sd*4, 9, '#e4e4ff'], [CX+sd*3, 10, '#a8a8e0'], [CX+sd*2, 11, '#6a6aa0'], [CX+sd*4, 11, '#5a5a90'])])
+            # 墨鏡反光：每片鏡片同方向（右上亮、左下暗）一道斜線加一個小亮點
+            [c for dx in (0, -6) for c in ([CX+4+dx, 9, '#e4e4ff'], [CX+3+dx, 10, '#a8a8e0'], [CX+2+dx, 11, '#6a6aa0'], [CX+4+dx, 11, '#5a5a90'])])
     return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
 COLS = 20
