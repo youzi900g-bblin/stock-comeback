@@ -110,18 +110,26 @@ def face_data():
         for k in HEADWEAR:
             cur = build(player(h, 's1', features=False, hw=k))
             hw[f'{h}_{k}'] = [[x, y, _hex(cur[y][x])] for y in range(len(cur)) for x in range(len(cur[0])) if cur[y][x] != ref[y][x]]
-    # 眼鏡：畫在五官之上；鏡框圍住眼睛（x 為 CX±1..±4、y 8..11），墨鏡把鏡片填滿
-    fr, ln = '#8a5a7a', '#2a2430'
-    def box(corners, fill):
+    # 眼鏡：畫在五官之上。鏡框 1 格寬、左右對稱，圍住眼睛（x 為 CX±1..±5、y 8..12）；
+    # 鏡片填半透明淺色並留 1 格反光，才不會在黑髮或深膚色上糊掉。圓框去掉四個角。
+    def glasses(frame, lens, rnd, glint, opaque=False):
         out = []
         for sd in (-1, 1):
-            for y in range(8, 12):
-                for dx in range(1, 5):
-                    edge = y in (8, 11) or dx in (1, 4)
-                    corner = y in (8, 11) and dx in (1, 4)
-                    if fill or (edge and (corners or not corner)): out.append([CX + sd*dx, y, ln if fill else fr])
-        return out + [[CX, 9, fr]]
-    geo['glasses'] = dict(round=box(False, False), square=box(True, False), sun=box(True, True))
+            for y in range(8, 13):
+                for dx in range(1, 6):
+                    edge = y in (8, 12) or dx in (1, 5)
+                    if edge and rnd and y in (8, 12) and dx in (1, 5): continue
+                    if edge: out.append([CX + sd*dx, y, frame])
+                    else: out.append([CX + sd*dx, y, lens])
+            out.append([CX + sd*4, 9, glint])
+        return out + [[CX, 9, frame]]
+    geo['glasses'] = dict(
+        round=glasses('#7a4a2a', '#d8ecf8a0', True, '#ffffffd0'),
+        square=glasses('#5a5470', '#d8ecf8a0', False, '#ffffffd0'),
+        rimless=glasses('#b8d4e8', '#d8ecf860', True, '#ffffffd0'),
+        gold=glasses('#e0b040', '#f8f0d070', True, '#ffffffd0'),
+        pink=glasses('#f080b0', '#f8d8ec80', True, '#ffffffd0'),
+        sun=glasses('#6a6488', '#34304a', False, '#a8a8d0'))
     return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
 
 COLS = 20
