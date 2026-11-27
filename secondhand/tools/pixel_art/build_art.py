@@ -5,7 +5,7 @@
 """
 import os, sys
 from PIL import Image
-from engine import H, BG, render, build
+from engine import H, BG, render, render_rgba, build
 from characters import A, B, C, D
 import room
 import scenes
@@ -38,6 +38,7 @@ chars = (A, B, C)
 sheet([render(build(f()), 8) for f in chars]).save(os.path.join(OUT, '三位角色.png'))
 # 林（作者彩蛋 NPC，單獨輸出，不影響前三位的圖）
 render(build(D()), 8).save(os.path.join(OUT, '林.png'))
+render_rgba(build(D()), 8).save(os.path.join(OUT, '林_透明.png'))   # 遊戲內疊在場景上用
 # 三張臉
 sheet([head(f()) for f in chars]).save(os.path.join(OUT, '三個臉.png'))
 # 3x3 眼睛與嘴巴

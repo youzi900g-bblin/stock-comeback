@@ -207,7 +207,10 @@
     const stale = staleListings().length;
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
     const tidy = S.wardrobe.length <= C.TIDY_AT;
-    return `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">
+    const roomImg = `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">`;
+    // 林（作者彩蛋）：預覽用，網址加 ?draft 才出現
+    const roomHtml = DRAFT_MODE ? `<div class="roomwrap">${roomImg}<img class="lin" src="art/林_透明.png" alt="林" width="216" height="424"></div>` : roomImg;
+    return `${roomHtml}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(S.player)}
         <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
