@@ -57,3 +57,34 @@ def C():
       sleeve=dict(long=True,base=lil['base'],hi=lil['hi'],lo=lil['lo'],cuff=H('#f4f0ec')),
       top=lil,torso_hem=29,torso_len=0,detail=det,
       iris=H('#2a2430'),eyes='closed',mouth='small')
+def D():
+    """林（作者彩蛋）：纖瘦、齊瀏海、斜肩灰白上衣、迷彩喇叭工作褲、黑平底鞋。
+    色碼皆為【佔位色】。"""
+    sk=H('#f0d0b0'); sks=H('#d8a888')
+    gy=dict(base=H('#dcdee0'),hi=H('#f0f1f2'),lo=H('#aeb2b8'))
+    blk=H('#2a2a30'); silver=H('#c8ccd4')
+    cam=[H('#4a4030'),H('#3a3226'),H('#5a5238'),H('#2c261e')]
+    def camo(x,y):
+        v=(x*7+y*13+(x*y)%5)%11
+        return cam[0] if v<4 else (cam[1] if v<7 else (cam[2] if v<9 else cam[3]))
+    def det(cv,tw,hem):
+        for x in range(CX-tw,CX-1): cv.px(x,19,sk)            # 左肩露出（畫面左側）
+        cv.px(CX-tw,20,sk)
+        cv.px(CX-tw+1,19,blk);cv.px(CX-tw+1,20,blk)          # 黑色蕾絲細肩帶
+        for i,x in enumerate(range(CX-2,CX+4)): cv.px(x,19+i//2+1,blk)  # 斜領黑滾邊
+        for x in range(CX-tw,CX+tw+1): cv.px(x,hem,gy['lo'])  # 下擺陰影
+        cv.px(CX+1,24,H('#8a5a38'))                          # 胸前小徽章
+        for y in (21,22,23): cv.px(CX-2,y,blk) if False else None
+        for y in (12,13,14): cv.px(CX-5,y,silver)             # 垂墜耳環
+    def pockets(cv):
+        for sd in (-1,1):
+            for y in (36,37,38):
+                for x in (CX+sd*4,CX+sd*5): cv.px(x,y,cam[2])
+        for y in range(30,32): pass
+    return dict(body='slim',skin=sk,skin_s=sks,blush=H('#eba098'),lip=H('#d8707c'),
+      hair=H('#3a2418'),hair_hi=H('#5a4030'),hs='lpony',fringe='jag',hp=None,
+      bottom=dict(type='pants',base=cam[0],hi=cam[2],lo=cam[3],legfill=camo,flare=True,detail=pockets),
+      shoe=blk,shoe_hi=H('#52525c'),
+      sleeve=dict(long=False,base=gy['base'],hi=gy['hi'],lo=gy['lo'],cuff=gy['lo']),
+      top=gy,torso_hem=30,torso_len=0,detail=det,
+      iris=H('#2a1c1c'),eyes='normal',mouth='mid')
