@@ -153,11 +153,12 @@ def draw_shoes(cv,P,x0,x1,pants=False):
         for x in range(x0,x1+1): cv.px(x,44,hi)                       # 上緣反摺
         for x in range(x0-1,x1+2): cv.px(x,50,hi)                     # 鞋跟與厚底（深色兩列）
         cv.px(x0-1,51,hi); cv.px(x1+1,51,hi)                          # 鞋跟兩角
-    elif st=='sandal':   # 涼鞋：中間露出皮膚的腳，只在兩側各有一條帶子（穿裙子或短褲時帶子往上到腳踝），底下一條細鞋底
-        top=49 if pants else 47
-        cv.paint(rows_mask({y:(x0,x1) for y in range(top,51)}),sk,base=sk,warm=True)   # 腳與小腿下段
-        cv.paint(rows_mask({51:(x0-1,x1+1)}),sh,base=sh)
-        for y in range(top,51): cv.px(x0,y,sh); cv.px(x1,y,sh)                         # 兩側帶子
+    elif st=='sandal':   # 涼鞋（橫向分層）：最上一條橫帶，中間露出皮膚，最下面是鞋面與鞋底
+        top=49 if pants else 48
+        cv.paint(rows_mask({y:(x0,x1) for y in range(top+1,51)}),sk,base=sk,warm=True)   # 中間的皮膚
+        cv.paint(rows_mask({top:(x0,x1)}),sh,base=sh)                                      # 腳背橫帶
+        cv.paint(rows_mask({51:(x0-1,x1+1)}),sh,base=sh)                                   # 鞋面與鞋底
+        for x in range(x0-1,x1+2): cv.px(x,51,hi) if (x-x0)%2==0 else None                 # 鞋底花紋
 
 def build(P,want_log=False):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
@@ -343,11 +344,9 @@ def build(P,want_log=False):
             cv.paint(rows_mask({y:(CX+5,CX+10) for y in range(31,40)}),bg['base'],base=bg['base'])
             for x in range(CX+5,CX+11): cv.px(x,31,bg['hi']); cv.px(x,39,bg['lo'])
         elif k=='pack':   # 後背包的肩帶：從肩頭越過手臂與身體的交界，沿身側下垂（上寬下窄），在腋下轉向身後
-            for sd in (-1,1):   # 肩帶從露出的背包頂部接下來，越過肩頭，沿身側下垂（上寬下窄），止於腋下；中間是背包本身的顏色，只有外緣一格暗色
-                for y in range(18,26):
-                    cv.px(CX+sd*3,y,bg['base']); cv.px(CX+sd*4,y,bg['base']); cv.px(CX+sd*5,y,bg['lo'])
-                for y in range(26,28):
-                    cv.px(CX+sd*4,y,bg['base']); cv.px(CX+sd*5,y,bg['lo'])
+            for sd in (-1,1):   # 肩帶：自動加邊線與肩膀、背包、衣服分開；中間是包包的顏色，外緣與下端有暗部
+                m={(CX+sd*dx,y) for y in range(18,26) for dx in (3,4,5)}|{(CX+sd*dx,y) for y in (26,27) for dx in (4,5)}
+                cv.paint(m,lambda x,y: bg['lo'] if (abs(x-CX)==5 or y>=26) else bg['base'],base=bg['base'])
     # --- neck
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
