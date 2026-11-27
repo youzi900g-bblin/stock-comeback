@@ -9,7 +9,7 @@ id 要與 config.js 的 HAIR_STYLES / SKIN_TONES / TOPS / BOTTOMS / EYES / MOUTH
 【佔位】髮色、衣服配色、五官樣式都是暫定值，尚未決定。
 """
 import json, os
-from engine import H, CX, build, face_cells, face_colors, render_rgba
+from engine import H, CX, dk, build, face_cells, face_colors, render_rgba
 
 # 與 config.js 的 SKIN_TONES 同色（網頁的膚色選鈕用 config.js；改色要兩邊一起改）
 SKIN_TONES = {'s1': '#f1cfb4', 's2': '#e3b38e', 's3': '#c68b62', 's4': '#8a5838', 's5': '#5f3b25'}
@@ -17,8 +17,9 @@ SKIN_TONES = {'s1': '#f1cfb4', 's2': '#e3b38e', 's3': '#c68b62', 's4': '#8a5838'
 HAIR = {'bob': 'bob', 'long': 'long', 'buns': 'puffs', 'short': 'short', 'twin': 'twin',
         'hpony': 'hpony', 'lpony': 'lpony', 'braids': 'braids', 'wavy': 'long', 'buzz': 'buzz'}
 # 髮色與頭飾色（id 與 config.js 的 HAIR_COLORS / HEADWEAR_COLORS 一致）【佔位色】
-# 新版劉海（樣品階段只有這三款，其餘髮型仍用舊劉海）
-FRINGE = {'bob': 'part', 'long': 'airy', 'short': 'sweep'}
+# 每款髮型各自的劉海（樣式見 engine.fringe_new）
+FRINGE = {'bob': 'part', 'long': 'airy', 'short': 'sweep', 'buns': 'mshape', 'twin': 'jag', 'hpony': 'sweepR',
+          'lpony': 'sidepart', 'braids': 'curtain', 'wavy': 'sidepart', 'buzz': 'buzzline'}
 HAIR_COLORS = {'black': '#2a2230', 'darkbrown': '#3a2418', 'brown': '#6a4a32', 'chestnut': '#8c3c2c',
                'blonde': '#d8b058', 'ginger': '#d06a28', 'pink': '#e878a8', 'violet': '#5a5ab8'}
 HW_COLORS = {'red': '#d83a3a', 'white': '#f4f1ea', 'black': '#2a2430', 'blue': '#3a5a8a', 'pink': '#f080b0', 'yellow': '#f8d838'}
@@ -85,7 +86,7 @@ def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
         bottom=_bottom(bottom), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'), torso_len=0,
         iris=H(IRIS[iris]), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
-        nofeatures=not features, no_blush=bool(freckles), wave=(hair_id == 'wavy'), fringe=FRINGE.get(hair_id))  # 有雀斑就不畫腮紅（美術規則）
+        nofeatures=not features, no_blush=bool(freckles), brow=dk(hair), wave=(hair_id == 'wavy'), fringe=FRINGE.get(hair_id))  # 有雀斑就不畫腮紅（美術規則）
     if hw: P['hw'] = dict(kind=hw, **tone(HW_COLORS[hw_color]))
     P.update(_top(top))
     return P

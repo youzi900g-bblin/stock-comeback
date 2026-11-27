@@ -43,7 +43,7 @@ def face_colors(P):
         br=tuple(dark[k]*(1-w)+pink[k]*w for k in range(3))
         t=0.26-0.02*w
         fc=tuple(int(sk[k]*(1-t)+br[k]*t) for k in range(3))
-    return dict(brow=P['hair'],white=WHITE,iris=P['iris'],blush=P['blush'],nose=P.get('nose',P['skin_s']),freckle=fc,lip=P['lip'])
+    return dict(brow=P.get('brow',P['hair']),white=WHITE,iris=P['iris'],blush=P['blush'],nose=P.get('nose',P['skin_s']),freckle=fc,lip=P['lip'])
 def face_cells(P):
     """五官的格子清單 [(x,y,色名)]，依繪製順序（後面蓋前面）。"""
     out=[]; ey=P['eyes']
@@ -105,6 +105,24 @@ def fringe_new(kind,fw,hh,sd):
     elif kind=='sweep':   # 斜劉海：三束大髮束由右上往左下掃，最長的一束落在左側
         rows={7:[(CX-5,CX+4)],8:[(CX-5,CX+1)],9:[(CX-5,CX-3)],10:[(CX-5,CX-4)]}
         hi=[(CX-1,7),(CX,7),(CX+1,7),(CX-3,8),(CX-2,8)]; seam=[(CX+2,7),(CX-1,8),(CX-3,9)]
+    elif kind=='sweepR':  # 斜劉海（朝右）：與 sweep 左右相反
+        rows={7:[(CX-4,CX+5)],8:[(CX-1,CX+5)],9:[(CX+3,CX+5)],10:[(CX+4,CX+5)]}
+        hi=[(CX-1,7),(CX,7),(CX+1,7),(CX+2,8),(CX+3,8)]; seam=[(CX-2,7),(CX+1,8),(CX+3,9)]
+    elif kind=='sidepart':  # 偏分：左邊短束、右邊一束大髮束斜垂
+        rows={7:[(CX-5,CX-2),(CX-1,CX+5)],8:[(CX-5,CX-4),(CX+1,CX+5)],9:[(CX+3,CX+5)]}
+        hi=[(CX+1,7),(CX+2,7),(CX+3,7),(CX-4,7)]; seam=[(CX-2,8),(CX+1,8)]
+    elif kind=='curtain':   # 窗簾劉海：中間分開得較寬，兩束往外微彎
+        rows={7:[(CX-5,CX-2),(CX+2,CX+5)],8:[(CX-5,CX-3),(CX+3,CX+5)],9:[(CX-5,CX-4),(CX+4,CX+5)]}
+        hi=[(CX-4,7),(CX-3,7),(CX+3,8),(CX+4,8)]; seam=[(CX-2,7),(CX+2,7)]
+    elif kind=='jag':       # 鋸齒齊劉海：整排髮束，底緣高低不齊
+        rows={7:[(CX-5,CX+5)],8:[(CX-4,CX-3),(CX,CX),(CX+3,CX+4)]}
+        hi=[(CX-3,7),(CX-2,7),(CX-1,7),(CX+3,7)]; seam=[(CX-2,8),(CX+1,8)]
+    elif kind=='mshape':    # 露額：髮際線中間高、兩側低（M 形）
+        rows={6:[(CX-5,CX-3),(CX+3,CX+5)],7:[(CX-5,CX-4),(CX+4,CX+5)]}
+        hi=[(CX-4,6),(CX+4,6)]; seam=[]
+    elif kind=='buzzline':  # 平頭：髮際線兩側往下一格，中間平整
+        rows={6:[(CX-5,CX-4),(CX+4,CX+5)],7:[(CX-5,CX-5),(CX+5,CX+5)]}
+        hi=[]; seam=[]
     cells={(x,y) for y,segs in rows.items() for (a,b) in segs for x in range(a,b+1)}
     return cells,hi,seam
 def build(P,want_log=False):
@@ -232,6 +250,7 @@ def build(P,want_log=False):
     if P['hs']=='puffs':
         m=mask_poly('ell',[CX-6,1,CX+6,13]); m={(x,y) for (x,y) in m if y<=5}
         m|={(CX-fw-2,y) for y in range(6,10)}|{(CX+fw+2,y) for y in range(6,10)}
+        if P.get('fringe'): m|=fringe_new(P['fringe'],fw,hh,None)[0]
         cv.paint(m,hair)
         for (x,y) in [(CX-9,4),(CX-7,6),(CX-8,8),(CX+8,4),(CX+7,7),(CX+9,6),(CX-2,3),(CX+3,3),(CX,2)]: cv.px(x,y,hh)
         if P.get('hp'):  # 頭飾可省略（hp=None 表示只有髮型）
@@ -259,6 +278,7 @@ def build(P,want_log=False):
     elif P['hs']=='buzz':
         m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=5}
         m|={(CX+fw+1,y) for y in range(6,9)}|{(CX-fw-1,y) for y in range(6,9)}
+        if P.get('fringe'): m|=fringe_new(P['fringe'],fw,hh,None)[0]
         cv.paint(m,hair)
         for (x,y) in [(CX-3,3),(CX+1,2),(CX+4,4),(CX-5,5)]: cv.px(x,y,hh)
     elif P['hs'] in ('short','twin','hpony','lpony','braids'):
