@@ -192,7 +192,7 @@ def build(P,want_log=False):
         cv.paint(mask_poly('ell',[CX+5,1,CX+10,18]),hair)
     elif P['hs']=='lpony':   # 低馬尾：馬尾落在右肩
         cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
-        cv.paint(mask_poly('ell',[CX+5,11,CX+9,29]),hair)
+        cv.paint(mask_poly('ell',[CX+5,11,CX+9,P.get('tail_end',29)]),hair)
     elif P['hs']=='braids':  # 麻花辮：後髮只有頭部，辮子畫在前層
         cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,16)}),hair)
     elif P['hs']=='buzz':    # 平頭：幾乎不露後髮

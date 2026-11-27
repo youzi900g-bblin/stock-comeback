@@ -68,10 +68,11 @@ def D():
         v=(x*7+y*13+(x*y)%5)%11
         return cam[0] if v<4 else (cam[1] if v<7 else (cam[2] if v<9 else cam[3]))
     def det(cv,tw,hem):
-        for x in range(CX-tw,CX-1): cv.px(x,19,sk)            # 左肩露出（畫面左側）
-        cv.px(CX-tw,20,sk)
-        cv.px(CX-tw+1,19,blk);cv.px(CX-tw+1,20,blk)          # 黑色蕾絲細肩帶
-        for i,x in enumerate(range(CX-2,CX+4)): cv.px(x,19+i//2+1,blk)  # 斜領黑滾邊
+        for y in (19,20,21):                                   # 右肩露出（畫面右側），左側維持衣服色
+            for x in range(CX+2+(y-19),CX+tw+1): cv.px(x,y,sk)
+        for y in (19,20,21,22): cv.px(CX+2,y,blk) if False else None
+        for y in (19,20): cv.px(CX+tw-1,y,blk);cv.px(CX+tw,y,blk)  # 黑色蕾絲細肩帶（兩格寬）
+        for i,x in enumerate(range(CX-3,CX+2)): cv.px(x,19+i//2+1,blk)  # 斜領黑滾邊
         for x in range(CX-tw,CX+tw+1): cv.px(x,hem,gy['lo'])  # 下擺陰影
         cv.px(CX+1,24,H('#8a5a38'))                          # 胸前小徽章
         for y in (21,22,23): cv.px(CX-2,y,blk) if False else None
@@ -82,9 +83,9 @@ def D():
                 for x in (CX+sd*4,CX+sd*5): cv.px(x,y,cam[2])
         for y in range(30,32): pass
     return dict(body='slim',skin=sk,skin_s=sks,blush=H('#eba098'),lip=H('#d8707c'),
-      hair=H('#3a2418'),hair_hi=H('#5a4030'),hs='lpony',fringe='jag',hp=None,
+      hair=H('#3a2418'),hair_hi=H('#5a4030'),hs='lpony',tail_end=21,fringe='jag',hp=None,
       bottom=dict(type='pants',base=cam[0],hi=cam[2],lo=cam[3],legfill=camo,flare=True,detail=pockets),
       shoe=blk,shoe_hi=H('#52525c'),
       sleeve=dict(long=False,base=gy['base'],hi=gy['hi'],lo=gy['lo'],cuff=gy['lo']),
       top=gy,torso_hem=30,torso_len=0,detail=det,
-      iris=H('#2a1c1c'),eyes='normal',mouth='mid')
+      iris=H('#2a1c1c'),eyes='big',mouth='mid')
