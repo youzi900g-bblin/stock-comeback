@@ -179,12 +179,15 @@
     { id: "acc", name: "配件", fields: [["glasses", "眼鏡", () => C.GLASSES], ["bag", "包包", () => C.BAGS], ["bagColor", "包包顏色", () => C.HEADWEAR_COLORS, true], ["earring", "耳環", () => C.ONOFF], ["necklace", "項鍊", () => C.ONOFF], ["bracelet", "手環", () => C.ONOFF]] },
   ];
   let createTab = "face";
+  // 排程新做的衣服在 config.js 標 draft: true，只有網址加 ?draft 才看得到，使用者標「通過」後才移除旗標
+  const DRAFT_MODE = new URLSearchParams(location.search).has("draft");
+  const live = (list) => list.filter((o) => !o.draft || DRAFT_MODE);
 
   function createView() {
     const opt = (key, o, sw) => `<button class="opt ${sw ? "swatch" : ""} ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}"${sw ? ` style="background:${o.color}" aria-label="${o.name}"` : ""}>${sw ? "" : o.name}</button>`;
     const tab = CREATE_TABS.find((t) => t.id === createTab);
     const fields = tab.fields.filter(([k]) => !({ headwearColor: "headwear", socksColor: "socks", bagColor: "bag" }[k] && draft[{ headwearColor: "headwear", socksColor: "socks", bagColor: "bag" }[k]] === "none"))
-      .map(([k, label, list, sw]) => `<div class="field"><span class="lab">${label}</span><div class="opts">${list().map((o) => opt(k, o, sw)).join("")}</div></div>`).join("");
+      .map(([k, label, list, sw]) => `<div class="field"><span class="lab">${label}</span><div class="opts">${live(list()).map((o) => opt(k, o, sw)).join("")}</div></div>`).join("");
     const tabs = CREATE_TABS.map((t) => `<button class="opt ${t.id === createTab ? "on" : ""}" role="tab" aria-selected="${t.id === createTab}" data-ctab="${t.id}">${t.name}</button>`).join("");
     const ok = !!draft.name.trim();
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
@@ -331,7 +334,7 @@
       });
       all("[data-ctab]", (b) => b.onclick = () => { createTab = b.dataset.ctab; render(); });
       all("[data-look]", (b) => b.onclick = () => { const [k, v] = b.dataset.look.split(":"); draft[k] = v; render(); });
-      const pick = (a) => a[Math.floor(Math.random() * a.length)].id;
+      const pick = (a) => { const l = live(a); return l[Math.floor(Math.random() * l.length)].id; };
       $("#rnd-name").onclick = () => { draft.name = C.RANDOM_NAMES[Math.floor(Math.random() * C.RANDOM_NAMES.length)]; render(); };
       $("#rnd-look").onclick = () => {
         Object.assign(draft, { hair: pick(C.HAIR_STYLES), skin: pick(C.SKIN_TONES), eyes: pick(C.EYES), iris: pick(C.EYE_COLORS), mouth: pick(C.MOUTHS),
