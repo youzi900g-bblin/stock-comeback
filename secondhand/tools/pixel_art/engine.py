@@ -67,18 +67,22 @@ def headwear(cv,hw):
     elif k=='bow':
         for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,b)
         cv.px(CX+4,4,lo)
-    elif k=='cap':  # 網帽：中間白色帽片、兩側紅色、帽圍與帽簷紅色（簷偏右），帽頂一顆鈕扣
+    elif k=='cap':  # 網帽：中間白色帽片（右上一顆黃星）、兩側紅色、帽圍與帽簷紅色（簷橫跨額頭），帽頂一顆鈕扣
         m={(x,y) for (x,y) in mask_poly('ell',[CX-6,0,CX+6,10]) if y<=5}
         cv.paint(m,diag(b,hi,lo,0,0.3),base=b)
         wb,wh,wl=H('#f4f1ea'),H('#fcfcfc'),H('#cfcac2')
-        panel={(x,y) for (x,y) in m if abs(x-CX)<=3 and y>=1}
+        panel={(x,y) for (x,y) in m if abs(x-CX)<=4 and y>=1}
         cv.paint(panel,diag(wb,wh,wl,0,0.3),base=wb,outline=False)
         for (x,y) in m:
-            if abs(x-CX)==4 and y>=1: cv.px(x,y,lo)   # 帽片與側面的接縫
+            if abs(x-CX)==5 and y>=1: cv.px(x,y,lo)   # 帽片與側面的接縫
         cv.px(CX,0,lo)                                  # 鈕扣
-        cv.paint(rows_mask({6:(CX-6,CX+6)}),lo,base=lo)
-        brim=rows_mask({6:(CX+2,CX+10),7:(CX+3,CX+10),8:(CX+5,CX+9)})
-        cv.paint(brim,lambda x,y: hi if y==6 and x>CX+6 else lo,base=lo)
+        # 帽簷：橫跨額頭的一條弧形（兩端各比頭寬多 1 到 2 格），中間往下垂一格
+        brim=rows_mask({6:(CX-8,CX+8),7:(CX-7,CX+7),8:(CX-4,CX+4)})
+        cv.paint(brim,lambda x,y: lo if y==8 else b,base=lo)
+        # 白色帽片右上方的黃色星星（5×4 格）
+        for dy,row in enumerate(('..X..','XXXXX','.XXX.','.X.X.')):
+            for dx,ch in enumerate(row):
+                if ch=='X': cv.px(CX-1+dx,1+dy,H('#f8d838') if dy<3 else H('#c89828'))
     elif k=='star':
         for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,b)
         cv.px(CX+4,4,hi)
