@@ -1,4 +1,10 @@
-/* 手機直式優先。介面走舊式電腦視窗質感（系統設計八-1）。 */
+/* 手機直式優先。介面走舊式電腦視窗質感（系統設計八-1、UI-UX指南）。
+   字型 Cubic 11 為 11px 點陣字，只使用 11px 的整數倍（22、33）。 */
+@font-face {
+  font-family: "Cubic 11";
+  src: url("fonts/Cubic_11.woff2") format("woff2");
+  font-display: swap;
+}
 :root {
   --bg: #d9d4ea;
   --win: #f4f1fa;
@@ -6,70 +12,91 @@
   --line: #4b3f6b;
   --accent: #7a5cc4;
   --accent-ink: #fff;
-  --muted: #6d6585;
-  --warn: #b5532f;
+  --muted: #5d5575;
+  --warn: #a8461f;
   --ok: #2f7a54;
+  --hi: #b9a4ec;
+  --lo: #2f2352;
+}
+body.contrast {
+  --bg: #fff; --win: #fff; --ink: #000; --line: #000; --accent: #3a1d99;
+  --muted: #222; --warn: #8a1d00; --ok: #0d5a33; --hi: #8f7bd6; --lo: #000;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  font-family: "Cubic 11", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-size: 22px;
+  line-height: 1.4;
+  font-synthesis: none;
+  -webkit-font-smoothing: none;
   -webkit-text-size-adjust: 100%;
 }
+img { image-rendering: pixelated; }
 #app {
-  max-width: 480px;
-  margin: 0 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  padding-bottom: calc(150px + env(safe-area-inset-bottom));
 }
 button { font: inherit; color: inherit; }
+b { font-weight: normal; text-shadow: 1px 0 0 currentColor; } /* 點陣字不使用合成粗體 */
 
-/* 頂部狀態列 */
+/* 頂部狀態列（金錢、天數固定可見） */
 .status {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 10px 14px; background: var(--line); color: #fff;
-  font-weight: 700; position: sticky; top: 0; z-index: 5;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  padding: 8px 12px; background: var(--line); color: #fff;
+  position: sticky; top: 0; z-index: 5;
 }
-.status small { font-weight: 400; opacity: .85; }
+.status small { font-size: 22px; opacity: .85; }
+.status .gear { min-height: 44px; min-width: 44px; background: transparent; border: 2px solid #cfc6ea; color: #fff; cursor: pointer; }
+.money.flash { animation: flash .9s steps(3); }
+@keyframes flash { 0%,100% { color: #fff; } 50% { color: #8ff0b4; } }
 
-/* 視窗卡片 */
+/* 視窗卡片：標題列加縮小／關閉小方塊 */
 .win {
   margin: 12px; background: var(--win);
-  border: 2px solid var(--line); border-radius: 4px;
-  box-shadow: 3px 3px 0 var(--line);
+  border: 2px solid var(--line); border-radius: 0;
+  box-shadow: 4px 4px 0 var(--line);
 }
 .win > h2 {
-  margin: 0; padding: 6px 10px; font-size: 15px;
+  margin: 0; padding: 4px 10px; font-size: 22px; font-weight: normal; position: relative;
   background: linear-gradient(90deg, var(--line), #7a6aa8); color: #fff;
+}
+body.contrast .win > h2 { background: #000; }
+.win > h2::after {
+  content: ""; position: absolute; right: 8px; top: 50%; margin-top: -7px;
+  width: 14px; height: 14px; background: #d9d4ea; border: 2px solid var(--lo);
+  box-shadow: -24px 0 0 -0px #d9d4ea;
 }
 .win .body { padding: 12px; }
 
 /* 教學提示 */
 .tip {
-  margin: 12px 12px 0; padding: 10px 12px; background: #fff6c9;
-  border: 2px solid #b79a1c; border-radius: 4px; font-size: 15px;
+  margin: 12px 12px 0; padding: 10px 12px; background: #fff6c9; color: #2c2638;
+  border: 2px solid #8a6f00; box-shadow: 3px 3px 0 #8a6f00;
 }
-.tip b { color: #7a5f00; }
-.hl { outline: 3px solid #f0b400; outline-offset: 2px; animation: pulse 1.2s infinite; }
+.tip .skip { margin-top: 6px; min-height: 44px; padding: 0 12px; background: #fff; border: 2px solid #8a6f00; cursor: pointer; }
+.hl { outline: 3px solid #f0b400; outline-offset: 2px; animation: pulse 1.2s steps(2) infinite; }
 @keyframes pulse { 50% { outline-color: transparent; } }
+.dim { opacity: .35; pointer-events: none; } /* 教學中暫時淡出的非重點操作 */
 
-/* 按鈕 */
+/* 按鈕：凸起與按下兩個狀態 */
 .btn {
-  display: inline-block; min-height: 44px; padding: 8px 16px; cursor: pointer;
+  display: inline-block; min-height: 44px; min-width: 44px; padding: 6px 16px; cursor: pointer;
   background: var(--accent); color: var(--accent-ink);
-  border: 2px solid var(--line); border-radius: 4px; font-weight: 700;
+  border: 3px solid; border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  border-radius: 0; text-align: center;
 }
+.btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); transform: translate(1px,1px); }
 .btn.block { display: block; width: 100%; }
-.btn.alt { background: #fff; color: var(--ink); }
-.btn.small { min-height: 40px; padding: 4px 14px; }
-.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.alt { background: #e8e1f7; color: var(--ink); border-color: #fff var(--line) var(--line) #fff; }
+body.contrast .btn.alt { background: #fff; }
+.btn.alt:active:not(:disabled) { border-color: var(--line) #fff #fff var(--line); }
+.btn.small { min-height: 44px; padding: 2px 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.why { margin: 6px 0 0; color: var(--warn); }
 
 /* 底部分頁 */
 .nav {
@@ -77,21 +104,21 @@ button { font: inherit; color: inherit; }
   max-width: 480px; margin: 0 auto; display: flex;
   background: var(--line); padding-bottom: env(safe-area-inset-bottom);
 }
-.nav button {
-  flex: 1; min-height: 56px; border: 0; background: transparent; color: #cfc6ea;
-  font-weight: 700; cursor: pointer;
-}
+.nav button { flex: 1; min-height: 56px; border: 0; background: transparent; color: #e0d9f5; cursor: pointer; }
 .nav button.on { background: var(--win); color: var(--ink); }
+/* 主要動作固定在右下角、導覽列上方 */
+.primary-bar {
+  position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom)); z-index: 6;
+  max-width: 480px; margin: 0 auto; padding: 8px 12px; display: flex; justify-content: flex-end;
+  pointer-events: none;
+}
+.primary-bar .btn { pointer-events: auto; min-height: 56px; padding: 6px 24px; }
 
 /* 首頁 */
-.room { width: 100%; display: block; image-rendering: pixelated; border-bottom: 2px solid var(--line); }
+.room { width: 100%; display: block; border-bottom: 2px solid var(--line); }
 .me { display: flex; gap: 12px; align-items: center; }
-.me h3 { margin: 0; }
-.chip {
-  display: inline-block; padding: 2px 10px; margin: 2px 4px 2px 0;
-  background: #e8e1f7; border: 1px solid var(--line); border-radius: 12px; font-size: 13px;
-}
-.muted { color: var(--muted); font-size: 14px; }
+.chip { display: inline-block; padding: 0 10px; margin: 2px 4px 2px 0; background: #e8e1f7; color: #2c2638; border: 2px solid var(--line); }
+.muted { color: var(--muted); }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
 /* 角色色塊（第一階段以色塊代替，見計畫書待決定第 3 項） */
@@ -113,55 +140,67 @@ button { font: inherit; color: inherit; }
 
 /* 創角 */
 .field { margin: 14px 0; }
-.field label, .field .lab { display: block; font-weight: 700; margin-bottom: 6px; }
+.field label, .field .lab { display: block; margin-bottom: 6px; }
 .field input[type=text] {
-  width: 100%; min-height: 44px; padding: 8px 10px; font-size: 16px;
-  border: 2px solid var(--line); border-radius: 4px; background: #fff;
+  width: 100%; min-height: 48px; padding: 6px 10px; font: inherit;
+  border: 3px solid; border-color: var(--line) #fff #fff var(--line); background: #fff; color: #000; border-radius: 0;
 }
 .opts { display: flex; flex-wrap: wrap; gap: 8px; }
 .opt {
-  min-height: 44px; padding: 6px 14px; background: #fff; cursor: pointer;
-  border: 2px solid var(--line); border-radius: 4px;
+  min-height: 44px; min-width: 44px; padding: 4px 12px; background: #fff; cursor: pointer;
+  border: 3px solid; border-color: #fff var(--line) var(--line) #fff; border-radius: 0;
 }
-.opt.on { background: var(--accent); color: #fff; }
-.swatch { width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+.opt.on { background: var(--accent); color: #fff; border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
+.swatch { width: 48px; height: 48px; padding: 0; }
 .swatch.on { outline: 3px solid var(--accent); outline-offset: 2px; }
-.preview { display: flex; justify-content: center; padding: 8px 0; background: #ece7f8; border-radius: 4px; }
+.preview { display: flex; justify-content: center; background: #ece7f8; }
 .preview .avatar { transform: scale(1.5); transform-origin: center; margin: 24px 0; }
 
-/* 衣櫃與賣場清單 */
+/* 衣櫃與賣場 */
 .tabs { display: flex; gap: 6px; padding: 12px 12px 0; overflow-x: auto; }
-.tabs .opt { flex: none; min-height: 40px; padding: 4px 12px; }
-.item {
-  display: flex; gap: 10px; align-items: center; padding: 10px 0;
-  border-bottom: 1px dashed #b9b0d6;
-}
+.tabs { gap: 4px; }
+.tabs .opt { flex: none; padding: 4px 8px; }
+.viewsw { display: flex; gap: 6px; padding: 8px 12px 0; justify-content: flex-end; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.card { border: 2px solid var(--line); padding: 8px; background: #fff; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.card .swatch-item { width: 100%; height: 44px; }
+.card .btns2 { display: flex; gap: 6px; margin-top: 4px; }
+.card .btns2 .btn { flex: 1; padding: 2px 4px; }
+.item { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 2px dotted #b9b0d6; }
 .item:last-child { border-bottom: 0; }
-.swatch-item { width: 44px; height: 44px; flex: none; border: 2px solid var(--line); border-radius: 4px; }
+.swatch-item { width: 44px; height: 44px; flex: none; border: 2px solid var(--line); }
 .item .info { flex: 1; min-width: 0; }
-.item .name { font-weight: 700; }
 .item .acts { display: flex; flex-direction: column; gap: 6px; }
-.badge { font-size: 12px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
-.badge.keep { background: #d8f0e2; }
-.full { color: var(--warn); font-weight: 700; }
-.warn { color: var(--warn); font-weight: 700; }
+.badge { padding: 0 6px; border: 2px solid var(--line); background: #d8f0e2; color: #1d3a2a; }
+.full { color: var(--warn); }
+.warn { color: var(--warn); }
+.empty { text-align: center; padding: 16px 0; }
 
 /* 彈窗 */
-.mask {
-  position: fixed; inset: 0; background: rgba(30,22,50,.55); z-index: 20;
-  display: flex; align-items: flex-end; justify-content: center;
-}
+.mask { position: fixed; inset: 0; background: rgba(30,22,50,.55); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
 .sheet {
-  width: 100%; max-width: 480px; max-height: 90dvh; overflow-y: auto;
-  background: var(--win); border: 2px solid var(--line); border-bottom: 0;
-  border-radius: 8px 8px 0 0; padding: 16px;
+  width: 100%; max-width: 480px; max-height: 92dvh; overflow-y: auto; background: var(--win);
+  border: 3px solid var(--line); border-bottom: 0; padding: 14px;
 }
-.sheet h3 { margin: 0 0 8px; }
-.sheet .field input[type=number] {
-  width: 100%; min-height: 48px; padding: 8px 10px; font-size: 20px;
-  border: 2px solid var(--line); border-radius: 4px;
-}
-.kv { display: flex; justify-content: space-between; padding: 4px 0; }
-.sheet .btns { display: flex; gap: 8px; margin-top: 12px; }
+.sheet h3 { margin: 0 0 8px; font-size: 22px; font-weight: normal; }
+.sheet .btns { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
 .sheet .btns .btn { flex: 1; }
-.money-up { color: var(--ok); font-weight: 700; }
+.sheet .btns .btn.main { flex: 2; } /* 主要按鈕在右、較寬 */
+.kv { display: flex; justify-content: space-between; padding: 4px 0; gap: 8px; }
+.money-up { color: var(--ok); }
+.prices { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin: 8px 0; text-align: center; }
+.prices div { border: 2px solid var(--line); padding: 4px 2px; background: #fff; }
+.prices small { display: block; color: var(--muted); font-size: 22px; }
+.prices .p-base { background: #e6efe2; } .prices .p-mkt { background: #e2e8f4; } .prices .p-you { background: #f6e8c4; }
+.prices div { color: #2c2638; } .prices small { color: #4a4460; }
+.stepper { display: flex; gap: 6px; margin: 8px 0; }
+.stepper .btn { flex: 1; padding: 2px 0; }
+.stepper input[type=number] {
+  flex: 2; min-width: 0; min-height: 44px; text-align: center; font: inherit; color: #000; background: #fff;
+  border: 3px solid; border-color: var(--line) #fff #fff var(--line); border-radius: 0;
+}
+input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(130px + env(safe-area-inset-bottom)); z-index: 30;
+  background: var(--lo); color: #fff; padding: 6px 14px; border: 2px solid var(--hi); width: max-content; max-width: 92%; white-space: nowrap;
+}

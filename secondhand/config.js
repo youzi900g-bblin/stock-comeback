@@ -23,6 +23,10 @@ const CONFIG = {
   WAIT_STEP: 0.15,         // 【佔位值】
   WAIT_MAX_DAYS: 14,       // 【佔位值】
   PRICE_MIN: 1,            // 可標的最低價【佔位值】
+  PRICE_SLIDER_MAX_RATIO: 3, // 滑桿上限＝市場價的幾倍【佔位值】
+  PRICE_STEP_SMALL: 1,     // 加減按鈕的小步進【佔位值】
+  PRICE_STEP_LARGE: 10,    // 加減按鈕的大步進【佔位值】
+  HIGH_PRICE_RATIO: 1.5,   // 標價超過市場價幾倍時顯示「偏高」提示【佔位值】
 
   // ---- 風格標籤（已定，見系統設計第五節）----
   STYLE_TAGS: ["可愛", "優雅", "哥德", "vintage", "街頭", "運動", "日系", "韓系", "極簡", "Y2K"],
