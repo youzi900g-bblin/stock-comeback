@@ -111,5 +111,21 @@ const CONFIG = {
     { name: "牛仔外套", type: "外套", tags: ["vintage"], base: 350, color: "#6c8bb3" },
     { name: "帆布鞋", type: "鞋子", tags: ["日系"], base: 180, color: "#eee6d6" },
   ],
+  // ---- 林（作者彩蛋）的任務鏈（全部為【佔位】：出現天數、目標數字、獎勵、台詞都待使用者決定）----
+  // LIN_DRAFT 為 true 時，只有網址加 ?draft 才看得到林；使用者通過內容後改為 false。
+  // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數
+  LIN_DRAFT: true,
+  LIN_QUESTS: [
+    { id: "lin1", appearDay: 3, goal: { type: "sold", n: 3 }, reward: { money: 100 },
+      intro: "你的衣櫃看起來很擠。先試著賣出三件，不用急著挑最貴的。",
+      done: "三件都賣出去了。讓衣服被人穿走，比放在衣櫃裡好。這是一點心意。" },
+    { id: "lin2", appearDay: 6, goal: { type: "money", n: 800 }, reward: { money: 200 },
+      intro: "賣了幾件之後，手邊的錢開始有用了。先存到 $800，之後收貨需要本金。",
+      done: "存下來了。錢不用全花掉，留一點給下一次。" },
+    { id: "lin3", appearDay: 9, goal: { type: "free", n: 8 }, reward: { money: 300 },
+      intro: "衣櫃還是太滿。清出八格空位，空間要留給真正想穿的。",
+      done: "空出來的位置，之後會有更好的東西住進去。" },
+  ],
+  LIN_ALL_DONE: "目前只有這些。之後再見。", // 【佔位台詞】
   START_ITEM_COUNT: 20,    // 開場衣櫃件數：等於初始容量，呈現「爆滿」【佔位值】
 };

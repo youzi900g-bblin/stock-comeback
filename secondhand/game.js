@@ -39,6 +39,19 @@
   const tutDone = () => S.tutorial === "done";
   const findItem = (id) => S.wardrobe.find((i) => i.id === id);
 
+  // ---------- 林的任務鏈（內容為佔位，見 config.js）----------
+  const linOn = () => !C.LIN_DRAFT || new URLSearchParams(location.search).has("draft");
+  const linState = () => (S.lin = S.lin || { q: 0, phase: "offer", base: 0 });
+  const linQuest = () => C.LIN_QUESTS[linState().q];
+  const linVisible = () => linOn() && S && tutDone() && !!linQuest() && S.day >= linQuest().appearDay;
+  function linProgress(q) {
+    const g = q.goal;
+    const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
+      : g.type === "money" ? S.money : C.WARDROBE_CAPACITY - S.wardrobe.length;
+    return [Math.max(0, cur), g.n];
+  }
+  const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
+
   function newGame(p) {
     const wardrobe = [];
     for (let i = 0; i < C.START_ITEM_COUNT; i++) {
@@ -61,6 +74,7 @@
       }
       return true;
     });
+    S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     modal = { type: "summary", sales };
     if (sales.length && S.tutorial === "wait") { S.tutorial = "done"; modal.intro = sales[0].item; }
     if (sales.length) flashMoney = true;
@@ -135,7 +149,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market");
+    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close");
     if (b) b.click();
   });
 
@@ -208,8 +222,10 @@
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
     const tidy = S.wardrobe.length <= C.TIDY_AT;
     const roomImg = `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">`;
-    // 林（作者彩蛋）：預覽用，網址加 ?draft 才出現
-    const roomHtml = DRAFT_MODE ? `<div class="roomwrap">${roomImg}<img class="lin" src="art/林_透明.png" alt="林" width="216" height="424"></div>` : roomImg;
+    // 林（作者彩蛋）：依任務鏈出現，點她開對話
+    const lq = linVisible() ? linQuest() : null;
+    const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
+    const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
     return `${roomHtml}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(S.player)}
@@ -312,6 +328,18 @@
         <p class="muted" style="margin-top:0">現在市場上願意買的價格。標價越接近市場價，成交越快；高出越多，等得越久。目前市場價等於基礎價值，之後會隨流行波動。</p>
         <div class="btns"><button class="btn main" id="close-market">我知道了</button></div></div></div>`;
     }
+    if (modal.type === "lin") {
+      const q = modal.quest;
+      if (!q) return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3><p>${esc(C.LIN_ALL_DONE)}</p>
+        <div class="btns"><button class="btn main" id="lin-close">好</button></div></div></div>`;
+      const st = linState(), [cur, n] = linProgress(q), ready = st.phase === "active" && cur >= n;
+      const body = st.phase === "offer" ? `<p>${esc(q.intro)}</p><div class="kv"><span>目標</span><span>${esc(linGoalText(q.goal))}</span></div><div class="kv"><span>獎勵</span><span>$${q.reward.money}</span></div>`
+        : ready ? `<p>${esc(q.done)}</p><div class="kv"><span>獎勵</span><span class="money-up">+$${q.reward.money}</span></div>`
+        : `<p>${esc(q.intro)}</p><div class="kv"><span>${esc(linGoalText(q.goal))}</span><span>${Math.min(cur, n)}/${n}</span></div>`;
+      const btns = st.phase === "offer" ? `<button class="btn alt" id="lin-close">先不要</button><button class="btn main" id="lin-accept">接受</button>`
+        : ready ? `<button class="btn main" id="lin-claim">領取獎勵</button>` : `<button class="btn main" id="lin-close">好</button>`;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3>${body}<div class="btns">${btns}</div></div></div>`;
+    }
     if (modal.type === "settings") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="設定" tabindex="-1"><h3>設定</h3>
         <div class="kv"><span>高對比模式</span><button class="btn alt small" id="set-contrast">${settings().contrast ? "開" : "關"}</button></div>
@@ -380,6 +408,17 @@
       S.wardrobe.push(it); S.listings.splice(idx, 1);
       save(); showToast(`已撤下「${it.name}」`);
     });
+    const lb = $("[data-lin]");
+    if (lb) lb.onclick = () => { modal = { type: "lin", quest: linQuest() }; render(); };
+    const la = $("#lin-accept");
+    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.base = S.stats ? S.stats.sold : 0; modal = null; save(); render(); };
+    const lc = $("#lin-claim");
+    if (lc) lc.onclick = () => {
+      const st = linState(), q = linQuest();
+      S.money += q.reward.money; flashMoney = true;
+      st.q += 1; st.phase = "offer"; st.base = 0; modal = null; save(); render();
+    };
+    const lx = $("#lin-close"); if (lx) lx.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
     const sk = $("#skip-tut"); if (sk) sk.onclick = () => { S.tutorial = "done"; save(); render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
@@ -445,6 +484,6 @@
   }
 
   // 供自我檢查與測試使用
-  window.__game = { get state() { return S; }, waitDays, marketPrice, sprite };
+  window.__game = { get state() { return S; }, linVisible, waitDays, marketPrice, sprite };
   render();
 })();
