@@ -39,9 +39,8 @@ const CONFIG = {
     { id: "long", name: "長直髮" },
     { id: "buns", name: "丸子頭" },
   ],
-  // 髮色：僅供色塊預覽【佔位值】
-  HAIR_COLORS: { bob: "#4a3426", long: "#2a2230", buns: "#2f2420" },
-  // 膚色：僅供色塊預覽【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
+  // 膚色：選鈕的顏色，要與 tools/pixel_art/player.py 的 SKIN_TONES 一致【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
+  // 玩家圖由 tools/pixel_art/player.py 產生；髮色與預設服裝也定義在那裡（皆為佔位）
   SKIN_TONES: [
     { id: "s1", name: "淺", color: "#f1cfb4" },
     { id: "s2", name: "淺暖", color: "#e3b38e" },

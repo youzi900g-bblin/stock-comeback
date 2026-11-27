@@ -21,6 +21,7 @@
 | `docs/UI-UX指南.md` | 選單與介面怎麼做：製作流程、手機操作規則、像素風介面、畫面清單、教學引導、檢查清單 |
 | `index.html`、`style.css`、`game.js` | 遊戲本體 |
 | `config.js` | 集中設定：名稱、佔位數值、風格標籤、創角選項、基本款樣板 |
+| `art/player/` | 玩家角色圖（3 髮型 × 5 膚色），由 `tools/pixel_art/player.py` 產生，與 NPC 同一套引擎 |
 | `docs/screenshots/` | 手機直式畫面截圖 |
 | `art/` | 目前的角色與房間圖片（由 `tools/pixel_art/` 產生） |
 | `tools/pixel_art/` | 產生像素角色與房間的 Python 程式 |
@@ -52,7 +53,7 @@ python3 tools/pixel_art/build_art.py
 
 ## 還沒決定的事
 
-見 `docs/系統設計.md` 第九節。已定案的有：美術風格、時間機制（每天結算）、遊戲名稱、個性標籤的種類。
+見 `docs/系統設計.md` 第九節。已定案的有：美術風格、時間機制（每天結算）、遊戲名稱。
 
 還沒決定的主要有：
 - 物品與價格的實際數值（目前是佔位值，集中在 `config.js`）。

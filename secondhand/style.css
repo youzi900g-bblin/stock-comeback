@@ -6,17 +6,20 @@
   font-display: swap;
 }
 :root {
-  --bg: #d9d4ea;
-  --win: #f4f1fa;
-  --ink: #2c2638;
-  --line: #4b3f6b;
-  --accent: #7a5cc4;
+  /* 色票取自房間圖：牆面 #d2c4e2、深木色 #4a3038／#6c4a50、梅紅 #a65a89、淺粉 #f4d0e0、地板 #c09868／#a87c4c */
+  --bg: #d2c4e2;          /* 頁面底：牆面 */
+  --win: #f9e7ef;         /* 視窗底：淺粉 #f4d0e0 與白各半 */
+  --ink: #4a3038;         /* 文字、邊框：深木色 */
+  --line: #4a3038;
+  --title-a: #6c4a50;     /* 標題列漸層：深木色 → 梅紅 */
+  --title-b: #a65a89;
+  --accent: #a65a89;      /* 主按鈕：梅紅（#c85088 配白字對比不足 4.5，不用） */
   --accent-ink: #fff;
-  --muted: #5d5575;
+  --muted: #6c4a50;
   --warn: #a8461f;
-  --ok: #2f7a54;
-  --hi: #b9a4ec;
-  --lo: #2f2352;
+  --ok: #1f6b45;
+  --hi: #e888b0;          /* 按鈕亮邊：窗簾粉 */
+  --lo: #4a3038;          /* 按鈕暗邊：深木色 */
 }
 body.contrast {
   --bg: #fff; --win: #fff; --ink: #000; --line: #000; --accent: #3a1d99;
@@ -50,7 +53,7 @@ b { font-weight: normal; text-shadow: 1px 0 0 currentColor; } /* 點陣字不使
   position: sticky; top: 0; z-index: 5;
 }
 .status small { font-size: 22px; opacity: .85; }
-.status .gear { min-height: 44px; min-width: 44px; background: transparent; border: 2px solid #cfc6ea; color: #fff; cursor: pointer; }
+.status .gear { min-height: 44px; min-width: 44px; background: transparent; border: 2px solid #f4d0e0; color: #fff; cursor: pointer; }
 .money.flash { animation: flash .9s steps(3); }
 @keyframes flash { 0%,100% { color: #fff; } 50% { color: #8ff0b4; } }
 
@@ -62,22 +65,22 @@ b { font-weight: normal; text-shadow: 1px 0 0 currentColor; } /* 點陣字不使
 }
 .win > h2 {
   margin: 0; padding: 4px 10px; font-size: 22px; font-weight: normal; position: relative;
-  background: linear-gradient(90deg, var(--line), #7a6aa8); color: #fff;
+  background: linear-gradient(90deg, var(--title-a), var(--title-b)); color: #fff;
 }
 body.contrast .win > h2 { background: #000; }
 .win > h2::after {
   content: ""; position: absolute; right: 8px; top: 50%; margin-top: -7px;
-  width: 14px; height: 14px; background: #d9d4ea; border: 2px solid var(--lo);
-  box-shadow: -24px 0 0 -0px #d9d4ea;
+  width: 14px; height: 14px; background: #f4d0e0; border: 2px solid var(--lo);
+  box-shadow: -24px 0 0 -0px #f4d0e0;
 }
 .win .body { padding: 12px; }
 
 /* 教學提示 */
 .tip {
-  margin: 12px 12px 0; padding: 10px 12px; background: #fff6c9; color: #2c2638;
-  border: 2px solid #8a6f00; box-shadow: 3px 3px 0 #8a6f00;
+  margin: 12px 12px 0; padding: 10px 12px; background: #e6d6c3; color: #4a3038; /* 地板 #c09868 與白混合 */
+  border: 2px solid #a87c4c; box-shadow: 3px 3px 0 #a87c4c;
 }
-.tip .skip { margin-top: 6px; min-height: 44px; padding: 0 12px; background: #fff; border: 2px solid #8a6f00; cursor: pointer; }
+.tip .skip { margin-top: 6px; min-height: 44px; padding: 0 12px; background: #fff; border: 2px solid #a87c4c; cursor: pointer; }
 .hl { outline: 3px solid #f0b400; outline-offset: 2px; animation: pulse 1.2s steps(2) infinite; }
 @keyframes pulse { 50% { outline-color: transparent; } }
 .dim { opacity: .35; pointer-events: none; } /* 教學中暫時淡出的非重點操作 */
@@ -91,7 +94,7 @@ body.contrast .win > h2 { background: #000; }
 }
 .btn:active:not(:disabled) { border-color: var(--lo) var(--hi) var(--hi) var(--lo); transform: translate(1px,1px); }
 .btn.block { display: block; width: 100%; }
-.btn.alt { background: #e8e1f7; color: var(--ink); border-color: #fff var(--line) var(--line) #fff; }
+.btn.alt { background: #f4d0e0; color: var(--ink); border-color: #fff var(--line) var(--line) #fff; }
 body.contrast .btn.alt { background: #fff; }
 .btn.alt:active:not(:disabled) { border-color: var(--line) #fff #fff var(--line); }
 .btn.small { min-height: 44px; padding: 2px 12px; }
@@ -104,7 +107,7 @@ body.contrast .btn.alt { background: #fff; }
   max-width: 480px; margin: 0 auto; display: flex;
   background: var(--line); padding-bottom: env(safe-area-inset-bottom);
 }
-.nav button { flex: 1; min-height: 56px; border: 0; background: transparent; color: #e0d9f5; cursor: pointer; }
+.nav button { flex: 1; min-height: 56px; border: 0; background: transparent; color: #f4d0e0; cursor: pointer; }
 .nav button.on { background: var(--win); color: var(--ink); }
 /* 主要動作固定在右下角、導覽列上方 */
 .primary-bar {
@@ -117,25 +120,11 @@ body.contrast .btn.alt { background: #fff; }
 /* 首頁 */
 .room { width: 100%; display: block; border-bottom: 2px solid var(--line); }
 .me { display: flex; gap: 12px; align-items: center; }
-.chip { display: inline-block; padding: 0 10px; margin: 2px 4px 2px 0; background: #e8e1f7; color: #2c2638; border: 2px solid var(--line); }
 .muted { color: var(--muted); }
 
-/* 角色色塊（第一階段以色塊代替，見計畫書待決定第 3 項） */
-.avatar { position: relative; width: 56px; height: 90px; flex: none; }
-.avatar i { position: absolute; display: block; border: 2px solid rgba(0,0,0,.35); }
-.avatar .hair-back { left: 8px; top: 2px; width: 40px; height: 34px; background: var(--hair); border-radius: 18px 18px 4px 4px; }
-.avatar .head { left: 13px; top: 10px; width: 30px; height: 28px; background: var(--skin); border-radius: 6px; }
-.avatar .fringe { left: 11px; top: 6px; width: 34px; height: 10px; background: var(--hair); border-radius: 8px 8px 0 0; }
-.avatar .eye { top: 24px; width: 4px; height: 4px; background: #2a2230; border: 0; }
-.avatar .eye.l { left: 20px; } .avatar .eye.r { left: 32px; }
-.avatar .body { left: 14px; top: 40px; width: 28px; height: 28px; background: var(--top); border-radius: 4px; }
-.avatar .legs { left: 17px; top: 68px; width: 22px; height: 20px; background: #5f7fa8; }
-.avatar.bob .hair-back { height: 30px; }
-.avatar.long .hair-back { height: 54px; width: 44px; left: 6px; border-radius: 18px 18px 2px 2px; }
-.avatar.buns .hair-back { height: 14px; top: 6px; }
-.avatar.buns .bun { left: 4px; top: -2px; width: 16px; height: 16px; background: var(--hair); border-radius: 50%; }
-.avatar.buns .bun.r { left: 36px; }
-.avatar:not(.buns) .bun { display: none; }
+/* 玩家角色：art/player/ 的像素圖（27×53 格，以 8 倍輸出）。顯示尺寸取 8 倍圖的 1/4（2 倍）與 1/2（4 倍），皆為整數比例。 */
+.sprite { image-rendering: pixelated; display: block; }
+.me .sprite { width: 54px; height: 106px; flex: none; }
 
 /* 創角 */
 .field { margin: 14px 0; }
@@ -152,8 +141,8 @@ body.contrast .btn.alt { background: #fff; }
 .opt.on { background: var(--accent); color: #fff; border-color: var(--lo) var(--hi) var(--hi) var(--lo); }
 .swatch { width: 48px; height: 48px; padding: 0; }
 .swatch.on { outline: 3px solid var(--accent); outline-offset: 2px; }
-.preview { display: flex; justify-content: center; background: #ece7f8; }
-.preview .avatar { transform: scale(1.5); transform-origin: center; margin: 24px 0; }
+.preview { display: flex; justify-content: center; background: #e8e1f0; padding: 8px 0; }
+.preview .sprite { width: 108px; height: 212px; }
 
 /* 衣櫃與賣場 */
 .tabs { display: flex; gap: 6px; padding: 12px 12px 0; overflow-x: auto; }

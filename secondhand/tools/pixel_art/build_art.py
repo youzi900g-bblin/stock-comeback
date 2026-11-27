@@ -8,6 +8,7 @@ from PIL import Image
 from engine import H, BG, render, build
 from characters import A, B, C
 import room
+import player
 
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'art')
 os.makedirs(OUT, exist_ok=True)
@@ -64,6 +65,8 @@ for sk, sks, lp, ns in tones:
     ims.append(crop(P))
 ims.append(crop(A()))
 sheet(ims).save(os.path.join(OUT, '雀斑_各膚色.png'))
+# 玩家角色（3 髮型 × 5 膚色）
+player.build_all(OUT)
 # 房間
 room.build_room(OUT)
 print('done ->', os.path.abspath(OUT))

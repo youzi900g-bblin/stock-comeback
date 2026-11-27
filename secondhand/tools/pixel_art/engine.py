@@ -128,20 +128,21 @@ def build(P):
         m|={(CX-fw-2,y) for y in range(6,10)}|{(CX+fw+2,y) for y in range(6,10)}
         cv.paint(m,hair)
         for (x,y) in [(CX-9,4),(CX-7,6),(CX-8,8),(CX+8,4),(CX+7,7),(CX+9,6),(CX-2,3),(CX+3,3),(CX,2)]: cv.px(x,y,hh)
-        # scrunchies
-        for (ax,col) in ((CX-9,P['hp'][0]),(CX+8,P['hp'][1])):
-            for x in (ax,ax+1):
-                cv.px(x,9,col);cv.px(x,10,dk(col,0.8))
-        s=P['hp'][2]
-        for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,s)
+        if P.get('hp'):  # 頭飾可省略（hp=None 表示只有髮型）
+            for (ax,col) in ((CX-9,P['hp'][0]),(CX+8,P['hp'][1])):
+                for x in (ax,ax+1):
+                    cv.px(x,9,col);cv.px(x,10,dk(col,0.8))
+            s=P['hp'][2]
+            for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,s)
     elif P['hs']=='bob':
         m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=6}
         for y,(a,b2) in {7:(CX-fw,CX),8:(CX-fw,CX-2),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
         m|={(CX+fw+2,y) for y in range(7,14)}|{(CX-fw-2,y) for y in range(7,14)}
         cv.paint(m,hair)
         for (x,y) in [(CX-3,7),(CX-1,6),(CX+2,5),(CX-5,9),(CX+5,9)]: cv.px(x,y,hh)
-        cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(P['hp'][0],P['hp'][1],P['hp'][0],0,0.2),base=P['hp'][0])
-        cv.px(CX-1,-1+1,P['hp'][2])
+        if P.get('hp'):
+            cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(P['hp'][0],P['hp'][1],P['hp'][0],0,0.2),base=P['hp'][0])
+            cv.px(CX-1,-1+1,P['hp'][2])
     elif P['hs']=='long':
         m={(x,y) for y in range(3,8) for x in range(CX-fw-2,CX+fw+3)}
         m|={(x,y) for y in range(3,5) for x in range(CX-fw,CX+fw+1)}
@@ -152,10 +153,11 @@ def build(P):
             sm={(CX+side*(tw+1+k),y) for y in range(17,28) for k in range(2)}
             cv.paint(sm,hair)
         for (x,y) in [(CX-3,5),(CX+2,4),(CX-7,12),(CX+7,14),(CX-6,22),(CX+6,24),(CX-7,18)]: cv.px(x,y,hh)
-        bw,bk=P['hp']
-        for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,bw)
-        cv.px(CX+4,4,bk); 
-        cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
+        if P.get('hp'):
+            bw,bk=P['hp']
+            for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,bw)
+            cv.px(CX+4,4,bk)
+            cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
     # --- face features
     iris=P['iris']; ey=P['eyes']; hc=P['hair']
     for sd in (-1,1):
@@ -196,4 +198,13 @@ def render(c,S=8,box=None):
     for j,r in enumerate(c):
         for i,col in enumerate(r):
             if col: dr.rectangle([i*S,j*S,(i+1)*S-1,(j+1)*S-1],fill=col)
+    return im
+
+def render_rgba(c,S=8):
+    """同 render，但背景透明，供遊戲內直接疊圖使用。"""
+    h=len(c);w=len(c[0])
+    im=Image.new("RGBA",(w*S,h*S),(0,0,0,0));dr=ImageDraw.Draw(im)
+    for j,r in enumerate(c):
+        for i,col in enumerate(r):
+            if col: dr.rectangle([i*S,j*S,(i+1)*S-1,(j+1)*S-1],fill=col+(255,))
     return im

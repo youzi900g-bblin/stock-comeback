@@ -74,12 +74,8 @@
 
   // ---------- 工具 ----------
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  function avatar(p, top) {
-    const skin = C.SKIN_TONES.find((s) => s.id === p.skin).color;
-    return `<div class="avatar ${p.hair}" style="--skin:${skin};--hair:${C.HAIR_COLORS[p.hair]};--top:${top || "#e3b93c"}">
-      <i class="hair-back"></i><i class="bun"></i><i class="bun r"></i><i class="head"></i><i class="fringe"></i>
-      <i class="eye l"></i><i class="eye r"></i><i class="body"></i><i class="legs"></i></div>`;
-  }
+  // 玩家圖由 tools/pixel_art/player.py 產生（與 NPC 同一套引擎）
+  const sprite = (p) => `<img class="sprite" src="art/player/${p.hair}_${p.skin}.png" alt="${esc(p.name || "你的角色")}" width="216" height="424">`;
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
   // ---------- 畫面 ----------
@@ -153,7 +149,7 @@
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
       <div class="win"><h2>創角</h2><div class="body">
         <p class="muted" style="margin-top:0">你愛買衣服，衣櫃早就塞不下了。先決定自己的樣子。</p>
-        <div class="preview">${avatar(draft)}</div>
+        <div class="preview">${sprite({ hair: draft.hair, skin: draft.skin })}</div>
         <div class="field"><label for="nm">名字</label><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"></div>
         <div class="field"><span class="lab">髮型</span><div class="opts">${hairs}</div></div>
         <div class="field"><span class="lab">膚色</span><div class="opts">${skins}</div></div>
@@ -167,7 +163,7 @@
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
     return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="576">
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
-        ${avatar(S.player)}
+        ${sprite(S.player)}
         <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
       </div></div>
       ${stale ? `<div class="tip"><b>提醒</b>　有 ${stale} 件掛賣超過 ${C.STALE_DAYS} 天，可到賣場調整價格。</div>` : ""}`;
