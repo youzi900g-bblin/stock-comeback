@@ -13,7 +13,7 @@
   let modal = null;    // {type, ...}
   let toast = "";
   let flashMoney = false;
-  let draft = { name: "", hair: C.HAIR_STYLES[0].id, skin: C.SKIN_TONES[1].id, tag: C.STYLE_TAGS[0] };
+  let draft = { name: "", hair: C.HAIR_STYLES[0].id, skin: C.SKIN_TONES[1].id };
 
   function load() {
     try {
@@ -149,7 +149,6 @@
   function createView() {
     const hairs = C.HAIR_STYLES.map((h) => `<button class="opt ${draft.hair === h.id ? "on" : ""}" aria-pressed="${draft.hair === h.id}" data-hair="${h.id}">${h.name}</button>`).join("");
     const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" aria-pressed="${draft.skin === s.id}" data-skin="${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
-    const tags = C.STYLE_TAGS.map((t) => `<button class="opt ${draft.tag === t ? "on" : ""}" aria-pressed="${draft.tag === t}" data-tag="${esc(t)}">${esc(t)}</button>`).join("");
     const ok = !!draft.name.trim();
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
       <div class="win"><h2>創角</h2><div class="body">
@@ -158,7 +157,6 @@
         <div class="field"><label for="nm">名字</label><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"></div>
         <div class="field"><span class="lab">髮型</span><div class="opts">${hairs}</div></div>
         <div class="field"><span class="lab">膚色</span><div class="opts">${skins}</div></div>
-        <div class="field"><span class="lab">風格標籤</span><div class="opts">${tags}</div></div>
         <button class="btn block" id="start" ${ok ? "" : "disabled"}>開始</button>
         <p class="why" id="why" ${ok ? "hidden" : ""}>請先輸入名字。</p>
       </div></div>`;
@@ -170,8 +168,7 @@
     return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="576">
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${avatar(S.player)}
-        <div><span class="chip">${esc(S.player.tag)}</span>
-        <div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
+        <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
       </div></div>
       ${stale ? `<div class="tip"><b>提醒</b>　有 ${stale} 件掛賣超過 ${C.STALE_DAYS} 天，可到賣場調整價格。</div>` : ""}`;
   }
@@ -296,10 +293,9 @@
       });
       all("[data-hair]", (b) => b.onclick = () => { draft.hair = b.dataset.hair; render(); });
       all("[data-skin]", (b) => b.onclick = () => { draft.skin = b.dataset.skin; render(); });
-      all("[data-tag]", (b) => b.onclick = () => { draft.tag = b.dataset.tag; render(); });
       $("#start").onclick = () => {
         if (!draft.name.trim()) return;
-        S = newGame({ name: draft.name.trim(), hair: draft.hair, skin: draft.skin, tag: draft.tag });
+        S = newGame({ name: draft.name.trim(), hair: draft.hair, skin: draft.skin });
         view = "home"; save(); render();
       };
       return;
