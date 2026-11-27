@@ -67,9 +67,12 @@ def headwear(cv,hw):
     elif k=='bow':
         for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,b)
         cv.px(CX+4,4,lo)
-    elif k=='band':
-        cv.paint(rows_mask({3:(CX-6,CX+6),4:(CX-6,CX+6)}),b,base=b)
-        for x in range(CX-5,CX+6,3): cv.px(x,3,hi)
+    elif k=='cap':  # 鴨舌帽：帽頂圓弧、帽圍一圈，帽簷往右前方凸出（偏一側）
+        m={(x,y) for (x,y) in mask_poly('ell',[CX-6,0,CX+6,10]) if y<=5}
+        cv.paint(m,diag(b,hi,lo,0,0.3),base=b)
+        cv.paint(rows_mask({6:(CX-6,CX+6)}),lo,base=lo)
+        brim=rows_mask({6:(CX+2,CX+10),7:(CX+3,CX+10),8:(CX+5,CX+9)})
+        cv.paint(brim,lambda x,y: hi if y==6 and x>CX+6 else lo,base=lo)
     elif k=='star':
         for (dx,dy) in [(0,0),(-1,1),(0,1),(1,1),(0,2)]: cv.px(CX+4+dx,3+dy,b)
         cv.px(CX+4,4,hi)

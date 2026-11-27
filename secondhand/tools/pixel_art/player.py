@@ -68,7 +68,7 @@ def _bottom(bid):
                     skirt_end=37, flare=2, legL=3, skin_y0=36)
     raise KeyError(bid)
 
-HEADWEAR = {'beret': '#f080b0', 'bow': '#c85088', 'band': '#88c0f0', 'star': '#f8d838'}  # 【佔位色】
+HEADWEAR = {'beret': '#f080b0', 'bow': '#c85088', 'cap': '#d83a3a', 'star': '#f8d838'}  # 【佔位色】
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
 TOPS = ('white', 'black', 'stripe', 'hoodie')
 BOTTOMS = ('jeans', 'track', 'pleat')
