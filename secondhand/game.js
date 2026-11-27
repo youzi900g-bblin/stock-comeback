@@ -81,22 +81,23 @@
   const dk = (c) => [Math.min(255, Math.floor(c[0] * 0.6) + 4), Math.min(255, Math.floor(c[1] * 0.6 * 0.95)), Math.min(255, Math.floor(c[2] * 0.6) + 14)];
   const warm = (c) => [Math.floor(c[0] * 0.72), Math.floor(c[1] * 0.58), Math.floor(c[2] * 0.56)];
   const rect = (x, y, w, c) => `<rect x="${x}" y="${y}" width="${w}" height="1" fill="${c}"/>`;
+  const LEGACY_HAIR_COLOR = { bob: "darkbrown", long: "black", buns: "black", short: "darkbrown", twin: "brown" }; // 舊存檔沒有髮色時沿用當時的髮色
   const sprite = (p) => {
-    const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hair}_${q.skin}`];
-    const pal = { ...F.pal.skin[q.skin], ...F.pal.hair[q.hair] };
+    const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown"}_${q.skin}`];
+    const hairColor = q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown";
+    const pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor] };
     const resolve = (spec) => {
       if (spec[0] === "#") return spec;
       const [role, op] = spec.split(":"), c = rgb(pal[role]);
       return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
     };
-    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom]].sort((a, b) => a.z - b.z);
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom], ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear])].sort((a, b) => a.z - b.z);
     const body = layers.map((l) => { const cols = l.cols.map(resolve); return l.runs.map(([x, y, w, ci]) => rect(x, y, w, cols[ci])).join(""); }).join("");
     const cell = ([x, y, c]) => rect(x, y, 1, c);
     const face = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? (q.eyes === "big" ? F.geo.freckles_big : F.geo.freckles) : F.geo.blush), ...F.geo.mouth[q.mouth]]
       .map(([x, y, r]) => rect(x, y, 1, r === "iris" ? F.iris[q.iris] : col[r])).join("");
     const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(cell).join("");
-    const hw = q.headwear === "none" ? "" : F.hw[`${q.hair}_${q.headwear}`].map(cell).join("");
-    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}">${body}${hw}${face}${gl}</svg>`;
+    return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}">${body}${face}${gl}</svg>`;
   };
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
@@ -164,9 +165,21 @@
     return msg ? `<div class="tip">${msg}<br><button class="skip" id="skip-tut">跳過教學</button></div>` : "";
   }
 
+  // 創角分頁：每頁列出的欄位（key、顯示名、選項清單、是否用色塊）
+  const CREATE_TABS = [
+    { id: "face", name: "臉部", fields: [["skin", "膚色", () => C.SKIN_TONES, true], ["eyes", "眼睛", () => C.EYES], ["iris", "眼珠顏色", () => C.EYE_COLORS], ["mouth", "嘴巴", () => C.MOUTHS], ["freckles", "雀斑", () => C.FRECKLES]] },
+    { id: "hair", name: "髮型與頭飾", fields: [["hair", "髮型", () => C.HAIR_STYLES], ["hairColor", "髮色", () => C.HAIR_COLORS, true], ["headwear", "頭飾", () => C.HEADWEAR], ["headwearColor", "頭飾顏色", () => C.HEADWEAR_COLORS, true]] },
+    { id: "outfit", name: "服裝", fields: [["top", "上衣", () => C.TOPS], ["bottom", "下身", () => C.BOTTOMS]] },
+    { id: "acc", name: "配件", fields: [["glasses", "眼鏡", () => C.GLASSES]] },
+  ];
+  let createTab = "face";
+
   function createView() {
-    const group = (key, label, list) => `<div class="field"><span class="lab">${label}</span><div class="opts">${list.map((o) => `<button class="opt ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}">${o.name}</button>`).join("")}</div></div>`;
-    const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" aria-pressed="${draft.skin === s.id}" data-look="skin:${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
+    const opt = (key, o, sw) => `<button class="opt ${sw ? "swatch" : ""} ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}"${sw ? ` style="background:${o.color}" aria-label="${o.name}"` : ""}>${sw ? "" : o.name}</button>`;
+    const tab = CREATE_TABS.find((t) => t.id === createTab);
+    const fields = tab.fields.filter(([k]) => k !== "headwearColor" || draft.headwear !== "none")
+      .map(([k, label, list, sw]) => `<div class="field"><span class="lab">${label}</span><div class="opts">${list().map((o) => opt(k, o, sw)).join("")}</div></div>`).join("");
+    const tabs = CREATE_TABS.map((t) => `<button class="opt ${t.id === createTab ? "on" : ""}" role="tab" aria-selected="${t.id === createTab}" data-ctab="${t.id}">${t.name}</button>`).join("");
     const ok = !!draft.name.trim();
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
       <div class="win"><h2>創角</h2><div class="body">
@@ -174,10 +187,8 @@
         <div class="preview">${sprite(draft)}</div>
         <div class="field"><label for="nm">名字</label><div class="namerow"><input id="nm" type="text" maxlength="8" value="${esc(draft.name)}" placeholder="最多 8 個字" autocomplete="off"><button class="btn alt" id="rnd-name">隨機名字</button></div></div>
         <button class="btn alt block" id="rnd-look">隨機外觀</button>
-        ${group("hair", "髮型", C.HAIR_STYLES)}
-        <div class="field"><span class="lab">膚色</span><div class="opts">${skins}</div></div>
-        ${group("eyes", "眼睛", C.EYES)}${group("iris", "眼珠顏色", C.EYE_COLORS)}${group("mouth", "嘴巴", C.MOUTHS)}${group("freckles", "雀斑", C.FRECKLES)}
-        ${group("headwear", "頭飾", C.HEADWEAR)}${group("glasses", "眼鏡", C.GLASSES)}${group("top", "上衣", C.TOPS)}${group("bottom", "下身", C.BOTTOMS)}
+        <div class="tabs ctabs" role="tablist" aria-label="外觀分類">${tabs}</div>
+        ${fields}
         <button class="btn block" id="start" ${ok ? "" : "disabled"}>開始</button>
         <p class="why" id="why" ${ok ? "hidden" : ""}>請先輸入名字。</p>
       </div></div>`;
@@ -312,12 +323,14 @@
         const ok = !!nm.value.trim();
         $("#start").disabled = !ok; $("#why").hidden = ok;
       });
+      all("[data-ctab]", (b) => b.onclick = () => { createTab = b.dataset.ctab; render(); });
       all("[data-look]", (b) => b.onclick = () => { const [k, v] = b.dataset.look.split(":"); draft[k] = v; render(); });
       const pick = (a) => a[Math.floor(Math.random() * a.length)].id;
       $("#rnd-name").onclick = () => { draft.name = C.RANDOM_NAMES[Math.floor(Math.random() * C.RANDOM_NAMES.length)]; render(); };
       $("#rnd-look").onclick = () => {
         Object.assign(draft, { hair: pick(C.HAIR_STYLES), skin: pick(C.SKIN_TONES), eyes: pick(C.EYES), iris: pick(C.EYE_COLORS), mouth: pick(C.MOUTHS),
-          freckles: pick(C.FRECKLES), headwear: pick(C.HEADWEAR), glasses: pick(C.GLASSES), top: pick(C.TOPS), bottom: pick(C.BOTTOMS) });
+          freckles: pick(C.FRECKLES), headwear: pick(C.HEADWEAR), glasses: pick(C.GLASSES), top: pick(C.TOPS), bottom: pick(C.BOTTOMS),
+          hairColor: pick(C.HAIR_COLORS), headwearColor: pick(C.HEADWEAR_COLORS) });
         render();
       };
       $("#start").onclick = () => {

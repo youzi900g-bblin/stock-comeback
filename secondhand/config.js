@@ -40,6 +40,23 @@ const CONFIG = {
     { id: "buns", name: "丸子頭" },
     { id: "short", name: "短髮" },
     { id: "twin", name: "雙馬尾" },
+    { id: "hpony", name: "高馬尾" },
+    { id: "lpony", name: "低馬尾" },
+    { id: "braids", name: "麻花辮" },
+    { id: "wavy", name: "波浪長髮" },
+    { id: "buzz", name: "平頭" },
+  ],
+  // 髮色與頭飾色：id 要與 tools/pixel_art/player.py 一致；color 只用於選鈕顯示【佔位色】
+  HAIR_COLORS: [
+    { id: "black", name: "黑", color: "#2a2230" }, { id: "darkbrown", name: "深棕", color: "#3a2418" },
+    { id: "brown", name: "棕", color: "#6a4a32" }, { id: "chestnut", name: "栗紅", color: "#8c3c2c" },
+    { id: "blonde", name: "金", color: "#d8b058" }, { id: "ginger", name: "薑橘", color: "#d06a28" },
+    { id: "pink", name: "粉", color: "#e878a8" }, { id: "violet", name: "藍紫", color: "#5a5ab8" },
+  ],
+  HEADWEAR_COLORS: [
+    { id: "red", name: "紅", color: "#d83a3a" }, { id: "white", name: "白", color: "#f4f1ea" },
+    { id: "black", name: "黑", color: "#2a2430" }, { id: "blue", name: "藍", color: "#3a5a8a" },
+    { id: "pink", name: "粉", color: "#f080b0" }, { id: "yellow", name: "黃", color: "#f8d838" },
   ],
   // 上衣、下身、五官：id 要與 tools/pixel_art/player.py 一致；名稱與配色取自基本款【佔位】。體型固定為中等，不開放選擇
   TOPS: [
@@ -52,12 +69,12 @@ const CONFIG = {
   EYES: [{ id: "closed", name: "瞇眼" }, { id: "normal", name: "一般" }, { id: "big", name: "大眼" }],
   MOUTHS: [{ id: "small", name: "小嘴" }, { id: "mid", name: "一般" }, { id: "wide", name: "大嘴" }],
   EYE_COLORS: [{ id: "brown", name: "深褐" }, { id: "blue", name: "藍" }, { id: "green", name: "綠" }, { id: "violet", name: "紫" }],
-  HEADWEAR: [{ id: "none", name: "無" }, { id: "beret", name: "貝雷帽" }, { id: "bow", name: "蝴蝶結" }, { id: "cap", name: "鴨舌帽" }, { id: "star", name: "星星髮夾" }],
+  HEADWEAR: [{ id: "none", name: "無" }, { id: "beret", name: "貝雷帽" }, { id: "bow", name: "蝴蝶結" }, { id: "cap", name: "網帽" }, { id: "star", name: "星星髮夾" }],
   // 隨機名字用的名單【佔位】，每個不超過 8 字
   RANDOM_NAMES: ["小雨", "小晴", "阿橘", "小米", "糖糖", "心心", "小柚", "莓莓", "芝芝", "嘟嘟", "小布", "阿福", "柚子", "小滿", "圓圓", "小棠", "咪咪", "阿秋", "小暖", "豆豆"],
   GLASSES: [{ id: "none", name: "無" }, { id: "round", name: "棕圓框" }, { id: "square", name: "黑方框" }, { id: "rimless", name: "無框" }, { id: "gold", name: "金絲" }, { id: "pink", name: "粉框" }, { id: "sun", name: "墨鏡" }],
   FRECKLES: [{ id: "off", name: "無" }, { id: "on", name: "有" }],
-  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off", headwear: "none", iris: "brown", glasses: "none" },
+  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off", headwear: "none", iris: "brown", glasses: "none", hairColor: "darkbrown", headwearColor: "red" },
   // 膚色：選鈕的顏色，要與 tools/pixel_art/player.py 的 SKIN_TONES 一致【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
   // 玩家圖由 tools/pixel_art/player.py 產生；髮色與預設服裝也定義在那裡（皆為佔位）
   SKIN_TONES: [

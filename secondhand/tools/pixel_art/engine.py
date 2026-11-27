@@ -112,9 +112,20 @@ def build(P,want_log=False):
         cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
         cv.paint(mask_poly('ell',[CX-11,8,CX-7,24]),hair)
         cv.paint(mask_poly('ell',[CX+7,8,CX+11,24]),hair)
+    elif P['hs']=='hpony':   # 高馬尾：馬尾從頭頂偏右垂下
+        cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
+        cv.paint(mask_poly('ell',[CX+5,1,CX+10,18]),hair)
+    elif P['hs']=='lpony':   # 低馬尾：馬尾落在右肩
+        cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,12)}),hair)
+        cv.paint(mask_poly('ell',[CX+5,11,CX+9,29]),hair)
+    elif P['hs']=='braids':  # 麻花辮：後髮只有頭部，辮子畫在前層
+        cv.paint(rows_mask({y:(CX-6,CX+6) for y in range(4,16)}),hair)
+    elif P['hs']=='buzz':    # 平頭：幾乎不露後髮
+        cv.paint(rows_mask({y:(CX-5,CX+5) for y in range(3,8)}),hair)
     elif P['hs']=='long':
         sp={}
-        for y in range(5,30): sp[y]=(CX-7,CX+7) if y<16 else ((CX-6,CX+6) if y<27 else (CX-5,CX+5))
+        wv=lambda y: ((0,1,2,1)[(y//2)%4] if P.get('wave') and y>=12 else 0)   # 波浪：下半段每 8 格一個起伏，最寬多 2 格
+        for y in range(5,30): sp[y]=(CX-7-wv(y),CX+7+wv(y)) if y<16 else ((CX-6-wv(y),CX+6+wv(y)) if y<27 else (CX-5-wv(y),CX+5+wv(y)))
         cv.paint(rows_mask(sp),hair)
     # --- legs/bottom/shoes
     ytop=30
@@ -221,7 +232,12 @@ def build(P,want_log=False):
         if P.get('hp'):
             cv.paint(mask_poly('ell',[CX-7,0,CX+6,5]),diag(P['hp'][0],P['hp'][1],P['hp'][0],0,0.2),base=P['hp'][0])
             cv.px(CX-1,-1+1,P['hp'][2])
-    elif P['hs'] in ('short','twin'):
+    elif P['hs']=='buzz':
+        m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=5}
+        m|={(CX+fw+1,y) for y in range(6,9)}|{(CX-fw-1,y) for y in range(6,9)}
+        cv.paint(m,hair)
+        for (x,y) in [(CX-3,3),(CX+1,2),(CX+4,4),(CX-5,5)]: cv.px(x,y,hh)
+    elif P['hs'] in ('short','twin','hpony','lpony','braids'):
         m=mask_poly('ell',[CX-6,1,CX+6,12]); m={(x,y) for (x,y) in m if y<=6}
         for y,(a,b2) in {7:(CX-fw,CX+1),8:(CX-fw,CX-1),9:(CX-fw,CX-3)}.items(): m|={(x,y) for x in range(a,b2+1)}
         m|={(CX+fw+2,y) for y in range(7,11)}|{(CX-fw-2,y) for y in range(7,11)}
@@ -230,6 +246,10 @@ def build(P,want_log=False):
         if P['hs']=='twin':
             for sd in (-1,1):
                 for dy in (0,1): cv.px(CX+sd*(fw+3),8+dy,hh)
+        if P['hs']=='braids':   # 兩條麻花辮垂在肩前，左右各一，每 2 格錯開 1 格
+            for sd in (-1,1):
+                cv.paint(rows_mask({y:(CX+sd*6+(sd if (y//2)%2 else 0)-1,CX+sd*6+(sd if (y//2)%2 else 0)+1) for y in range(17,31)}),hair)
+                for y in range(18,31,4): cv.px(CX+sd*6+(sd if (y//2)%2 else 0),y,hh)
     elif P['hs']=='long':
         m={(x,y) for y in range(3,8) for x in range(CX-fw-2,CX+fw+3)}
         m|={(x,y) for y in range(3,5) for x in range(CX-fw,CX+fw+1)}
@@ -237,7 +257,7 @@ def build(P,want_log=False):
         cv.paint(m,hair)
         # strands over shoulders
         for side in (-1,1):
-            sm={(CX+side*(tw+1+k),y) for y in range(17,28) for k in range(2)}
+            sm={(CX+side*(tw+1+k+((0,1,2,1)[(y//2)%4] if P.get('wave') else 0)),y) for y in range(17,28) for k in range(2)}
             cv.paint(sm,hair)
         for (x,y) in [(CX-3,5),(CX+2,4),(CX-7,12),(CX+7,14),(CX-6,22),(CX+6,24),(CX-7,18)]: cv.px(x,y,hh)
         if P.get('hp'):

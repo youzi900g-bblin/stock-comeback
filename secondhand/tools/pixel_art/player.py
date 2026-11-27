@@ -13,9 +13,13 @@ from engine import H, CX, build, face_cells, face_colors, render_rgba
 
 # 與 config.js 的 SKIN_TONES 同色（網頁的膚色選鈕用 config.js；改色要兩邊一起改）
 SKIN_TONES = {'s1': '#f1cfb4', 's2': '#e3b38e', 's3': '#c68b62', 's4': '#8a5838', 's5': '#5f3b25'}
-# hs 是 engine.py 的髮型名稱；髮色為【佔位值】
-HAIR = {'bob': ('bob', '#4a3426'), 'long': ('long', '#2a2230'), 'buns': ('puffs', '#2f2420'),
-        'short': ('short', '#3a2c26'), 'twin': ('twin', '#5a3a2a')}
+# hs 是 engine.py 的髮型名稱（id 與 config.js 的 HAIR_STYLES 一致）
+HAIR = {'bob': 'bob', 'long': 'long', 'buns': 'puffs', 'short': 'short', 'twin': 'twin',
+        'hpony': 'hpony', 'lpony': 'lpony', 'braids': 'braids', 'wavy': 'long', 'buzz': 'buzz'}
+# 髮色與頭飾色（id 與 config.js 的 HAIR_COLORS / HEADWEAR_COLORS 一致）【佔位色】
+HAIR_COLORS = {'black': '#2a2230', 'darkbrown': '#3a2418', 'brown': '#6a4a32', 'chestnut': '#8c3c2c',
+               'blonde': '#d8b058', 'ginger': '#d06a28', 'pink': '#e878a8', 'violet': '#5a5ab8'}
+HW_COLORS = {'red': '#d83a3a', 'white': '#f4f1ea', 'black': '#2a2430', 'blue': '#3a5a8a', 'pink': '#f080b0', 'yellow': '#f8d838'}
 EYES = ('closed', 'normal', 'big')
 MOUTHS = ('small', 'mid', 'wide')
 
@@ -67,20 +71,20 @@ def _bottom(bid):
                     skirt_end=37, flare=2, legL=3, skin_y0=36)
     raise KeyError(bid)
 
-HEADWEAR = {'beret': '#f080b0', 'bow': '#c85088', 'cap': '#d83a3a', 'star': '#f8d838'}  # 【佔位色】
+HEADWEAR = ('beret', 'bow', 'cap', 'star')
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
 TOPS = ('white', 'black', 'stripe', 'hoodie')
 BOTTOMS = ('jeans', 'track', 'pleat')
 
-def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown'):
-    sk = H(SKIN_TONES[skin_id]); hs, hc = HAIR[hair_id]; hair = H(hc)
+def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown', hair_color='darkbrown', hw_color='red'):
+    sk = H(SKIN_TONES[skin_id]); hs = HAIR[hair_id]; hair = H(HAIR_COLORS[hair_color])
     shade, lip, blush = skin_colors(sk)
     P = dict(body='medium', skin=sk, skin_s=shade, blush=blush, lip=lip,
         hair=hair, hair_hi=hi_of(hair), hs=hs, hp=None,
         bottom=_bottom(bottom), shoe=H('#f4f0ec'), shoe_hi=H('#c8c4bc'), torso_len=0,
         iris=H(IRIS[iris]), eyes=eyes, mouth=mouth, freckles='auto' if freckles else None,
-        nofeatures=not features, no_blush=bool(freckles))  # 有雀斑就不畫腮紅（美術規則）
-    if hw: t = tone(HEADWEAR[hw]); P['hw'] = dict(kind=hw, **t)
+        nofeatures=not features, no_blush=bool(freckles), wave=(hair_id == 'wavy'))  # 有雀斑就不畫腮紅（美術規則）
+    if hw: P['hw'] = dict(kind=hw, **tone(HW_COLORS[hw_color]))
     P.update(_top(top))
     return P
 
@@ -100,17 +104,10 @@ def face_data():
     geo['freckles'] = [list(c) for c in allc if c[2] == 'freckle']
     geo['freckles_big'] = [list(c) for c in face_cells(player('bob', 's1', eyes='big', freckles=True)) if c[2] == 'freckle']
     colors = {}
-    for h in HAIR:
-        for s in SKIN_TONES:
-            P = player(h, s, freckles=True)
-            colors[f'{h}_{s}'] = {k: _hex(v) for k, v in face_colors(P).items()}
-    # 頭飾：與「無頭飾」的底圖逐格比對，只留不同的格子（含自動邊線），不需另做圖檔
-    hw = {}
-    for h in HAIR:
-        ref = build(player(h, 's1', features=False))
-        for k in HEADWEAR:
-            cur = build(player(h, 's1', features=False, hw=k))
-            hw[f'{h}_{k}'] = [[x, y, _hex(cur[y][x])] for y in range(len(cur)) for x in range(len(cur[0])) if cur[y][x] != ref[y][x]]
+    for h in HAIR_COLORS:
+        for s_ in SKIN_TONES:
+            P = player('bob', s_, freckles=True, hair_color=h)
+            colors[f'{h}_{s_}'] = {k: _hex(v) for k, v in face_colors(P).items()}
     # 眼鏡：畫在五官之上。鏡框 1 格寬、左右對稱，圍住眼睛（x 為 CX±1..±5、y 8..12）；
     # 鏡片填半透明淺色並留 1 格反光，才不會在黑髮或深膚色上糊掉。圓框去掉四個角。
     def glasses(frame, lens, rnd, glint, opaque=False):
@@ -133,15 +130,16 @@ def face_data():
         sun=glasses('#6a6488', '#34304a', False, '#a8a8d0') +
             # 墨鏡反光：每片鏡片同方向（右上亮、左下暗）一道斜線加一個小亮點
             [c for dx in (0, -6) for c in ([CX+4+dx, 9, '#e4e4ff'], [CX+3+dx, 10, '#a8a8e0'], [CX+2+dx, 11, '#6a6aa0'], [CX+4+dx, 11, '#5a5a90'])])
-    return dict(geo=geo, colors=colors, hw=hw, iris=IRIS)
+    return dict(geo=geo, colors=colors, iris=IRIS)
 
 # ---- 分層輸出 ----
 # 每個選項輸出自己的圖層（格子加色名），顏色在網頁上才套入。圖層依 Z 由小到大疊，
 # 順序與 engine.build 的繪製順序一致，所以疊出來的結果與整張重畫逐格相同（有比對測試）。
 Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt': 23,
-     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80}
+     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80, 'headwear': 90}
 # 可換色的色名 → 標記色（引擎跑一遍後，由標記色反查是哪個色名；邊線色由標記色推得）
-MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7)}
+MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7),
+        'hw': (250, 250, 3), 'hw_hi': (250, 250, 9), 'hw_lo': (250, 250, 15)}
 
 def _dk(c, f=0.6): return (min(255, int(c[0]*f)+4), min(255, int(c[1]*f*0.95)), min(255, int(c[2]*f)+14))
 def _warm(b): return (int(b[0]*.72), int(b[1]*.58), int(b[2]*.56))
@@ -153,9 +151,10 @@ def _spec_table():
     assert len(t) == 3*len(MARK), '標記色的邊線色互相撞色'
     return t
 
-def _marked(hair_id, top, bottom):
-    P = player(hair_id, 's1', top, bottom, features=False)
+def _marked(hair_id, top, bottom, hw=None):
+    P = player(hair_id, 's1', top, bottom, features=False, hw=hw)
     P.update(skin=MARK['skin'], skin_s=MARK['skin_s'], hair=MARK['hair'], hair_hi=MARK['hair_hi'])
+    if hw: P['hw'] = dict(kind=hw, base=MARK['hw'], hi=MARK['hw_hi'], lo=MARK['hw_lo'])
     return P
 
 def _layers(P, names):
@@ -184,11 +183,14 @@ def layer_data():
     for h in HAIR: L['hair:'+h] = _layers(_marked(h, 'white', 'jeans'), ('hair_back', 'hair_front'))
     for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso'))
     for b in BOTTOMS: L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'socks', 'shoes', 'skirt'))
-    pal = dict(skin={}, hair={})
-    for s, hexc in SKIN_TONES.items():
-        P = player('bob', s); pal['skin'][s] = dict(skin=_hex(P['skin']), skin_s=_hex(P['skin_s']))
-    for h, (hs, hc) in HAIR.items():
-        c = H(hc); pal['hair'][h] = dict(hair=_hex(c), hair_hi=_hex(hi_of(c)))
+    for k in HEADWEAR: L['hw:'+k] = _layers(_marked('bob', 'white', 'jeans', hw=k), ('headwear',))
+    pal = dict(skin={}, hair={}, hw={})
+    for s_, hexc in SKIN_TONES.items():
+        P = player('bob', s_); pal['skin'][s_] = dict(skin=_hex(P['skin']), skin_s=_hex(P['skin_s']))
+    for h, hexc in HAIR_COLORS.items():
+        c = H(hexc); pal['hair'][h] = dict(hair=_hex(c), hair_hi=_hex(hi_of(c)))
+    for h, hexc in HW_COLORS.items():
+        t = tone(hexc); pal['hw'][h] = dict(hw=_hex(t['base']), hw_hi=_hex(t['hi']), hw_lo=_hex(t['lo']))
     return L, pal
 
 def build_all(out_dir):
