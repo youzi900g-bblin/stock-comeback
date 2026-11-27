@@ -189,8 +189,21 @@ def build(P,want_log=False):
         for side in (0,1):
             x0,x1=legL() if side==0 else legR()
             sp={y:((x0-(1 if y>=45 else 0)),(x1+(1 if y>=45 else 0))) if True else None for y in range(30,49)}
-            ext=(lambda y: 0 if y<40 else (1 if y<44 else 2)) if bt.get('flare') else (lambda y: 1 if y>=45 else 0)   # 喇叭褲從膝下逐步外擴
-            sp={y:(x0-(ext(y) if side==0 else 0),x1+(ext(y) if side==1 else 0)) for y in range(30,49)}
+            if bt.get('flare'):   # 喇叭褲：大腿貼腿、膝蓋最窄（外側內收 1 格），膝下逐步變寬，褲口最寬（外 2 格、內 1 格）
+                def prof(y):   # (外側外擴格數, 內側內擴格數)，負值為內收
+                    if y<35: return (0,0)
+                    if y<41: return (-1,0)
+                    if y<43: return (0,0)
+                    if y<45: return (1,0)
+                    if y<47: return (1,1)
+                    return (2,1)
+                sp={}
+                for y in range(30,49):
+                    o,i=prof(y)
+                    sp[y]=(x0-o,x1+i) if side==0 else (x0-i,x1+o)
+            else:
+                ext=lambda y: 1 if y>=45 else 0
+                sp={y:(x0-(ext(y) if side==0 else 0),x1+(ext(y) if side==1 else 0)) for y in range(30,49)}
             cv.paint(rows_mask(sp),diag(bt['base'],bt['hi'],bt['lo'],30,0.4),base=bt['base'])
         # waist band
         cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])
@@ -308,11 +321,13 @@ def build(P,want_log=False):
             for x in range(CX+5,CX+12): cv.px(x,34,bg['hi'])
             for x in range(CX+5,CX+12): cv.px(x,41,bg['lo'])
         elif k=='pack':   # 後背包的肩帶：從肩頭越過手臂與身體的交界，沿身側下垂（上寬下窄），在腋下轉向身後
-            for sd in (-1,1):
-                for y in range(19,22): cv.px(CX+sd*3,y,bg['lo']); cv.px(CX+sd*4,y,bg['lo'])
-                for y in range(22,28): cv.px(CX+sd*4,y,bg['lo'])
-                cv.px(CX+sd*4,28,bg['lo']); cv.px(CX+sd*5,28,bg['lo'])
-                cv.px(CX+sd*4,24,bg['hi'])
+            for sd in (-1,1):   # 肩帶蓋住身體與手臂的交界，整條實心（不露出衣服色）
+                for y in range(19,21):
+                    for dx in (3,4,5): cv.px(CX+sd*dx,y,bg['lo'])
+                for y in range(21,28):
+                    for dx in (4,5): cv.px(CX+sd*dx,y,bg['lo'])
+                for dx in (4,5,6): cv.px(CX+sd*dx,28,bg['lo'])
+                cv.px(CX+sd*4,24,bg['hi']); cv.px(CX+sd*5,24,bg['hi'])
     # --- neck
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
