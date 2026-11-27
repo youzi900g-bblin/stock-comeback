@@ -455,6 +455,8 @@ def build(P,want_log=False):
     if not P.get('nofeatures'):
         cols=face_colors(P)
         for (x,y,r) in face_cells(P): cv.px(x,y,cols[r])
+    cv.L='overlay'   # 逐格覆蓋（NPC 林依手繪稿用；沒有 overlay 的角色不受影響）
+    for (x,y,c) in P.get('overlay',()): cv.px(x,y,c)
     return (cv.c,cv.log) if want_log else cv.c
 OUTL=H('#2a1c26')
 def render(c,S=8,box=None):
