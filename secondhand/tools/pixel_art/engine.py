@@ -125,6 +125,23 @@ def fringe_new(kind,fw,hh,sd):
         hi=[]; seam=[]
     cells={(x,y) for y,segs in rows.items() for (a,b) in segs for x in range(a,b+1)}
     return cells,hi,seam
+def draw_shoes(cv,P,x0,x1):
+    """鞋子：canvas（低筒，原本的畫法）、sneaker（含腳踝）、boot（短靴，蓋住小腿下段）、sandal（只有鞋底與兩條帶子）。"""
+    st=P.get('shoe_style','canvas'); sh=P['shoe']; hi=P['shoe_hi']
+    if st=='canvas':
+        cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),sh,base=sh)
+        for x in range(x0-1,x1+2): cv.px(x,50,hi)
+    elif st=='sneaker':
+        cv.paint(rows_mask({48:(x0,x1),49:(x0-1,x1+1),50:(x0-1,x1+1),51:(x0-1,x1+1)}),sh,base=sh)
+        for x in range(x0-1,x1+2): cv.px(x,51,hi)
+        cv.px(x1,49,hi)
+    elif st=='boot':
+        cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(44,52)}),sh,base=sh)
+        for x in range(x0-1,x1+2): cv.px(x,44,hi); cv.px(x,51,hi)
+    elif st=='sandal':
+        cv.paint(rows_mask({50:(x0-1,x1+1),51:(x0-1,x1+1)}),sh,base=sh)
+        for x in range(x0-1,x1+2): cv.px(x,51,hi)
+        cv.px(x0,49,sh); cv.px(x1,49,sh)
 def build(P,want_log=False):
     cv=Cv(); b=BODY[P['body']]; tw,nw,L,aw=b['tw'],b['nw'],b['L'],b['arm']
     sk,sks,blush,lip=P['skin'],P['skin_s'],P['blush'],P['lip']
@@ -176,13 +193,12 @@ def build(P,want_log=False):
             cv.paint(rows_mask(sp),diag(bt['base'],bt['hi'],bt['lo'],30,0.4),base=bt['base'])
         # waist band
         cv.paint(rows_mask({30:(CX-1-L,CX+1+L),31:(CX-1-L,CX+1+L)}),bt['lo'],base=bt['lo'])
+        if bt.get('detail'): bt['detail'](cv)
         # shoes
         cv.L='shoes'
         for side in (0,1):
             x0,x1=legL() if side==0 else legR()
-            cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),P['shoe'],base=P['shoe'])
-            for x in range(x0-1,x1+2): cv.px(x,50,P['shoe_hi'])
-            cv.px(x0-1 if side==0 else x1+1,51,P['shoe_hi']) if False else None
+            draw_shoes(cv,P,x0,x1)
     else:
         LL=bt['legL']
         for side in (0,1):
@@ -191,12 +207,17 @@ def build(P,want_log=False):
             cv.L='legs'
             cv.paint(rows_mask({y:(x0,x1) for y in range(bt['skin_y0'],49)}),sk,base=sk,warm=True)
             cv.L='socks'
+            so=P.get('socks')
+            if so:   # 玩家用的襪子（只在穿裙子時看得到）：short 到腳踝、long 到膝下、stripe 為長襪加橫條
+                y0={'short':46,'long':40,'stripe':40}[so['kind']]
+                fl=(lambda x,y: so['lo'] if (y%2==0) else so['base']) if so['kind']=='stripe' else so['base']
+                cv.paint(rows_mask({y:(x0,x1) for y in range(y0,49)}),fl,base=so['base'])
+                for x in range(x0,x1+1): cv.px(x,y0,so['lo'])
             if bt.get('sock'):
                 cv.paint(rows_mask({y:(x0,x1) for y in range(bt['sock_y0'],49)}),bt['sock'],base=bt['sock'],outline=True)
                 for x in range(x0,x1+1): cv.px(x,bt['sock_y0'],bt['sock_hi'])
             cv.L='shoes'
-            cv.paint(rows_mask({y:(x0-1,x1+1) for y in range(49,52)}),P['shoe'],base=P['shoe'])
-            for x in range(x0-1,x1+2): cv.px(x,50,P['shoe_hi'])
+            draw_shoes(cv,P,x0,x1)
         cv.L='skirt'
         sp={}
         top,bot=30,bt['skirt_end']
@@ -205,10 +226,16 @@ def build(P,want_log=False):
             half=tw+int(round(t*bt['flare']))
             sp[y]=(CX-half,CX+half)
         cv.paint(rows_mask(sp),bt['fill'],base=bt['base'])
+        if bt.get('detail'): bt['detail'](cv)
     # --- hood (behind neck)
     cv.L='hood'
     if P.get('hood'):
         cv.paint(mask_poly('ell',[CX-nw-4,15,CX+nw+4,21]),P['hood'])
+    # --- 包包（身後的部分）
+    cv.L='bag_back'
+    bg=P.get('bag')
+    if bg and bg['kind']=='pack':
+        cv.paint(rows_mask({y:(CX-5,CX+5) for y in range(18,32)}),bg['base'],base=bg['base'])
     # --- sleeves / arms / hands
     cv.L='arms'
     for side in (-1,1):
@@ -230,15 +257,57 @@ def build(P,want_log=False):
             cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'])
         hy=arm_cells(side,32,34)
         cv.paint(hy,sk,base=sk,warm=True)
+    jk=P.get('jacket')
+    if jk:
+        cv.L='jarms'
+        for side in (-1,1):
+            cv.paint(arm_cells(side,20,31),diag(jk['base'],jk['hi'],jk['lo'],20),base=jk['base'])
+            cv.paint(arm_cells(side,30,31),jk['lo'],base=jk['lo'])
+    cv.L='bracelet'
+    if P.get('jewel',{}).get('bracelet'):
+        for side in (-1,1):
+            for (x,y) in arm_cells(side,31,31): cv.px(x,y,H('#e0b040'))
     # --- torso
     cv.L='torso'
     tb=P['top']; hem=P['torso_hem']
     cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),tb.get('fill') or diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
     if 'detail' in P: P['detail'](cv,tw,hem)
+    if jk:
+        cv.L='jacket'
+        kd=jk['kind']; h2=30+{'cardigan':3,'denim':1,'sport':2}[kd]
+        if kd=='cardigan':   # 開襟：中間 3 格露出裡面的上衣
+            cv.paint(rows_mask({y:(CX-tw,CX-2) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
+            cv.paint(rows_mask({y:(CX+2,CX+tw) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
+            for y in (22,25,28): cv.px(CX-2,y,jk['lo'])
+        else:
+            cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,h2+1)}),diag(jk['base'],jk['hi'],jk['lo'],19),base=jk['base'])
+            for y in range(19,h2+1): cv.px(CX,y,jk['lo'])
+            for x in range(CX-3,CX+4): cv.px(x,19,jk['hi'])
+            if kd=='denim':
+                for y in (22,25,28): cv.px(CX,y,jk['hi'])
+                for sd in (-1,1): cv.px(CX+sd*3,26,jk['lo']); cv.px(CX+sd*3,27,jk['lo'])
+            else:
+                for x in range(CX-tw,CX+tw+1): cv.px(x,h2,jk['lo'])
+    cv.L='bag_front'
+    if bg:
+        k=bg['kind']
+        if k=='cross':
+            for i in range(12): cv.px(CX-4+(i*7)//11,19+i,bg['lo'])
+            cv.paint(rows_mask({y:(CX+3,CX+6) for y in range(29,34)}),bg['base'],base=bg['base'])
+        elif k=='tote':
+            for (x,y) in [(CX+7,31),(CX+9,31),(CX+7,32),(CX+9,32)]: cv.px(x,y,bg['lo'])
+            cv.paint(rows_mask({y:(CX+6,CX+10) for y in range(33,41)}),bg['base'],base=bg['base'])
+        elif k=='pack':
+            for sd in (-1,1):
+                for y in range(19,28): cv.px(CX+sd*3,y,bg['lo']); cv.px(CX+sd*2,y,bg['lo'])
     # --- neck
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
     cv.paint(rows_mask(sp),lambda x,y: sks if y<=16 else sk,base=sk,warm=True)
+    cv.L='necklace'
+    if P.get('jewel',{}).get('necklace'):
+        for (x,y) in [(CX-2,18),(CX-1,19),(CX,20),(CX+1,19),(CX+2,18)]: cv.px(x,y,H('#e0b040'))
+        cv.px(CX,21,H('#f080b0'))
     # --- face
     cv.L='face'
     fsp={}
@@ -323,6 +392,9 @@ def build(P,want_log=False):
             for (dx,dy) in [(-2,-1),(-2,0),(-2,1),(-1,0),(1,0),(2,-1),(2,0),(2,1)]: cv.px(CX+4+dx,4+dy,bw)
             cv.px(CX+4,4,bk)
             cv.px(CX-5,7,P['clip']);cv.px(CX-4,7,P['clip'])
+    cv.L='earring'
+    if P.get('jewel',{}).get('earring'):
+        for sd in (-1,1): cv.px(CX+sd*5,12,H('#e0b040')); cv.px(CX+sd*5,13,H('#f8dc78'))
     # --- 頭飾（玩家用，與髮型無關；NPC 用上面的 hp）
     cv.L='headwear'
     if P.get('hw'): headwear(cv,P['hw'])

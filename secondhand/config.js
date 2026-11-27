@@ -72,9 +72,16 @@ const CONFIG = {
   HEADWEAR: [{ id: "none", name: "無" }, { id: "beret", name: "貝雷帽" }, { id: "bow", name: "蝴蝶結" }, { id: "cap", name: "網帽" }, { id: "star", name: "星星髮夾" }],
   // 隨機名字用的名單【佔位】，每個不超過 8 字
   RANDOM_NAMES: ["小雨", "小晴", "阿橘", "小米", "糖糖", "心心", "小柚", "莓莓", "芝芝", "嘟嘟", "小布", "阿福", "柚子", "小滿", "圓圓", "小棠", "咪咪", "阿秋", "小暖", "豆豆"],
+  SHOES: [{ id: "canvas", name: "帆布鞋" }, { id: "sneaker", name: "運動鞋" }, { id: "boot", name: "短靴" }, { id: "sandal", name: "涼鞋" }],
+  SOCKS: [{ id: "none", name: "無" }, { id: "short", name: "短襪" }, { id: "long", name: "長襪" }, { id: "stripe", name: "條紋襪" }],
+  JACKETS: [{ id: "none", name: "無" }, { id: "cardigan", name: "針織開襟衫" }, { id: "denim", name: "牛仔外套" }, { id: "sport", name: "運動外套" }],
+  BAGS: [{ id: "none", name: "無" }, { id: "cross", name: "斜背包" }, { id: "tote", name: "托特包" }, { id: "pack", name: "後背包" }],
+  ONOFF: [{ id: "off", name: "無" }, { id: "on", name: "有" }],
   GLASSES: [{ id: "none", name: "無" }, { id: "round", name: "棕圓框" }, { id: "square", name: "黑方框" }, { id: "rimless", name: "無框" }, { id: "gold", name: "金絲" }, { id: "pink", name: "粉框" }, { id: "sun", name: "墨鏡" }],
   FRECKLES: [{ id: "off", name: "無" }, { id: "on", name: "有" }],
-  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off", headwear: "none", iris: "brown", glasses: "none", hairColor: "darkbrown", headwearColor: "red" },
+  DEFAULT_LOOK: { top: "white", bottom: "jeans", eyes: "normal", mouth: "mid", freckles: "off", headwear: "none", iris: "brown", glasses: "none", hairColor: "darkbrown", headwearColor: "red",
+    shoes: "canvas", shoesColor: "white", socks: "none", socksColor: "white", jacket: "none", bag: "none", bagColor: "blue",
+    earring: "off", necklace: "off", bracelet: "off" },
   // 膚色：選鈕的顏色，要與 tools/pixel_art/player.py 的 SKIN_TONES 一致【佔位值】（深棕 #8a5838 為文件標準色，其餘為佔位）
   // 玩家圖由 tools/pixel_art/player.py 產生；髮色與預設服裝也定義在那裡（皆為佔位）
   SKIN_TONES: [

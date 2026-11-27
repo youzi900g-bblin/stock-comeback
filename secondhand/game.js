@@ -85,13 +85,18 @@
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown"}_${q.skin}`];
     const hairColor = q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown";
-    const pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor] };
+    const it = (id) => F.pal.item[id], pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor],
+      shoe: it(q.shoesColor).base, shoe_lo: it(q.shoesColor).lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: it(q.bagColor).base, bag_lo: it(q.bagColor).lo };
+    const bt = F.pal.btype[q.bottom];
     const resolve = (spec) => {
       if (spec[0] === "#") return spec;
       const [role, op] = spec.split(":"), c = rgb(pal[role]);
       return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
     };
-    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom], ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear])].sort((a, b) => a.z - b.z);
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers["bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
+      ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear]), ...(q.socks === "none" || bt !== "skirt" ? [] : F.layers["socks:" + q.socks]),
+      ...(q.jacket === "none" ? [] : F.layers["jacket:" + q.jacket]), ...(q.bag === "none" ? [] : F.layers["bag:" + q.bag]),
+      ...["earring", "necklace", "bracelet"].filter((k) => q[k] === "on").flatMap((k) => F.layers["jewel:" + k])].sort((a, b) => a.z - b.z);
     const body = layers.map((l) => { const cols = l.cols.map(resolve); return l.runs.map(([x, y, w, ci]) => rect(x, y, w, cols[ci])).join(""); }).join("");
     const cell = ([x, y, c]) => rect(x, y, 1, c);
     const face = [...F.geo.eyes[q.eyes], ...F.geo.nose, ...(q.freckles === "on" ? (q.eyes === "big" ? F.geo.freckles_big : F.geo.freckles) : F.geo.blush), ...F.geo.mouth[q.mouth]]
@@ -169,15 +174,15 @@
   const CREATE_TABS = [
     { id: "face", name: "臉部", fields: [["skin", "膚色", () => C.SKIN_TONES, true], ["eyes", "眼睛", () => C.EYES], ["iris", "眼珠顏色", () => C.EYE_COLORS], ["mouth", "嘴巴", () => C.MOUTHS], ["freckles", "雀斑", () => C.FRECKLES]] },
     { id: "hair", name: "髮型與頭飾", fields: [["hair", "髮型", () => C.HAIR_STYLES], ["hairColor", "髮色", () => C.HAIR_COLORS, true], ["headwear", "頭飾", () => C.HEADWEAR], ["headwearColor", "頭飾顏色", () => C.HEADWEAR_COLORS, true]] },
-    { id: "outfit", name: "服裝", fields: [["top", "上衣", () => C.TOPS], ["bottom", "下身", () => C.BOTTOMS]] },
-    { id: "acc", name: "配件", fields: [["glasses", "眼鏡", () => C.GLASSES]] },
+    { id: "outfit", name: "服裝", fields: [["top", "上衣", () => C.TOPS], ["bottom", "下身", () => C.BOTTOMS], ["jacket", "外套", () => C.JACKETS], ["shoes", "鞋子", () => C.SHOES], ["shoesColor", "鞋子顏色", () => C.HEADWEAR_COLORS, true], ["socks", "襪子（穿裙子時看得到）", () => C.SOCKS], ["socksColor", "襪子顏色", () => C.HEADWEAR_COLORS, true]] },
+    { id: "acc", name: "配件", fields: [["glasses", "眼鏡", () => C.GLASSES], ["bag", "包包", () => C.BAGS], ["bagColor", "包包顏色", () => C.HEADWEAR_COLORS, true], ["earring", "耳環", () => C.ONOFF], ["necklace", "項鍊", () => C.ONOFF], ["bracelet", "手環", () => C.ONOFF]] },
   ];
   let createTab = "face";
 
   function createView() {
     const opt = (key, o, sw) => `<button class="opt ${sw ? "swatch" : ""} ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}"${sw ? ` style="background:${o.color}" aria-label="${o.name}"` : ""}>${sw ? "" : o.name}</button>`;
     const tab = CREATE_TABS.find((t) => t.id === createTab);
-    const fields = tab.fields.filter(([k]) => k !== "headwearColor" || draft.headwear !== "none")
+    const fields = tab.fields.filter(([k]) => !({ headwearColor: "headwear", socksColor: "socks", bagColor: "bag" }[k] && draft[{ headwearColor: "headwear", socksColor: "socks", bagColor: "bag" }[k]] === "none"))
       .map(([k, label, list, sw]) => `<div class="field"><span class="lab">${label}</span><div class="opts">${list().map((o) => opt(k, o, sw)).join("")}</div></div>`).join("");
     const tabs = CREATE_TABS.map((t) => `<button class="opt ${t.id === createTab ? "on" : ""}" role="tab" aria-selected="${t.id === createTab}" data-ctab="${t.id}">${t.name}</button>`).join("");
     const ok = !!draft.name.trim();
@@ -330,7 +335,9 @@
       $("#rnd-look").onclick = () => {
         Object.assign(draft, { hair: pick(C.HAIR_STYLES), skin: pick(C.SKIN_TONES), eyes: pick(C.EYES), iris: pick(C.EYE_COLORS), mouth: pick(C.MOUTHS),
           freckles: pick(C.FRECKLES), headwear: pick(C.HEADWEAR), glasses: pick(C.GLASSES), top: pick(C.TOPS), bottom: pick(C.BOTTOMS),
-          hairColor: pick(C.HAIR_COLORS), headwearColor: pick(C.HEADWEAR_COLORS) });
+          hairColor: pick(C.HAIR_COLORS), headwearColor: pick(C.HEADWEAR_COLORS), shoes: pick(C.SHOES), shoesColor: pick(C.HEADWEAR_COLORS),
+          socks: pick(C.SOCKS), socksColor: pick(C.HEADWEAR_COLORS), jacket: pick(C.JACKETS), bag: pick(C.BAGS), bagColor: pick(C.HEADWEAR_COLORS),
+          earring: pick(C.ONOFF), necklace: pick(C.ONOFF), bracelet: pick(C.ONOFF) });
         render();
       };
       $("#start").onclick = () => {
