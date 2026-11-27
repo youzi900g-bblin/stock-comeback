@@ -18,7 +18,9 @@
   function load() {
     try {
       const raw = localStorage.getItem(C.SAVE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const s = raw ? JSON.parse(raw) : null;
+      if (s && s.tutorial === "market") s.tutorial = "done"; // 舊版卡住的狀態
+      return s;
     } catch (e) { return null; }
   }
   function save() {
@@ -45,7 +47,7 @@
         base: t.base, cost: 0, color: t.color, kept: false });
     }
     return { player: p, money: C.START_MONEY, day: 1, wardrobe, listings: [],
-      sold: [], tutorial: "goWardrobe", nextId: C.START_ITEM_COUNT + 1, settings: { contrast: false } };
+      tutorial: "goWardrobe", settings: { contrast: false } };
   }
 
   function nextDay() {
@@ -55,13 +57,12 @@
       if (S.day - l.listedDay >= l.waitDays) {
         S.money += l.price;
         sales.push({ name: l.item.name, price: l.price, item: l.item });
-        S.sold.push(l.item.id);
         return false;
       }
       return true;
     });
     modal = { type: "summary", sales };
-    if (sales.length && S.tutorial === "wait") S.tutorial = "market";
+    if (sales.length && S.tutorial === "wait") { S.tutorial = "done"; modal.intro = sales[0].item; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
@@ -82,11 +83,36 @@
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
   // ---------- 畫面 ----------
+  // 焦點：整個畫面重繪後，把焦點還給剛才的控制項；開關彈窗時移入與歸還
+  let hadModal = false, returnSel = null;
+  function selOf(el) {
+    if (!el || el === document.body || !app.contains(el)) return null;
+    if (el.id) return "#" + el.id;
+    for (const a of el.attributes) if (a.name.startsWith("data-")) return `[${a.name}="${a.value}"]`;
+    return null;
+  }
+  function focusSel(sel) {
+    const el = sel && app.querySelector(sel);
+    if (el) el.focus({ preventScroll: true });
+  }
   function render() {
+    const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
     bind();
+    if (modal && !hadModal) {
+      returnSel = cur;
+      const sh = app.querySelector(".sheet");
+      if (sh) sh.focus({ preventScroll: true });
+    } else focusSel(modal ? cur : hadModal ? returnSel : cur);
+    hadModal = !!modal;
   }
+  // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !modal) return;
+    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market");
+    if (b) b.click();
+  });
 
   function shell() {
     let body = "";
@@ -97,7 +123,8 @@
       const hl = S.tutorial === "goWardrobe" && id === "wardrobe" ? " hl" : "";
       // 教學第一步：先淡出其他分頁，只留要點的那個
       const dim = S.tutorial === "goWardrobe" && id !== "wardrobe" && id !== view ? " dim" : "";
-      return `<button data-nav="${id}" class="${view === id ? "on" : ""}${hl}${dim}">${label}</button>`;
+      const goHome = S.tutorial === "wait" && id === "home" && view !== "home" ? " hl" : "";
+      return `<button data-nav="${id}" class="${view === id ? "on" : ""}${hl}${dim}${goHome}"${view === id ? ' aria-current="page"' : ""}>${label}</button>`;
     };
     const primary = view === "home"
       ? `<div class="primary-bar"><button class="btn ${S.tutorial === "wait" ? "hl" : ""}" id="nextday">進入下一天</button></div>` : "";
@@ -120,9 +147,9 @@
   }
 
   function createView() {
-    const hairs = C.HAIR_STYLES.map((h) => `<button class="opt ${draft.hair === h.id ? "on" : ""}" data-hair="${h.id}">${h.name}</button>`).join("");
-    const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" data-skin="${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
-    const tags = C.STYLE_TAGS.map((t) => `<button class="opt ${draft.tag === t ? "on" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("");
+    const hairs = C.HAIR_STYLES.map((h) => `<button class="opt ${draft.hair === h.id ? "on" : ""}" aria-pressed="${draft.hair === h.id}" data-hair="${h.id}">${h.name}</button>`).join("");
+    const skins = C.SKIN_TONES.map((s) => `<button class="opt swatch ${draft.skin === s.id ? "on" : ""}" aria-pressed="${draft.skin === s.id}" data-skin="${s.id}" style="background:${s.color}" aria-label="膚色：${s.name}"></button>`).join("");
+    const tags = C.STYLE_TAGS.map((t) => `<button class="opt ${draft.tag === t ? "on" : ""}" aria-pressed="${draft.tag === t}" data-tag="${esc(t)}">${esc(t)}</button>`).join("");
     const ok = !!draft.name.trim();
     return `<div class="status"><span>${C.TITLE_ZH}</span><small>${C.TITLE_EN}</small></div>
       <div class="win"><h2>創角</h2><div class="body">
@@ -140,7 +167,7 @@
   function homeView() {
     const stale = staleListings().length;
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    return `<img class="room" src="art/小套房背景.png" alt="小套房">
+    return `<img class="room" src="art/小套房背景.png" alt="小套房" width="832" height="576">
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${avatar(S.player)}
         <div><span class="chip">${esc(S.player.tag)}</span>
@@ -150,11 +177,12 @@
   }
 
   function itemCard(i, first) {
-    const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && first ? " hl" : "";
+    const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && first && !i.kept ? " hl" : "";
     const meta = `${esc(i.type)}・${i.tags.map(esc).join("、")}`;
     const val = tutDone() ? `<div class="muted">基礎價值 $${i.base}</div>` : "";
-    const acts = `<button class="btn small${hl}" data-sell="${i.id}">賣</button>
-      <button class="btn small alt" data-keep="${i.id}">${i.kept ? "不留" : "留"}</button>`;
+    // 留下的衣服不顯示「賣」，要賣得先按「不留」，避免誤賣
+    const acts = `${i.kept ? "" : `<button class="btn small${hl}" data-sell="${i.id}">賣</button>`}
+      <button class="btn small alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>`;
     const name = `${esc(i.name)}${i.kept ? ' <span class="badge">留</span>' : ""}`;
     if (layout === "grid") {
       return `<div class="card"><div class="swatch-item" style="background:${i.color}"></div>
@@ -166,15 +194,16 @@
   }
 
   function wardrobeView() {
-    const tabs = C.CATEGORIES.map((c) => `<button class="opt ${cat === c ? "on" : ""}" data-cat="${c}">${c}</button>`).join("");
+    const tabs = C.CATEGORIES.map((c) => `<button class="opt ${cat === c ? "on" : ""}" aria-pressed="${cat === c}" data-cat="${c}">${c}</button>`).join("");
     const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    const cards = items.map((i, idx) => itemCard(i, idx === 0)).join("");
+    const firstSellable = items.find((i) => !i.kept);
+    const cards = items.map((i) => itemCard(i, i === firstSellable)).join("");
     const list = layout === "grid" ? `<div class="grid">${cards}</div>` : cards;
     const empty = S.wardrobe.length === 0 ? "衣櫃是空的。" : "這個分類沒有衣服。";
     return `<div class="tabs">${tabs}</div>
-      <div class="viewsw"><button class="opt ${layout === "grid" ? "on" : ""}" data-layout="grid">網格</button>
-        <button class="opt ${layout === "list" ? "on" : ""}" data-layout="list">清單</button></div>
+      <div class="viewsw"><button class="opt ${layout === "grid" ? "on" : ""}" aria-pressed="${layout === "grid"}" data-layout="grid">網格</button>
+        <button class="opt ${layout === "list" ? "on" : ""}" aria-pressed="${layout === "list"}" data-layout="list">清單</button></div>
       <div class="win"><h2>衣櫃　<span class="${full ? "full" : ""}" style="${full ? "color:#ffd0b8" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></h2>
         <div class="body">${cards ? list : `<p class="muted empty">${empty}</p>`}</div></div>`;
   }
@@ -187,7 +216,7 @@
         <div class="swatch-item" style="background:${l.item.color}"></div>
         <div class="info"><div>${esc(l.item.name)}</div>
           <div>標價 $${l.price}・已掛 ${d} 天</div>
-          ${tutDone() ? `<div class="muted">市場價 $${marketPrice(l.item)}・預計第 ${l.waitDays} 天成交</div>` : ""}
+          ${tutDone() ? `<div class="muted">市場價 $${marketPrice(l.item)}・約 ${Math.max(1, l.waitDays - d)} 天後成交</div>` : ""}
           ${stale ? `<div class="warn">掛太久了，考慮調整價格</div>` : ""}</div>
         <div class="acts"><button class="btn small" data-reprice="${l.item.id}">改價</button>
           <button class="btn small alt" data-pull="${l.item.id}">撤下</button></div></div>`;
@@ -209,7 +238,7 @@
            <div class="kv"><span>預計等待</span><span id="eta">${p > 0 ? waitDays(p, it) + " 天" : "—"}</span></div>
            <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`
         : `<p class="muted">先隨意標一個價格。標得越高，通常等得越久。</p>`;
-      return `<div class="mask"><div class="sheet"><h3>${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3>
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><h3>${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3>
         ${prices}
         <div class="stepper">
           <button class="btn alt" data-step="-${C.PRICE_STEP_LARGE}">-${C.PRICE_STEP_LARGE}</button>
@@ -227,13 +256,13 @@
       const body = sales.length
         ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
-      return `<div class="mask"><div class="sheet"><h3>第 ${S.day} 天・結算</h3>${body}
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><h3>第 ${S.day} 天・結算</h3>${body}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
     if (modal.type === "market") {
       const it = modal.item;
-      return `<div class="mask"><div class="sheet"><h3>第一筆收入</h3>
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="第一筆收入" tabindex="-1"><h3>第一筆收入</h3>
         <p>「${esc(it.name)}」賣出去了，這是你的第一筆本金。認識兩個數字：</p>
         <div class="kv"><span>基礎價值</span><span>$${it.base}</span></div>
         <p class="muted" style="margin-top:0">這件衣服本身應有的價值，固定不變。</p>
@@ -242,7 +271,7 @@
         <div class="btns"><button class="btn main" id="close-market">我知道了</button></div></div></div>`;
     }
     if (modal.type === "settings") {
-      return `<div class="mask"><div class="sheet"><h3>設定</h3>
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="設定" tabindex="-1"><h3>設定</h3>
         <div class="kv"><span>高對比模式</span><button class="btn alt small" id="set-contrast">${settings().contrast ? "開" : "關"}</button></div>
         <div class="kv"><span>新手教學</span><button class="btn alt small" id="replay-tut">重看教學</button></div>
         <div class="kv"><span>存檔</span><button class="btn alt small" id="reset-save">清除存檔</button></div>
@@ -345,7 +374,7 @@
         const wasEdit = modal.edit;
         if (wasEdit) {
           const l = S.listings.find((x) => x.item.id === it.id);
-          l.price = price; l.listedDay = S.day; l.waitDays = waitDays(price, it); // 改價後重新計算等待
+          l.price = price; l.waitDays = waitDays(price, it); // 改價重算等待天數，但掛賣天數照舊，滯銷提醒不會被洗掉
         } else {
           S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id);
           S.listings.push({ item: it, price, listedDay: S.day, waitDays: waitDays(price, it) });
@@ -356,13 +385,12 @@
     }
     const cs = $("#close-summary");
     if (cs) cs.onclick = () => {
-      const first = S.tutorial === "market" ? modal.sales[0] : null;
-      modal = null;
-      if (first) modal = { type: "market", item: first.item };
+      const intro = modal.intro;
+      modal = intro ? { type: "market", item: intro } : null;
       render();
     };
     const cm = $("#close-market");
-    if (cm) cm.onclick = () => { S.tutorial = "done"; modal = null; save(); render(); };
+    if (cm) cm.onclick = () => { modal = null; render(); };
   }
 
   // 供自我檢查與測試使用

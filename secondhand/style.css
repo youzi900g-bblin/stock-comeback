@@ -119,7 +119,6 @@ body.contrast .btn.alt { background: #fff; }
 .me { display: flex; gap: 12px; align-items: center; }
 .chip { display: inline-block; padding: 0 10px; margin: 2px 4px 2px 0; background: #e8e1f7; color: #2c2638; border: 2px solid var(--line); }
 .muted { color: var(--muted); }
-.row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
 /* 角色色塊（第一階段以色塊代替，見計畫書待決定第 3 項） */
 .avatar { position: relative; width: 56px; height: 90px; flex: none; }
@@ -158,8 +157,8 @@ body.contrast .btn.alt { background: #fff; }
 
 /* 衣櫃與賣場 */
 .tabs { display: flex; gap: 6px; padding: 12px 12px 0; overflow-x: auto; }
-.tabs { gap: 4px; }
-.tabs .opt { flex: none; padding: 4px 8px; }
+.tabs { gap: 8px; }
+.tabs .opt { flex: none; padding: 4px 6px; }
 .viewsw { display: flex; gap: 6px; padding: 8px 12px 0; justify-content: flex-end; }
 .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .card { border: 2px solid var(--line); padding: 8px; background: #fff; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -203,4 +202,8 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(130px + env(safe-area-inset-bottom)); z-index: 30;
   background: var(--lo); color: #fff; padding: 6px 14px; border: 2px solid var(--hi); width: max-content; max-width: 92%; white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl, .money.flash { animation: none; }
 }
