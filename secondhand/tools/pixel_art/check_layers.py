@@ -10,7 +10,7 @@ def resolve(spec,pl):
 def compose(h,s,t,b,hc='darkbrown',hw=None,hwc='red',sh='canvas',shc='white',so=None,soc='white',jk=None,bg=None,bgc='blue',jw=()):
     it=lambda c: pal['item'][c]
     pl={**pal['skin'][s],**pal['hair'][hc],**pal['hw'][hwc],'shoe':it(shc)['base'],'shoe_lo':it(shc)['lo'],
-        'sock':it(soc)['base'],'sock_lo':it(soc)['lo'],'bag':it(bgc)['base'],'bag_lo':it(bgc)['lo']}
+        'sock':it(soc)['base'],'sock_lo':it(soc)['lo'],'bag':it(bgc)['base'],'bag_hi':it(bgc)['hi'],'bag_lo':it(bgc)['lo']}
     bt=pal['btype'][b]
     layers=L['base']+L['hair:'+h]+L['top:'+t]+L['bottom:'+b]+L[f'shoes:{sh}:{bt}']
     if hw: layers+=L['hw:'+hw]

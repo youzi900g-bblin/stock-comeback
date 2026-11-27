@@ -235,8 +235,10 @@ def build(P,want_log=False):
     # --- 包包（身後的部分）
     cv.L='bag_back'
     bg=P.get('bag')
-    if bg and bg['kind']=='pack':
-        cv.paint(rows_mask({y:(CX-5,CX+5) for y in range(18,32)}),bg['base'],base=bg['base'])
+    if bg and bg['kind']=='pack':   # 後背包的背面：圓頂從肩膀後方探出，頂部加一個提把
+        cv.paint(rows_mask({16:(CX-2,CX+2),17:(CX-4,CX+4),**{y:(CX-5,CX+5) for y in range(18,32)}}),bg['base'],base=bg['base'])
+        for x in range(CX-3,CX): cv.px(x,17,bg['hi'])
+        for x in range(CX-1,CX+2): cv.px(x,15,bg['lo'])
     # --- sleeves / arms / hands
     cv.L='arms'
     for side in (-1,1):
@@ -292,15 +294,25 @@ def build(P,want_log=False):
     cv.L='bag_front'
     if bg:
         k=bg['kind']
-        if k=='cross':
-            for i in range(12): cv.px(CX-4+(i*7)//11,19+i,bg['lo'])
-            cv.paint(rows_mask({y:(CX+3,CX+6) for y in range(29,34)}),bg['base'],base=bg['base'])
-        elif k=='tote':
-            for (x,y) in [(CX+7,31),(CX+9,31),(CX+7,32),(CX+9,32)]: cv.px(x,y,bg['lo'])
-            cv.paint(rows_mask({y:(CX+6,CX+10) for y in range(33,41)}),bg['base'],base=bg['base'])
-        elif k=='pack':
+        if k=='cross':    # 斜背包：兩格寬的背帶由左肩斜到右髖，包身有包蓋、扣子與亮邊
+            for i in range(11):
+                x=CX-4+(i*7)//10
+                cv.px(x,19+i,bg['lo']); cv.px(x+1,19+i,bg['lo'])
+            cv.paint(rows_mask({y:(CX+3,CX+8) for y in range(29,35)}),bg['base'],base=bg['base'])
+            for x in range(CX+3,CX+9): cv.px(x,29,bg['hi']); cv.px(x,30,bg['lo'])      # 包蓋
+            cv.px(CX+5,31,bg['hi']); cv.px(CX+6,31,bg['hi'])                               # 扣子
+        elif k=='tote':   # 托特包：提把掛在右手，方形大包身，上緣一道亮帶
+            for x in range(CX+7,CX+11): cv.px(x,31,bg['lo'])
+            for y in (32,33): cv.px(CX+7,y,bg['lo']); cv.px(CX+10,y,bg['lo'])
+            cv.paint(rows_mask({y:(CX+5,CX+11) for y in range(34,42)}),bg['base'],base=bg['base'])
+            for x in range(CX+5,CX+12): cv.px(x,34,bg['hi'])
+            for x in range(CX+5,CX+12): cv.px(x,41,bg['lo'])
+        elif k=='pack':   # 後背包的肩帶：從肩頭越過手臂與身體的交界，沿身側下垂（上寬下窄），在腋下轉向身後
             for sd in (-1,1):
-                for y in range(19,28): cv.px(CX+sd*3,y,bg['lo']); cv.px(CX+sd*2,y,bg['lo'])
+                for y in range(19,22): cv.px(CX+sd*3,y,bg['lo']); cv.px(CX+sd*4,y,bg['lo'])
+                for y in range(22,28): cv.px(CX+sd*4,y,bg['lo'])
+                cv.px(CX+sd*4,28,bg['lo']); cv.px(CX+sd*5,28,bg['lo'])
+                cv.px(CX+sd*4,24,bg['hi'])
     # --- neck
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}

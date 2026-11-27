@@ -182,7 +182,7 @@ Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt'
 MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7),
         'hw': (250, 250, 3), 'hw_hi': (250, 250, 9), 'hw_lo': (250, 250, 15),
         'shoe': (250, 3, 250), 'shoe_lo': (250, 9, 250), 'sock': (3, 250, 250), 'sock_lo': (9, 250, 250),
-        'bag': (250, 130, 3), 'bag_lo': (250, 130, 9)}
+        'bag': (250, 130, 3), 'bag_lo': (250, 130, 9), 'bag_hi': (250, 130, 15)}
 
 def _dk(c, f=0.6): return (min(255, int(c[0]*f)+4), min(255, int(c[1]*f*0.95)), min(255, int(c[2]*f)+14))
 def _warm(b): return (int(b[0]*.72), int(b[1]*.58), int(b[2]*.56))
@@ -202,7 +202,7 @@ def _marked(hair_id, top, bottom, hw=None, shoes='canvas', socks=None, jacket=No
     P['bottom'] = _bottom(bottom, MARK['skin'])   # 破洞牛仔褲的破洞用膚色，要用色名標記
     if hw: P['hw'] = dict(kind=hw, base=MARK['hw'], hi=MARK['hw_hi'], lo=MARK['hw_lo'])
     if socks: P['socks'] = dict(kind=socks, base=MARK['sock'], lo=MARK['sock_lo'])
-    if bag: P['bag'] = dict(kind=bag, base=MARK['bag'], lo=MARK['bag_lo'])
+    if bag: P['bag'] = dict(kind=bag, base=MARK['bag'], hi=MARK['bag_hi'], lo=MARK['bag_lo'])
     return P
 
 def _layers(P, names):
@@ -245,7 +245,7 @@ def layer_data():
         c = H(hexc); pal['hair'][h] = dict(hair=_hex(c), hair_hi=_hex(hi_of(c)))
     for h, hexc in HW_COLORS.items():
         t = tone(hexc); pal['hw'][h] = dict(hw=_hex(t['base']), hw_hi=_hex(t['hi']), hw_lo=_hex(t['lo']))
-        pal['item'][h] = dict(base=_hex(t['base']), lo=_hex(t['lo']))
+        pal['item'][h] = dict(base=_hex(t['base']), hi=_hex(t['hi']), lo=_hex(t['lo']))
     return L, dict(pal, btype=BTYPE)
 
 def build_all(out_dir):

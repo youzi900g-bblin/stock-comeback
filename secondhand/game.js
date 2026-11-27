@@ -86,7 +86,7 @@
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown"}_${q.skin}`];
     const hairColor = q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown";
     const it = (id) => F.pal.item[id], pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor],
-      shoe: it(q.shoesColor).base, shoe_lo: it(q.shoesColor).lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: it(q.bagColor).base, bag_lo: it(q.bagColor).lo };
+      shoe: it(q.shoesColor).base, shoe_lo: it(q.shoesColor).lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: it(q.bagColor).base, bag_hi: it(q.bagColor).hi, bag_lo: it(q.bagColor).lo };
     const bt = F.pal.btype[q.bottom];
     const resolve = (spec) => {
       if (spec[0] === "#") return spec;
