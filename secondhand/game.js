@@ -151,7 +151,7 @@
     S.tutorial = "done"; S.quest = 0; S.questV = 2; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "tutReward" };
   }
   // 新手任務：依序一個個出現；S.quest 是目前第幾個（沒有這個欄位＝沒有任務，舊存檔就是這樣）
-  let questGuide = false;
+  let questGuide = false, questOpen = false;   // questOpen：任務卡的說明是否展開（預設收起）
   const QUEST_DONE = {
     listAll: () => S.wardrobe.every((i) => i.reward),   // 教學獎勵的衣服不要求上架
     nextDay: () => S.day >= 2,
@@ -165,7 +165,7 @@
   function questCheck() {
     if (!curQuest()) return;
     while (curQuest() && QUEST_DONE[curQuest().id]()) {
-      const q = curQuest(); S.quest += 1; questGuide = false;
+      const q = curQuest(); S.quest += 1; questGuide = false; questOpen = false;
       toast = `任務完成：${q.title}`; setTimeout(() => { if (toast.startsWith("任務完成")) { toast = ""; render(); } }, 2400);
     }
     if (!curQuest()) S.quest = C.QUESTS.length;
@@ -174,13 +174,13 @@
     const list = shippingList();
     if (!list.length) return "";
     const sum = list.reduce((a, s) => a + s.price, 0);
-    return `<div class="tip"><b>待出貨</b>　${list.length} 件，共 $${sum}<br><span class="muted">包貨出貨後才會收到錢。</span><br><button class="btn small" id="pack-open">去包貨</button></div>`;
+    return `<div class="tip shipline"><span><b>待出貨</b>　${list.length} 件・$${sum}</span><button class="btn small" id="pack-open">去包貨</button></div>`;
   }
   function questCard() {
     const q = curQuest();
     if (!q) return "";
-    return `<div class="tip quest"><b>新手任務　${S.quest + 1}/${C.QUESTS.length}</b>　${esc(q.title)}<br><span class="muted">${esc(q.desc)}</span><br>
-      <button class="btn small" id="quest-go">帶我去</button></div>`;
+    return `<div class="tip quest"><b>新手任務　${S.quest + 1}/${C.QUESTS.length}</b>　${esc(q.title)}${questOpen ? `<br><span class="muted">${esc(q.desc)}</span>` : ""}
+      <div class="qbtns"><button class="btn small" id="quest-go">帶我去</button><button class="btn small alt" id="quest-more" aria-expanded="${questOpen}">${questOpen ? "收起說明" : "看說明"}</button></div></div>`;
   }
   function buyOffer(oid, price, silent) {
     const so = socialState(), o = so.offers.find((x) => x.oid === oid);
@@ -568,10 +568,10 @@
       </div></div>`;
   }
 
-  function trendBar() {
+  function trendBar(showMarket = true) {
     if (!S.season || !tutDone()) return "";
     const left = Math.max(0, S.season.start + C.SEASON_DAYS - S.day);
-    return `<div class="trend"><span>本季流行　<b class="up">${esc(S.season.up)} ▲</b>　退燒　<b class="down">${esc(S.season.down)} ▼</b></span><small>還有 ${left} 天換季</small></div>${S.market ? `<div class="trend2"><b>今日行情</b>　${C.MARKET_TYPES.map((t) => { const a = S.market[t] || 0, n = Math.round(a * 100); return `${t} <span class="${n > 0 ? "up" : n < 0 ? "down" : "muted"}">${pctText(a)}</span>`; }).join("　")}</div>` : ""}`;
+    return `<div class="trend"><span>本季流行　<b class="up">${esc(S.season.up)} ▲</b>　退燒　<b class="down">${esc(S.season.down)} ▼</b></span><small>還有 ${left} 天換季</small></div>${S.market && showMarket ? `<div class="trend2"><small>今日行情</small><div class="mkrow">${C.MARKET_TYPES.map((t) => { const a = S.market[t] || 0, n = Math.round(a * 100); return `<div class="mk"><small>${t}</small><b class="${n > 0 ? "up" : n < 0 ? "down" : "muted"}">${pctText(a)}</b></div>`; }).join("")}</div></div>` : ""}`;
   }
 
   function homeView() {
@@ -667,7 +667,7 @@
           <button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></article>`;
     }).join("");
     const empty = !so.offers.length ? "還沒有貨。按「刷新看看」。" : "這個分頁目前沒有貨。";
-    return `${trendBar()}<div class="stabs" role="tablist">${tabs}</div>
+    return `${trendBar(false)}<div class="stabs" role="tablist">${tabs}</div>
       <div class="sbar"><span>刷新 ${so.left}/${C.SOCIAL_REFRESHES}</span><button class="btn small" id="refresh" ${so.left > 0 ? "" : "disabled"}>${so.left > 0 ? "刷新看看" : "今天刷完了"}</button></div>
       ${full ? '<p class="warn" style="padding:0 12px">衣櫃已滿，先賣或清掉幾件才買得下。</p>' : ""}
       <div class="feed">${posts || `<p class="muted empty" style="padding:16px">${empty}</p>`}</div>`;
@@ -994,6 +994,7 @@
     all("[data-buy]", (b) => b.onclick = () => buyOffer(+b.dataset.buy));
     const ch = $("#close-hint"); if (ch) ch.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
+    const qm = $("#quest-more"); if (qm) qm.onclick = () => { questOpen = !questOpen; render(); };
     const qg = $("#quest-go"); if (qg) qg.onclick = () => { questGuide = true; render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
 

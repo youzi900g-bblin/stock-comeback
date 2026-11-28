@@ -321,6 +321,16 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .star { width: 18px; height: 18px; background: #c9bcc4; clip-path: polygon(50% 0, 62% 35%, 98% 38%, 69% 59%, 80% 94%, 50% 73%, 20% 94%, 31% 59%, 2% 38%, 38% 35%); }
 .star.on { background: #e8b630; }
 
-.trend2 { margin: 6px 12px 0; padding: 6px 12px; font-size: 13px; line-height: 1.7; background: #fff; border: 2px solid var(--line); }
-.trend2 .up { color: var(--ok); }
-.trend2 .down { color: var(--warn); }
+.trend2 { margin: 6px 12px 0; padding: 4px 8px 6px; background: #fff; border: 2px solid var(--line); }
+.trend2 > small { display: block; font-size: 12px; color: var(--muted, #7a6070); margin-bottom: 2px; }
+.mkrow { display: flex; gap: 4px; }
+.mk { flex: 1; text-align: center; background: #f6eef2; padding: 2px 0; }
+.mk small { display: block; font-size: 12px; white-space: nowrap; }
+.mk b { font-size: 13px; font-weight: normal; white-space: nowrap; }
+.mk .up { color: var(--ok); }
+.mk .down { color: var(--warn); }
+.trend b { white-space: nowrap; }
+.tip.shipline { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 12px; }
+.tip.shipline .btn { margin: 0; }
+.qbtns { display: flex; gap: 8px; margin-top: 6px; }
+.qbtns .btn { margin-top: 0; }
