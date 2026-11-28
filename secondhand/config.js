@@ -174,13 +174,18 @@ const CONFIG = {
   // 林出現條件：三位 NPC 好感度都達到 NPC_FAVOR_UNLOCK。LIN_DRAFT 為 true 時，另外要網址加 ?draft 才看得到。
   // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數；repaired＝接任務後累計修補件數
   LIN_DRAFT: false,        // 林改由好感度門檻控制（NPC_FAVOR_UNLOCK），不再用 ?draft 擋住
-  // 林的任務（先用「修補」當作佔位任務，使用者之後會改；台詞由使用者自己寫，這裡只放空缺標示）
+  // 林的任務：咖啡廳遇到的求助（先用「修補」當玩法，使用者之後會再改）。台詞是使用者要求我先擬的草案，可直接改字。
+  // 流程：進咖啡廳 → narration（旁白）→ monologue（林自言自語）→ intro（林求助，接受／先不要）→ acceptLine → waiting（進行中）→ done（完成）
   LIN_QUESTS: [
-    { id: "lin1", appearDay: 1, goal: { type: "repaired", n: 1 }, reward: { money: 100 },
-      intro: "（台詞待作者填寫）",
-      done: "（台詞待作者填寫）" },
+    { id: "lin1", appearDay: 1, title: "幫林修好一件衣服", goal: { type: "repaired", n: 1 }, reward: { money: 100 },
+      narration: "隔壁桌的人把一件外套攤在桌上，皺著眉頭看了很久。",
+      monologue: "袖口的線整個鬆掉了……明天就要穿的。這種東西，到底要找誰修才好。",
+      intro: "啊，不好意思，被你聽到了。這件外套是朋友送的，不能就這樣丟掉。如果你知道誰修得好，可以幫我問問嗎？",
+      acceptLine: "真的嗎？那就拜託你了。我先在這裡等。",
+      waiting: "不急，慢慢來。",
+      done: "縫得真整齊，看不出哪裡壞過。太感謝了，這是一點心意。" },
   ],
-  LIN_ALL_DONE: "（台詞待作者填寫）", // 【佔位】台詞由使用者自己寫
+  LIN_ALL_DONE: "外套我天天穿呢。有空再一起喝杯咖啡吧。", // 台詞草案
   // 創角選的衣物會成為開場衣櫃的前幾件（上衣、下身、外套、鞋子、包包；選「無」就不產生），其餘用基本款補滿【佔位】
   // 沒有對應基本款樣板的款式，基礎價值與標籤沿用同類型的第一個樣板；顏色用 PICK_COLORS，鞋與包用創角選的顏色
   PICK_FALLBACK: { 下身: "直筒牛仔褲", 外套: "針織開襟衫", 鞋子: "帆布鞋" },

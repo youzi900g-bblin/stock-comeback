@@ -81,7 +81,7 @@
     return S.favor[name] || 0;
   };
   const favorOK = () => [...new Set(C.NPC_TASKS.map((t) => t.npc))].every((n) => favorOf(n) >= C.NPC_FAVOR_UNLOCK);   // 三位好感度都達標，林才出現
-  const linVisible = () => linOn() && S && tutDone() && favorOK() && !!linQuest() && S.day >= linQuest().appearDay;
+  const linVisible = () => linOn() && S && tutDone() && favorOK() && (!linQuest() || S.day >= linQuest().appearDay);
   function linProgress(q) {
     const g = q.goal;
     const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
@@ -194,6 +194,17 @@
       const left = ph === "offer" ? "來訊了" : ph === "ready" ? `${esc(t.title)}　${go ? "可以出發了" : "完成！"}` : `${esc(t.title)}　${npcProgress(t)}/${t.goal.n}`;
       return `<div class="tip shipline"><span><b>${esc(t.npc)}</b>　${left}</span><button class="btn small" data-npc="${t.id}">${ph === "offer" ? "看訊息" : ph === "ready" ? (go ? "出發" : "領取獎勵") : "看任務"}</button></div>`;
     }).join("");
+  }
+  // 林（作者彩蛋）：在咖啡廳遇到。三位 NPC 好感度達標後，首頁出現「咖啡廳」一行，按「出門」進去
+  const linEvent = () => { const q = linQuest(); return !!q && (linState().phase === "offer" || (linState().phase === "active" && linProgress(q)[0] >= linProgress(q)[1])); };
+  function cafeCard() {
+    if (!linVisible()) return "";
+    return `<div class="tip shipline"><span><b>咖啡廳</b>${linEvent() ? "　有人在那裡" : ""}</span><button class="btn small" id="cafe-go">出門</button></div>`;
+  }
+  function cafeView() {
+    const mark = linEvent() ? '<span class="mark" aria-hidden="true">!</span>' : "";
+    return `<div class="roomwrap"><img class="room" src="art/咖啡廳.png" alt="咖啡廳" width="832" height="768"><button class="lin cafe" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>
+      <div class="tip"><b>咖啡廳</b><br><span class="muted">點林說話。</span><br><button class="btn small alt" data-nav="home">回家</button></div>`;
   }
   function shipCard() {
     const list = shippingList();
@@ -521,6 +532,8 @@
     if (S && S.tutorial === "done" && !S.season) rollSeason();
     questCheck();
     if (S && view !== "create" && S.haggles && S.haggles.length && !modal) modal = openHaggle();
+    if (view === "cafe" && !(S && linVisible())) view = "home";
+    if (view === "cafe" && !modal && linQuest() && linState().phase === "offer" && !linState().seenIntro) modal = { type: "lin", quest: linQuest(), step: 0 };
     { const nt = npcTasks().find((t) => npcPhase(t) === "offer" && !(S.seen && S.seen["npct_" + t.id]));   // 新來訊跳一次
       if (nt && !modal && view !== "create" && !curQuest()) { S.seen = { ...(S.seen || {}), ["npct_" + nt.id]: true }; save(); modal = { type: "npcTask", id: nt.id }; } }
     { const nq = curQuest();   // 新手任務有 NPC 的，開始時跳一次私訊
@@ -549,6 +562,7 @@
     if (view === "home") body = homeView();
     else if (view === "wardrobe") body = wardrobeView();
     else if (view === "social") body = socialView();
+    else if (view === "cafe") body = cafeView();
     else body = marketView();
     const nav = (id, label) => {
       return `<button data-nav="${id}" class="${view === id ? "on" : ""}"${view === id ? ' aria-current="page"' : ""}>${label}</button>`;
@@ -607,11 +621,7 @@
     const full = totalCount() >= capacity();
     const tidy = S.wardrobe.length <= C.TIDY_AT;
     const roomImg = `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">`;
-    // 林（作者彩蛋）：依任務鏈出現，點她開對話
-    const lq = linVisible() ? linQuest() : null;
-    const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
-    const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
-    return `${questCard()}${npcCard()}${shipCard()}${roomHtml}
+    return `${questCard()}${npcCard()}${shipCard()}${cafeCard()}${roomImg}
       ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(playerLook())}
@@ -813,16 +823,20 @@
         <div class="kv"><span>新手任務</span><span>${esc(modal.q.title)}</span></div><div class="btns"><button class="btn main" id="lin-close">知道了</button></div></div></div>`;
     }
     if (modal.type === "lin") {
-      const q = modal.quest;
-      if (!q) return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3><p>${esc(C.LIN_ALL_DONE)}</p>
-        <div class="btns"><button class="btn main" id="lin-close">好</button></div></div></div>`;
+      const q = linQuest(), box = (inner) => `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1">${inner}</div></div>`;
+      if (!q) return box(`<h3>林</h3><p>${esc(C.LIN_ALL_DONE)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
       const st = linState(), [cur, n] = linProgress(q), ready = st.phase === "active" && cur >= n;
-      const body = st.phase === "offer" ? `<p>${esc(q.intro)}</p><div class="kv"><span>目標</span><span>${esc(linGoalText(q.goal))}</span></div><div class="kv"><span>獎勵</span><span>$${q.reward.money}</span></div>`
-        : ready ? `<p>${esc(q.done)}</p><div class="kv"><span>獎勵</span><span class="money-up">+$${q.reward.money}</span></div>`
-        : `<p>${esc(q.intro)}</p><div class="kv"><span>${esc(linGoalText(q.goal))}</span><span>${Math.min(cur, n)}/${n}</span></div>`;
-      const btns = st.phase === "offer" ? `<button class="btn alt" id="lin-close">先不要</button><button class="btn main" id="lin-accept">接受</button>`
-        : ready ? `<button class="btn main" id="lin-claim">領取獎勵</button>` : `<button class="btn main" id="lin-close">好</button>`;
-      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3>${body}<div class="btns">${btns}</div></div></div>`;
+      const goal = esc(q.title || linGoalText(q.goal));
+      if (modal.acceptLine) return box(`<h3>林</h3><p>${esc(q.acceptLine)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
+      if (st.phase === "offer") {
+        const step = modal.step === undefined ? (st.seenIntro ? 2 : 0) : modal.step;
+        if (step === 0) return box(`<p class="muted">${esc(q.narration)}</p><div class="btns"><button class="btn main" id="lin-next">繼續</button></div>`);
+        if (step === 1) return box(`<h3>林</h3><p>${esc(q.monologue)}</p><div class="btns"><button class="btn main" id="lin-next">上前搭話</button></div>`);
+        return box(`<h3>林</h3><p>${esc(q.intro)}</p><div class="kv"><span>目標</span><span>${goal}</span></div><div class="kv"><span>獎勵</span><span>$${q.reward.money}</span></div>
+          <div class="btns"><button class="btn alt" id="lin-close">先不要</button><button class="btn main" id="lin-accept">接受</button></div>`);
+      }
+      if (ready) return box(`<h3>林</h3><p>${esc(q.done)}</p><div class="kv"><span>獎勵</span><span class="money-up">+$${q.reward.money}</span></div><div class="btns"><button class="btn main" id="lin-claim">領取獎勵</button></div>`);
+      return box(`<h3>林</h3><p>${esc(q.waiting || q.intro)}</p><div class="kv"><span>${goal}</span><span>${Math.min(cur, n)}/${n}</span></div><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
     }
     if (modal.type === "item") {
       const i = findItem(modal.id);
@@ -984,14 +998,16 @@
     const lb = $("[data-lin]");
     if (lb) lb.onclick = () => { modal = { type: "lin", quest: linQuest() }; render(); };
     const la = $("#lin-accept");
-    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.base = (S.stats && (linQuest().goal.type === "repaired" ? S.stats.repaired : S.stats.sold)) || 0; modal = null; save(); render(); };
+    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.seenIntro = true; st.base = (S.stats && (linQuest().goal.type === "repaired" ? S.stats.repaired : S.stats.sold)) || 0; modal = { type: "lin", quest: linQuest(), acceptLine: true }; save(); render(); };
+    const ln = $("#lin-next"); if (ln) ln.onclick = () => { const st = linState(); modal.step = (modal.step === undefined ? 0 : modal.step) + 1; if (modal.step >= 2) st.seenIntro = true; save(); render(); };
+    const cg = $("#cafe-go"); if (cg) cg.onclick = () => { view = "cafe"; window.scrollTo(0, 0); render(); };
     const lc = $("#lin-claim");
     if (lc) lc.onclick = () => {
       const st = linState(), q = linQuest();
       S.money += q.reward.money; flashMoney = true;
       st.q += 1; st.phase = "offer"; st.base = 0; modal = null; save(); render();
     };
-    const lx = $("#lin-close"); if (lx) lx.onclick = () => { modal = null; render(); };
+    const lx = $("#lin-close"); if (lx) lx.onclick = () => { if (modal && modal.type === "lin") { const st = linState(); if (st.phase === "offer" && !st.seenIntro) st.seenIntro = true; } modal = null; render(); };
     const rf = $("#refresh"); if (rf) rf.onclick = refreshSocial;
     // 買家殺價
     const hl = () => S.listings.find((x) => x.item.id === modal.item.id);
