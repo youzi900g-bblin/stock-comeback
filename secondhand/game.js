@@ -52,9 +52,29 @@
   }
   const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
 
+  // 創角選的衣物 → 開場衣櫃的前幾件（規則見 config.js 的 PICK_*）
+  function starterPicks(p) {
+    const T = (name) => C.ITEM_TEMPLATES.find((t) => t.name === name);
+    const hex = (id) => (C.HEADWEAR_COLORS.find((x) => x.id === id) || {}).color || "#cccccc";
+    const make = (type, name, tpl, color) => ({ name, type, tags: tpl ? tpl.tags : [], condition: "良好", base: tpl ? tpl.base : C.BAG_BASE, cost: 0, color, kept: false });
+    const out = [];
+    const pick = (list, id) => list.find((o) => o.id === id);
+    const tp = pick(C.TOPS, p.top);
+    if (tp) { const t = T(tp.name); out.push(make("上衣", tp.name, t, t.color)); }
+    const bt = pick(C.BOTTOMS, p.bottom);
+    if (bt) { const t = T(bt.name) || T(C.PICK_FALLBACK["下身"]); out.push(make("下身", bt.name, t, T(bt.name) ? t.color : C.PICK_COLORS[bt.id])); }
+    const jk = p.jacket !== "none" && pick(C.JACKETS, p.jacket);
+    if (jk) { const t = T(jk.name) || T(C.PICK_FALLBACK["外套"]); out.push(make("外套", jk.name, t, T(jk.name) ? t.color : C.PICK_COLORS[jk.id])); }
+    const sh = pick(C.SHOES, p.shoes);
+    if (sh) out.push(make("鞋子", sh.name, T(sh.name) || T(C.PICK_FALLBACK["鞋子"]), hex(p.shoesColor)));
+    const bg = p.bag !== "none" && pick(C.BAGS, p.bag);
+    if (bg) out.push(make("包包", bg.name, null, hex(p.bagColor)));
+    return out;
+  }
+
   function newGame(p) {
-    const wardrobe = [];
-    for (let i = 0; i < C.START_ITEM_COUNT; i++) {
+    const wardrobe = starterPicks(p).map((it, i) => ({ id: i + 1, ...it }));
+    for (let i = wardrobe.length; i < C.START_ITEM_COUNT; i++) {
       const t = C.ITEM_TEMPLATES[i % C.ITEM_TEMPLATES.length];
       wardrobe.push({ id: i + 1, name: t.name, type: t.type, tags: t.tags, condition: "良好",
         base: t.base, cost: 0, color: t.color, kept: false });
@@ -236,7 +256,7 @@
 
   function itemCard(i, first) {
     const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && first && !i.kept ? " hl" : "";
-    const meta = `${esc(i.type)}・${i.tags.map(esc).join("、")}`;
+    const meta = i.tags.length ? `${esc(i.type)}・${i.tags.map(esc).join("、")}` : esc(i.type);
     const val = tutDone() ? `<div class="muted">基礎價值 $${i.base}</div>` : "";
     // 留下的衣服不顯示「賣」，要賣得先按「不留」，避免誤賣
     const acts = `${i.kept ? "" : `<button class="btn small${hl}" data-sell="${i.id}">賣</button>`}
