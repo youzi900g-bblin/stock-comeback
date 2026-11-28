@@ -56,10 +56,11 @@ const CONFIG = {
   },
   // ---- NPC 簡單任務（第二階段末，全部為【佔位內容】，任務條件、台詞與獎勵格數都待使用者決定）----
   // 出現條件：新手任務全部完成，且天數 ≥ appearDay。goal.type：bargained（社群議價成功 n 次）、boughtTag（買下帶任一標籤的衣服 n 件）、outfit（身上穿著帶標籤的衣服 n 件，才能出門）
+  NPC_FAVOR_UNLOCK: 2,      // 林出現的條件：伊瑪、艾蓮娜、由奈三位的好感度都達到這個值【佔位值】；完成一個 NPC 任務 +2（任務的 reward.favor）
   NPC_TASKS: [
-    { id: "imma1", npc: "伊瑪", face: 0, appearDay: 3, title: "幫伊瑪殺價兩次", intro: "社群的價格都太高了。你去幫我殺價，成功兩次再來找我。", done: "不錯嘛，你很會殺價！", goal: { type: "bargained", n: 2 }, reward: { capacity: 1 } },
-    { id: "elena1", npc: "艾蓮娜", face: 1, appearDay: 5, title: "替艾蓮娜找古著", intro: "我在找帶有古著或優雅風格的衣服。社群上看到的話，幫我買一件。", done: "眼光真好，這件我很喜歡。", goal: { type: "boughtTag", tags: ["vintage", "優雅"], n: 1 }, reward: { capacity: 1 } },
-    { id: "yuna1", npc: "由奈", face: 2, appearDay: 7, title: "和由奈出門", intro: "這個週末一起出去玩吧！穿可愛一點的衣服，我們風格才搭。", done: "哇，今天的穿搭好可愛！我們出發吧。", goal: { type: "outfit", tag: "可愛", n: 2 }, reward: { capacity: 1 } },
+    { id: "imma1", npc: "伊瑪", face: 0, appearDay: 3, title: "幫伊瑪殺價兩次", intro: "社群的價格都太高了。你去幫我殺價，成功兩次再來找我。", done: "不錯嘛，你很會殺價！", goal: { type: "bargained", n: 2 }, reward: { capacity: 1, favor: 2 } },
+    { id: "elena1", npc: "艾蓮娜", face: 1, appearDay: 5, title: "替艾蓮娜找古著", intro: "我在找帶有古著或優雅風格的衣服。社群上看到的話，幫我買一件。", done: "眼光真好，這件我很喜歡。", goal: { type: "boughtTag", tags: ["vintage", "優雅"], n: 1 }, reward: { capacity: 1, favor: 2 } },
+    { id: "yuna1", npc: "由奈", face: 2, appearDay: 7, title: "和由奈出門", intro: "這個週末一起出去玩吧！穿可愛一點的衣服，我們風格才搭。", done: "哇，今天的穿搭好可愛！我們出發吧。", goal: { type: "outfit", tag: "可愛", n: 2 }, reward: { capacity: 1, favor: 2 } },
   ],
   // 教學完成獎勵（基礎價值 200 為【佔位值】）
   TUTORIAL_REWARD: { name: "聖誕毛衣", type: "上衣", tags: ["可愛"], base: 200, color: "#c43a3a" },
@@ -170,21 +171,16 @@ const CONFIG = {
     { name: "帆布鞋", type: "鞋子", tags: ["日系"], base: 180, color: "#eee6d6" },
   ],
   // ---- 林（作者彩蛋）的任務鏈（全部為【佔位】：出現天數、目標數字、獎勵、台詞都待使用者決定）----
-  // LIN_DRAFT 為 true 時，只有網址加 ?draft 才看得到林；使用者通過內容後改為 false。
-  // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數
-  LIN_DRAFT: true,
+  // 林出現條件：三位 NPC 好感度都達到 NPC_FAVOR_UNLOCK。LIN_DRAFT 為 true 時，另外要網址加 ?draft 才看得到。
+  // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數；repaired＝接任務後累計修補件數
+  LIN_DRAFT: false,        // 林改由好感度門檻控制（NPC_FAVOR_UNLOCK），不再用 ?draft 擋住
+  // 林的任務（先用「修補」當作佔位任務，使用者之後會改；台詞由使用者自己寫，這裡只放空缺標示）
   LIN_QUESTS: [
-    { id: "lin1", appearDay: 3, goal: { type: "sold", n: 3 }, reward: { money: 100 },
-      intro: "你的衣櫃看起來很擠。先試著賣出三件，不用急著挑最貴的。",
-      done: "三件都賣出去了。讓衣服被人穿走，比放在衣櫃裡好。這是一點心意。" },
-    { id: "lin2", appearDay: 6, goal: { type: "money", n: 800 }, reward: { money: 200 },
-      intro: "賣了幾件之後，手邊的錢開始有用了。先存到 $800，之後收貨需要本金。",
-      done: "存下來了。錢不用全花掉，留一點給下一次。" },
-    { id: "lin3", appearDay: 9, goal: { type: "free", n: 16 }, reward: { money: 300 },
-      intro: "衣櫃還是太滿。清到只剩四件，空間要留給真正想穿的。",
-      done: "空出來的位置，之後會有更好的東西住進去。" },
+    { id: "lin1", appearDay: 1, goal: { type: "repaired", n: 1 }, reward: { money: 100 },
+      intro: "（台詞待作者填寫）",
+      done: "（台詞待作者填寫）" },
   ],
-  LIN_ALL_DONE: "目前只有這些。之後再見。", // 【佔位台詞】
+  LIN_ALL_DONE: "（台詞待作者填寫）", // 【佔位】台詞由使用者自己寫
   // 創角選的衣物會成為開場衣櫃的前幾件（上衣、下身、外套、鞋子、包包；選「無」就不產生），其餘用基本款補滿【佔位】
   // 沒有對應基本款樣板的款式，基礎價值與標籤沿用同類型的第一個樣板；顏色用 PICK_COLORS，鞋與包用創角選的顏色
   PICK_FALLBACK: { 下身: "直筒牛仔褲", 外套: "針織開襟衫", 鞋子: "帆布鞋" },

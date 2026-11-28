@@ -75,14 +75,21 @@
   const linOn = () => !C.LIN_DRAFT || new URLSearchParams(location.search).has("draft");
   const linState = () => (S.lin = S.lin || { q: 0, phase: "offer", base: 0 });
   const linQuest = () => C.LIN_QUESTS[linState().q];
-  const linVisible = () => linOn() && S && tutDone() && !!linQuest() && S.day >= linQuest().appearDay;
+  // 好感度：各 NPC 各自一個分數，完成她的任務 +2；舊存檔沒有 S.favor 時，依已完成的任務補算
+  const favorOf = (name) => {
+    if (!S.favor) { S.favor = {}; C.NPC_TASKS.forEach((t) => { if (S.npcq && S.npcq.done && S.npcq.done[t.id]) S.favor[t.npc] = (S.favor[t.npc] || 0) + ((t.reward && t.reward.favor) || 0); }); }
+    return S.favor[name] || 0;
+  };
+  const favorOK = () => [...new Set(C.NPC_TASKS.map((t) => t.npc))].every((n) => favorOf(n) >= C.NPC_FAVOR_UNLOCK);   // 三位好感度都達標，林才出現
+  const linVisible = () => linOn() && S && tutDone() && favorOK() && !!linQuest() && S.day >= linQuest().appearDay;
   function linProgress(q) {
     const g = q.goal;
     const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
+      : g.type === "repaired" ? ((S.stats && S.stats.repaired) || 0) - linState().base
       : g.type === "money" ? S.money : capacity() - S.wardrobe.length;
     return [Math.max(0, cur), g.n];
   }
-  const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
+  const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "repaired" ? `修補 ${g.n} 件衣服` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
 
   // 創角選的衣物 → 開場衣櫃的前幾件（規則見 config.js 的 PICK_*）
   // 款式 → 物品：有對應基本款樣板就沿用其基礎價值與標籤，沒有就沿用同類型第一個樣板（規則見 config.js 的 PICK_*）
@@ -796,7 +803,8 @@
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(t.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${t.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(t.npc)}</h3><p>${esc(body)}</p></div></div>
         ${outing && ph === "ready" ? `<div class="outfit-prev">${sprite(playerLook())}</div>` : ""}${outing && ph === "active" ? `<p class="muted">到衣櫃把「私人」裡的衣服穿在角色身上，穿好後回首頁按「出發」。</p>` : ""}
         <div class="kv"><span>${ph === "active" || ph === "ready" ? "進度" : "目標"}</span><span>${ph === "offer" ? esc(npcGoalText(t)) : `${npcProgress(t)}/${t.goal.n}`}</span></div>
-        <div class="kv"><span>獎勵</span><span>衣櫃 +${t.reward.capacity} 格</span></div>
+        <div class="kv"><span>獎勵</span><span>衣櫃 +${t.reward.capacity} 格、好感度 +${t.reward.favor || 0}</span></div>
+        <div class="kv"><span>目前好感度</span><span>${favorOf(t.npc)}</span></div>
         <div class="btns">${btns}</div></div></div>`;
     }
     if (modal.type === "npcMsg") {
@@ -976,7 +984,7 @@
     const lb = $("[data-lin]");
     if (lb) lb.onclick = () => { modal = { type: "lin", quest: linQuest() }; render(); };
     const la = $("#lin-accept");
-    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.base = S.stats ? S.stats.sold : 0; modal = null; save(); render(); };
+    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.base = (S.stats && (linQuest().goal.type === "repaired" ? S.stats.repaired : S.stats.sold)) || 0; modal = null; save(); render(); };
     const lc = $("#lin-claim");
     if (lc) lc.onclick = () => {
       const st = linState(), q = linQuest();
@@ -1029,7 +1037,7 @@
     all("[data-npc]", (b) => b.onclick = () => { modal = { type: "npcTask", id: b.dataset.npc }; render(); });
     const nx2 = $("#npct-close"); if (nx2) nx2.onclick = () => { modal = null; render(); };
     const na = $("#npct-accept"); if (na) na.onclick = () => { const t = C.NPC_TASKS.find((x) => x.id === modal.id); npcState().acc[t.id] = { base: npcCount(t) }; save(); modal = null; render(); };
-    const nc = $("#npct-claim"); if (nc) nc.onclick = () => { const t = C.NPC_TASKS.find((x) => x.id === modal.id); if (npcPhase(t) === "ready") { npcState().done[t.id] = true; S.capBonus = (S.capBonus || 0) + t.reward.capacity; save(); } modal = null; render(); };
+    const nc = $("#npct-claim"); if (nc) nc.onclick = () => { const t = C.NPC_TASKS.find((x) => x.id === modal.id); if (npcPhase(t) === "ready") { npcState().done[t.id] = true; S.capBonus = (S.capBonus || 0) + t.reward.capacity; S.favor[t.npc] = favorOf(t.npc) + (t.reward.favor || 0); save(); } modal = null; render(); };
     const qm = $("#quest-more"); if (qm) qm.onclick = () => { questOpen = !questOpen; render(); };
     const qg = $("#quest-go"); if (qg) qg.onclick = () => { questGuide = true; render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
