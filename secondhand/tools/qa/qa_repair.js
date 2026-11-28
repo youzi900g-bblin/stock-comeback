@@ -26,6 +26,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   // 任務 2：下一天
   await p.click('#quest-go'); await p.click('#nextday'); await p.click('#close-summary'); await clearHaggle();
   console.log('任務 2 後', JSON.stringify(await st()));
+  // 任務：包貨出貨（沒成交就補一筆，免得隨機結果讓檢查卡住）
+  if (!(await p.locator('#pack-open').count())) { await p.evaluate(() => { const s = window.__game.state; s.shipping = [{ item: { name: '測試衣', type: '上衣', tags: [], condition: '良好', base: 50, cost: 0, color: '#fff', id: 999 }, price: 20 }]; }); await p.click('[data-nav="wardrobe"]'); await p.click('[data-nav="home"]'); }
+  await clearHaggle(); await p.screenshot({ path: path.join(SP, 'quest_ship_home.png') });
+  await p.click('#pack-open'); await p.screenshot({ path: path.join(SP, 'quest_pack.png') });
+  const m0 = (await st()).money; await p.click('[data-pack]');
+  console.log('出貨後', JSON.stringify(await st()), '收款前', m0);
+  while (await p.locator('[data-pack]').count()) await p.click('[data-pack]');
+  await p.click('#pack-close'); await clearHaggle();
   // 任務 3：買貨（保證第一則是有瑕疵、買得起）
   await p.evaluate(() => { window.__game.state.money = 300; }); await clearHaggle();
   await p.click('[data-nav="social"]'); await p.click('#refresh');

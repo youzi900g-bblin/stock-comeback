@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
     }, seed.toString());
     await p.reload(); return p;
   }
-  const st = (p) => p.evaluate(() => { const s = window.__game.state; return { money: s.money, sold: s.stats.sold, listings: s.listings.length, haggles: (s.haggles || []).length }; });
+  const st = (p) => p.evaluate(() => { const s = window.__game.state; return { money: s.money, sold: s.stats.sold, listings: s.listings.length, haggles: (s.haggles || []).length, shipping: (s.shipping || []).length }; });   // 成交後要包貨才入帳：money 不變、shipping 加一
   const seedHaggle = (s) => { const it = s.wardrobe[0]; return { wardrobe: s.wardrobe.slice(1), listings: [{ item: it, price: 100, listedDay: 1 }], haggles: [{ id: it.id, offer: 80 }], stats: { sold: 0 } }; };
   // 買家殺價：接受
   let p = await fresh(0.5, seedHaggle);

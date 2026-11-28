@@ -23,6 +23,7 @@
       if (s && s.tutorial === "market") s.tutorial = "done"; // 舊版卡住的狀態
       if (s && s.tutorial === "sell") s.tutorial = "pick";   // 舊版教學狀態對應新版
       if (s && ["backStock", "rest", "wait", "social", "refresh", "read", "buy", "fixGo", "fixPick", "fixDo"].includes(s.tutorial)) { s.tutorial = "done"; s.quest = 0; }   // 這些步驟已改成任務
+      if (s && typeof s.quest === "number" && !s.questV) { if (s.quest >= 2) s.quest += 1; s.questV = 1; }   // 任務表第 3 個新增了「出貨」
       return s;
     } catch (e) { return null; }
   }
@@ -143,6 +144,7 @@
   const QUEST_DONE = {
     listAll: () => S.wardrobe.every((i) => i.reward),   // 教學獎勵的衣服不要求上架
     nextDay: () => S.day >= 2,
+    ship: () => ((S.stats && S.stats.shipped) || 0) >= 1,
     buy: () => ((S.stats && S.stats.bought) || 0) >= 1,
     bargain: () => ((S.stats && S.stats.bargained) || 0) >= 1,
     repair: () => ((S.stats && S.stats.repaired) || 0) >= 1,
@@ -155,6 +157,12 @@
       toast = `任務完成：${q.title}`; setTimeout(() => { if (toast.startsWith("任務完成")) { toast = ""; render(); } }, 2400);
     }
     if (!curQuest()) S.quest = C.QUESTS.length;
+  }
+  function shipCard() {
+    const list = shippingList();
+    if (!list.length) return "";
+    const sum = list.reduce((a, s) => a + s.price, 0);
+    return `<div class="tip"><b>待出貨</b>　${list.length} 件，共 $${sum}<br><span class="muted">包貨出貨後才會收到錢。</span><br><button class="btn small" id="pack-open">去包貨</button></div>`;
   }
   function questCard() {
     const q = curQuest();
@@ -224,7 +232,7 @@
     S.day += 1;
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
-    const sell = (l) => { S.money += l.price; sales.push({ name: l.item.name, price: l.price, item: l.item }); };
+    const sell = (l) => { addShipping(l.item, l.price); sales.push({ name: l.item.name, price: l.price, item: l.item }); };
     S.haggles = [];
     S.listings = S.listings.filter((l) => {
       if (Math.random() < saleChance(l.price, l.item)) {   // 每件各抽一次
@@ -239,12 +247,21 @@
     fixed.forEach((i) => { i.condition = "良好"; i.fixing = false; delete i.flaw; });
     modal = { type: "summary", sales, fixed: fixed.map((i) => i.name), haggles: S.haggles.length };
     if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
-    if (sales.length) flashMoney = true;
     save(); render();
   }
 
-  function completeSale(l, price) {   // 議價成交：收款、下架、計入賣出件數
-    S.money += price; flashMoney = true; S.listings = S.listings.filter((x) => x !== l);
+  // 包貨出貨：成交後商品進「待出貨」，玩家包貨後才收到款項
+  const shippingList = () => (S && S.shipping) || [];
+  function addShipping(item, price) { S.shipping = shippingList(); S.shipping.push({ item, price }); }
+  function packOne(idx) {
+    const s = shippingList()[idx];
+    if (!s) return;
+    S.shipping.splice(idx, 1); S.money += s.price; flashMoney = true;
+    S.stats = S.stats || { sold: 0 }; S.stats.shipped = (S.stats.shipped || 0) + 1;
+    save();
+  }
+  function completeSale(l, price) {   // 議價成交：商品進待出貨、下架、計入賣出件數
+    addShipping(l.item, price); S.listings = S.listings.filter((x) => x !== l);
     S.stats = S.stats || { sold: 0 }; S.stats.sold += 1;
   }
   function openHaggle() {   // 依序處理待回應的買家殺價
@@ -373,6 +390,12 @@
       if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」。", quest: true };
       return piece(q.id === "repair" ? ".piece.flawed" : ".piece:not(.rewarditem)", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
     }
+    if (q.id === "ship") {
+      if (modal && modal.type === "pack") return { sel: "[data-pack]", text: "按「包貨」，包好就收到錢。", quest: true };
+      if (modal) return null;
+      if (view !== "home") return go("home", "回首頁。");
+      return shippingList().length ? { sel: "#pack-open", text: "按「去包貨」。", quest: true } : { sel: "#nextday", text: "還沒有成交，按「進入下一天」。", quest: true };
+    }
     if (q.id === "nextDay") return view !== "home" ? go("home", "回首頁。") : { sel: "#nextday", text: "按「進入下一天」。", quest: true };
     if (q.id === "bargain") {
       if (modal && modal.type === "bargain" && !modal.result) return { sel: "#bargain-go", text: "按「出價」。出價越接近開價，成功機率越高。", quest: true };
@@ -454,7 +477,7 @@
     questCheck();
     if (S && view !== "create" && S.haggles && S.haggles.length && !modal) modal = openHaggle();
     { const nq = curQuest();   // 新手任務有 NPC 的，開始時跳一次私訊
-      if (nq && nq.npc && !modal && view !== "create" && !(S.seen && S.seen["npc_" + nq.id])) { S.seen = { ...(S.seen || {}), ["npc_" + nq.id]: true }; save(); modal = { type: "npcMsg", npc: nq.npc, q: nq }; } }
+      if (nq && C.QUEST_NPC[nq.id] && !modal && view !== "create" && !(S.seen && S.seen["npc_" + nq.id])) { S.seen = { ...(S.seen || {}), ["npc_" + nq.id]: true }; save(); modal = { type: "npcMsg", q: nq }; } }
     const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
@@ -470,7 +493,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #skip-cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
+    const b = app.querySelector("#cancel, #pack-close, #skip-cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
     if (b) b.click();
   });
 
@@ -541,7 +564,7 @@
     const lq = linVisible() ? linQuest() : null;
     const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
     const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
-    return `${questCard()}${roomHtml}
+    return `${questCard()}${shipCard()}${roomHtml}
       ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(playerLook())}
@@ -704,7 +727,7 @@
     if (modal.type === "summary") {
       const sales = modal.sales;
       const body = sales.length
-        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">+$${s.price}</span></div>`).join("")
+        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">$${s.price}</span></div>`).join("") + `<p class="muted">成交的商品要包貨出貨才會收到錢，到首頁按「去包貨」。</p>`
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         ${modal.haggles ? `<p>有 ${modal.haggles} 位買家想殺價，按「好」之後逐一處理。</p>` : ""}
@@ -724,8 +747,8 @@
         <div class="btns"><button class="btn main" id="close-market">我知道了</button></div></div></div>`;
     }
     if (modal.type === "npcMsg") {
-      const n = C.QUEST_NPC[modal.npc];
-      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(modal.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${n.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(modal.npc)}</h3><p>${esc(n.text)}</p></div></div>
+      const n = C.QUEST_NPC[modal.q.id];
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(n.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${n.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(n.npc)}</h3><p>${esc(n.text)}</p></div></div>
         <div class="kv"><span>新手任務</span><span>${esc(modal.q.title)}</span></div><div class="btns"><button class="btn main" id="lin-close">知道了</button></div></div></div>`;
     }
     if (modal.type === "lin") {
@@ -758,6 +781,14 @@
           <button class="btn alt" data-keepit="${i.id}"${i.fixing ? " disabled" : ""}>留</button>
           <button class="btn main" data-sell="${i.id}"${i.fixing ? " disabled" : ""}>賣</button></div>
         ${i.condition === "有瑕疵" && !i.fixing && fixingCount() >= C.REPAIR_SLOTS ? `<p class="muted">同時最多整理 ${C.REPAIR_SLOTS} 件。</p>` : ""}</div></div>`;
+    }
+    if (modal.type === "pack") {
+      const list = shippingList();
+      const rows = list.length ? list.map((s, i) => `<div class="kv"><span>${esc(s.item.name)}　$${s.price}</span><button class="btn small" data-pack="${i}">包貨</button></div>`).join("") : `<p class="muted">沒有待出貨的商品了。</p>`;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="包貨" tabindex="-1"><img class="room night" src="art/包貨角落.png" alt="" width="832" height="768"><h3>包貨出貨</h3>
+        <p class="muted">包好出貨，款項就入帳。</p>${rows}
+        <div class="kv"><span>目前金錢</span><span>$${fmtMoney(S.money)}</span></div>
+        <div class="btns"><button class="btn main" id="pack-close">${list.length ? "先離開" : "好"}</button></div></div></div>`;
     }
     if (modal.type === "skipTut") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="跳過教學" tabindex="-1"><h3>跳過教學？</h3>
@@ -998,6 +1029,9 @@
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };
     }
+    const po = $("#pack-open"); if (po) po.onclick = () => { modal = { type: "pack" }; render(); };
+    const pc = $("#pack-close"); if (pc) pc.onclick = () => { modal = null; render(); };
+    all("[data-pack]", (b) => b.onclick = () => { packOne(+b.dataset.pack); questCheck(); render(); });
     const skc = $("#skip-cancel"); if (skc) skc.onclick = () => { modal = null; render(); };
     const so2 = $("#skip-ok"); if (so2) so2.onclick = () => { S.tutorial = "done"; S.quest = 0; modal = null; save(); render(); };
     const rc = $("#reward-claim");
