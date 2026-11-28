@@ -132,5 +132,12 @@ const CONFIG = {
   PICK_FALLBACK: { 下身: "直筒牛仔褲", 外套: "針織開襟衫", 鞋子: "帆布鞋" },
   PICK_COLORS: { flare: "#5f7fa8", ripped: "#5f7fa8", shorts: "#6c8bb3", sport: "#4d4f58" },
   BAG_BASE: 200,           // 包包的基礎價值【佔位值】，目前還沒有包包的基本款樣板
+  // ---- 社群收貨（第二階段第 1 段，全部為【佔位值】）----
+  // 貨源＝目前所有（已通過的）款式，之後新增款式會自動進貨源
+  SOCIAL_REFRESHES: 5,     // 每天可刷新次數（設計：約 5 次，確切次數待定）【佔位值】
+  SOCIAL_BATCH: 4,         // 每次刷新出現的件數【佔位值】
+  SOCIAL_PRICE_MIN: 0.6,   // 開價 = 市場價 × 係數（隨機，範圍如下）【佔位值】
+  SOCIAL_PRICE_MAX: 1.4,   // 【佔位值】
+  SOCIAL_PRICE_ROUND: 10,  // 開價四捨五入到幾元【佔位值】
   START_ITEM_COUNT: 20,    // 開場衣櫃件數：等於初始容量，呈現「爆滿」【佔位值】
 };

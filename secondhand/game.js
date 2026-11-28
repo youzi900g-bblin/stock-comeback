@@ -53,23 +53,59 @@
   const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
 
   // 創角選的衣物 → 開場衣櫃的前幾件（規則見 config.js 的 PICK_*）
+  // 款式 → 物品：有對應基本款樣板就沿用其基礎價值與標籤，沒有就沿用同類型第一個樣板（規則見 config.js 的 PICK_*）
+  const T = (name) => C.ITEM_TEMPLATES.find((t) => t.name === name);
+  const hexOf = (id) => (C.HEADWEAR_COLORS.find((x) => x.id === id) || {}).color || "#cccccc";
+  function styleItem(type, o, color) {
+    const exact = T(o.name), tpl = exact || (C.PICK_FALLBACK[type] ? T(C.PICK_FALLBACK[type]) : null);
+    const col = type === "鞋子" || type === "包包" ? color : exact ? exact.color : C.PICK_COLORS[o.id];
+    return { name: o.name, type, tags: tpl ? tpl.tags : [], condition: "良好", base: tpl ? tpl.base : C.BAG_BASE, cost: 0, color: col, kept: false };
+  }
+  // 創角選的衣物 → 開場衣櫃的前幾件
   function starterPicks(p) {
-    const T = (name) => C.ITEM_TEMPLATES.find((t) => t.name === name);
-    const hex = (id) => (C.HEADWEAR_COLORS.find((x) => x.id === id) || {}).color || "#cccccc";
-    const make = (type, name, tpl, color) => ({ name, type, tags: tpl ? tpl.tags : [], condition: "良好", base: tpl ? tpl.base : C.BAG_BASE, cost: 0, color, kept: false });
-    const out = [];
     const pick = (list, id) => list.find((o) => o.id === id);
-    const tp = pick(C.TOPS, p.top);
-    if (tp) { const t = T(tp.name); out.push(make("上衣", tp.name, t, t.color)); }
-    const bt = pick(C.BOTTOMS, p.bottom);
-    if (bt) { const t = T(bt.name) || T(C.PICK_FALLBACK["下身"]); out.push(make("下身", bt.name, t, T(bt.name) ? t.color : C.PICK_COLORS[bt.id])); }
-    const jk = p.jacket !== "none" && pick(C.JACKETS, p.jacket);
-    if (jk) { const t = T(jk.name) || T(C.PICK_FALLBACK["外套"]); out.push(make("外套", jk.name, t, T(jk.name) ? t.color : C.PICK_COLORS[jk.id])); }
-    const sh = pick(C.SHOES, p.shoes);
-    if (sh) out.push(make("鞋子", sh.name, T(sh.name) || T(C.PICK_FALLBACK["鞋子"]), hex(p.shoesColor)));
-    const bg = p.bag !== "none" && pick(C.BAGS, p.bag);
-    if (bg) out.push(make("包包", bg.name, null, hex(p.bagColor)));
+    const out = [];
+    const tp = pick(C.TOPS, p.top), bt = pick(C.BOTTOMS, p.bottom), sh = pick(C.SHOES, p.shoes);
+    const jk = p.jacket !== "none" && pick(C.JACKETS, p.jacket), bg = p.bag !== "none" && pick(C.BAGS, p.bag);
+    if (tp) out.push(styleItem("上衣", tp));
+    if (bt) out.push(styleItem("下身", bt));
+    if (jk) out.push(styleItem("外套", jk));
+    if (sh) out.push(styleItem("鞋子", sh, hexOf(p.shoesColor)));
+    if (bg) out.push(styleItem("包包", bg, hexOf(p.bagColor)));
     return out;
+  }
+
+  // ---------- 社群收貨 ----------
+  const socialState = () => (S.social = S.social || { left: C.SOCIAL_REFRESHES, offers: [], seq: 0 });
+  const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  function socialPool() {
+    const lv = (list) => list.filter((o) => !o.draft || DRAFT_MODE);
+    const col = () => rnd(C.HEADWEAR_COLORS).color;
+    return [...lv(C.TOPS).map((o) => () => styleItem("上衣", o)), ...lv(C.BOTTOMS).map((o) => () => styleItem("下身", o)),
+      ...lv(C.JACKETS).filter((o) => o.id !== "none").map((o) => () => styleItem("外套", o)),
+      ...lv(C.SHOES).map((o) => () => styleItem("鞋子", o, col())), ...lv(C.BAGS).filter((o) => o.id !== "none").map((o) => () => styleItem("包包", o, col()))];
+  }
+  function refreshSocial() {
+    const so = socialState();
+    if (so.left <= 0) return;
+    so.left -= 1;
+    const pool = socialPool(), offers = [];
+    for (let k = 0; k < C.SOCIAL_BATCH; k++) {
+      const item = rnd(pool)(), f = C.SOCIAL_PRICE_MIN + Math.random() * (C.SOCIAL_PRICE_MAX - C.SOCIAL_PRICE_MIN);
+      const ask = Math.max(C.SOCIAL_PRICE_ROUND, Math.round(marketPrice(item) * f / C.SOCIAL_PRICE_ROUND) * C.SOCIAL_PRICE_ROUND);
+      offers.push({ oid: ++so.seq, item, ask });
+    }
+    so.offers = offers; // 沒買的貨隨刷新消失
+    save(); render();
+  }
+  const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...S.listings.map((l) => l.item.id));
+  function buyOffer(oid) {
+    const so = socialState(), o = so.offers.find((x) => x.oid === oid);
+    if (!o || S.money < o.ask || S.wardrobe.length >= C.WARDROBE_CAPACITY) return;
+    S.money -= o.ask; flashMoney = true;
+    S.wardrobe.push({ ...o.item, id: nextItemId(), cost: o.ask });
+    so.offers = so.offers.filter((x) => x.oid !== oid);
+    save(); showToast(`已買下「${o.item.name}」$${o.ask}`);
   }
 
   function newGame(p) {
@@ -80,11 +116,12 @@
         base: t.base, cost: 0, color: t.color, kept: false });
     }
     return { player: p, money: C.START_MONEY, day: 1, wardrobe, listings: [],
-      tutorial: "goWardrobe", settings: { contrast: false } };
+      tutorial: "goWardrobe", settings: { contrast: false }, social: { left: C.SOCIAL_REFRESHES, offers: [], seq: 0 }, stats: { sold: 0 } };
   }
 
   function nextDay() {
     S.day += 1;
+    S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
     S.listings = S.listings.filter((l) => {
       if (S.day - l.listedDay >= l.waitDays) {
@@ -207,7 +244,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close");
+    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint");
     if (b) b.click();
   });
 
@@ -215,6 +252,7 @@
     let body = "";
     if (view === "home") body = homeView();
     else if (view === "wardrobe") body = wardrobeView();
+    else if (view === "social") body = socialView();
     else body = marketView();
     const nav = (id, label) => {
       const hl = S.tutorial === "goWardrobe" && id === "wardrobe" ? " hl" : "";
@@ -230,7 +268,7 @@
     return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${S.money}</span>
         <button class="gear" id="open-settings" aria-label="設定">設定</button></div>
       ${tipView()}${body}${primary}
-      <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${nav("market", "賣場")}</nav>
+      <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${tutDone() ? nav("social", "社群") : ""}${nav("market", "賣場")}</nav>
       ${modalView()}${toast && !modal ? `<div class="toast" role="status">${esc(toast)}</div>` : ""}`;
   }
 
@@ -295,6 +333,7 @@
   function itemCard(i, first) {
     const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && first && !i.kept ? " hl" : "";
     const meta = i.tags.length ? `${esc(i.type)}・${i.tags.map(esc).join("、")}` : esc(i.type);
+    const costTxt = i.cost > 0 && tutDone() ? `・成本 $${i.cost}` : "";
     const val = tutDone() ? `<div class="muted">基礎價值 $${i.base}</div>` : "";
     // 留下的衣服不顯示「賣」，要賣得先按「不留」，避免誤賣
     const acts = `${i.kept ? "" : `<button class="btn small${hl}" data-sell="${i.id}">賣</button>`}
@@ -302,10 +341,10 @@
     const name = `${esc(i.name)}${i.kept ? ' <span class="badge">留</span>' : ""}`;
     if (layout === "grid") {
       return `<div class="card">${thumb(i)}
-        <div>${name}</div><div class="muted">${meta}</div>${val}<div class="btns2">${acts}</div></div>`;
+        <div>${name}</div><div class="muted">${meta}${costTxt}</div>${val}<div class="btns2">${acts}</div></div>`;
     }
     return `<div class="item">${thumb(i)}
-      <div class="info"><div>${name}</div><div class="muted">${meta}・${esc(i.condition)}</div>${val}</div>
+      <div class="info"><div>${name}</div><div class="muted">${meta}${costTxt}・${esc(i.condition)}</div>${val}</div>
       <div class="acts">${acts}</div></div>`;
   }
 
@@ -322,6 +361,24 @@
         <button class="opt ${layout === "list" ? "on" : ""}" aria-pressed="${layout === "list"}" data-layout="list">清單</button></div>
       <div class="win"><h2>衣櫃　<span class="${full ? "full" : ""}" style="${full ? "color:#ffd0b8" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></h2>
         <div class="body">${cards ? list : `<p class="muted empty">${empty}</p>`}</div></div>`;
+  }
+
+  function socialView() {
+    const so = socialState(), full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
+    const rows = so.offers.map((o) => {
+      const mk = marketPrice(o.item), d = o.ask - mk;
+      const diff = d < 0 ? `<span class="money-up">低於市場價 $${-d}</span>` : d > 0 ? `<span class="warn">高於市場價 $${d}</span>` : `<span class="muted">與市場價相同</span>`;
+      const meta = o.item.tags.length ? `${esc(o.item.type)}・${o.item.tags.map(esc).join("、")}` : esc(o.item.type);
+      const can = S.money >= o.ask && !full;
+      return `<div class="item">${thumb(o.item)}
+        <div class="info"><div>${esc(o.item.name)}</div><div class="muted">${meta}</div>
+          <div>開價 $${o.ask}</div><div class="muted">市場價 $${mk}</div><div>${diff}</div></div>
+        <div class="acts"><button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></div>`;
+    }).join("");
+    return `<div class="win"><h2>社群　<span style="font-weight:normal">刷新 ${so.left}/${C.SOCIAL_REFRESHES}</span></h2><div class="body">
+      <button class="btn block" id="refresh" ${so.left > 0 ? "" : "disabled"}>${so.left > 0 ? "刷新看看" : "今天刷完了"}</button>
+      ${full ? '<p class="warn">衣櫃已滿，先賣或清掉幾件才買得下。</p>' : ""}
+      ${rows || '<p class="muted empty">還沒有貨。按「刷新看看」。</p>'}</div></div>`;
   }
 
   function marketView() {
@@ -370,7 +427,7 @@
     if (modal.type === "summary") {
       const sales = modal.sales;
       const body = sales.length
-        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}</span><span class="money-up">+$${s.price}</span></div>`).join("")
+        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
@@ -397,6 +454,12 @@
       const btns = st.phase === "offer" ? `<button class="btn alt" id="lin-close">先不要</button><button class="btn main" id="lin-accept">接受</button>`
         : ready ? `<button class="btn main" id="lin-claim">領取獎勵</button>` : `<button class="btn main" id="lin-close">好</button>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3>${body}<div class="btns">${btns}</div></div></div>`;
+    }
+    if (modal.type === "socialHint") {
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="社群說明" tabindex="-1"><h3>社群上的貨</h3>
+        <p>開價不一定等於市場價。開價比市場價低，買下來再賣就有價差可賺；開價比市場價高，就是買貴了。</p>
+        <p class="muted" style="margin-top:0">每天可以刷新幾次，沒買的貨會隨刷新消失。</p>
+        <div class="btns"><button class="btn main" id="close-hint">我知道了</button></div></div></div>`;
     }
     if (modal.type === "settings") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="設定" tabindex="-1"><h3>設定</h3>
@@ -444,6 +507,7 @@
 
     all("[data-nav]", (b) => b.onclick = () => {
       view = b.dataset.nav;
+      if (view === "social" && !(S.seen && S.seen.social)) { S.seen = { ...(S.seen || {}), social: true }; modal = { type: "socialHint" }; }
       if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "sell";
       save(); render();
     });
@@ -477,6 +541,9 @@
       st.q += 1; st.phase = "offer"; st.base = 0; modal = null; save(); render();
     };
     const lx = $("#lin-close"); if (lx) lx.onclick = () => { modal = null; render(); };
+    const rf = $("#refresh"); if (rf) rf.onclick = refreshSocial;
+    all("[data-buy]", (b) => b.onclick = () => buyOffer(+b.dataset.buy));
+    const ch = $("#close-hint"); if (ch) ch.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
     const sk = $("#skip-tut"); if (sk) sk.onclick = () => { S.tutorial = "done"; save(); render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
