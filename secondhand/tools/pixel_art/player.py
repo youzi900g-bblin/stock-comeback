@@ -112,8 +112,8 @@ def _tank(skin, shade):
 
 def _top(tid, skin=None, shade=None):
     if tid == 'tank': return _tank(skin, shade)
-    if tid == 'white':  t = tone('#f4f1ea'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
-    if tid == 'black':  t = tone('#2b2b30'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
+    if tid == 'white':  t = tone('#f4f1ea'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
+    if tid == 'black':  t = tone('#2b2b30'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
     if tid == 'stripe':
         t = tone('#9db7d6'); f = _stripe(dict(base=t['base'], hi=H('#f4f1ea')))
         return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30, folds=False))
@@ -150,7 +150,7 @@ def _bottom(bid, skin=None, cover=False):
         return dict(type='skirt', shorts=True, base=t['base'], fill=lambda x, y: t['hi'] if (x - CX) >= 2 else t['base'], skirt_end=35, flare=0, legL=3, skin_y0=36, detail=det)
     if bid == 'pleat':
         t = tone('#d98aa6')
-        return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else (t['hi'] if y < 32 else t['base']),
+        return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else t['base'],
                     skirt_end=37, flare=2, legL=3, skin_y0=36,
                     detail=lambda cv: [cv.px(x, 37, t['lo']) for x in range(CX-6, CX+7)])   # 下擺陰影
     raise KeyError(bid)
@@ -178,7 +178,9 @@ def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='
     if hw: P['hw'] = dict(kind=hw, **tone(HW_COLORS[hw_color]))
     if socks: P['socks'] = dict(kind=socks, **tone(HW_COLORS[sock_color]))
     if jacket:
-        jt = tone(JACKETS[jacket]); P['jacket'] = dict(kind=jacket, fill=_torso_fill(jt), sfill=_sleeve_fill(jt), **jt)
+        jt = tone(JACKETS[jacket])
+        jf = dict(jt, hi=jt['base']) if jacket == 'cardigan' else jt   # 針織是霧面：不畫高光
+        P['jacket'] = dict(kind=jacket, fill=_torso_fill(jf), sfill=_sleeve_fill(jt), **jt)
     if bag: P['bag'] = dict(kind=bag, **tone(HW_COLORS[bag_color]))
     P['jewel'] = dict(earring=earring, necklace=necklace, bracelet=bracelet)
     P.update(_top(top, sk, shade))
