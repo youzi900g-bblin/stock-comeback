@@ -85,11 +85,12 @@
   function linProgress(q) {
     const g = q.goal;
     const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
+      : g.type === "linCoat" ? (linState().itemId ? (((findItem(linState().itemId) || {}).condition === "良好") ? 1 : (findItem(linState().itemId) ? 0 : 1)) : ((S.stats && S.stats.repaired) || 0) - linState().base)   // 外套找不到（不該發生）就當作完成；舊存檔沒有外套時沿用修補件數
       : g.type === "repaired" ? ((S.stats && S.stats.repaired) || 0) - linState().base
       : g.type === "money" ? S.money : capacity() - S.wardrobe.length;
     return [Math.max(0, cur), g.n];
   }
-  const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "repaired" ? `修補 ${g.n} 件衣服` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
+  const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : (g.type === "repaired" || g.type === "linCoat") ? `修補 ${g.n} 件衣服` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
 
   // 創角選的衣物 → 開場衣櫃的前幾件（規則見 config.js 的 PICK_*）
   // 款式 → 物品：有對應基本款樣板就沿用其基礎價值與標籤，沒有就沿用同類型第一個樣板（規則見 config.js 的 PICK_*）
@@ -161,7 +162,7 @@
   // 新手任務：依序一個個出現；S.quest 是目前第幾個（沒有這個欄位＝沒有任務，舊存檔就是這樣）
   let questGuide = false, questOpen = false;   // questOpen：任務卡的說明是否展開（預設收起）
   const QUEST_DONE = {
-    listAll: () => S.wardrobe.every((i) => i.reward),   // 教學獎勵的衣服不要求上架
+    listAll: () => S.wardrobe.every((i) => i.reward || i.lin),   // 教學獎勵的衣服不要求上架
     nextDay: () => S.day >= 2,
     ship: () => ((S.stats && S.stats.shipped) || 0) >= 1,
     review: () => ((S.stats && S.stats.goodReviews) || 0) >= 1,
@@ -634,7 +635,7 @@
   const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
   function piece(i, hl) {
     const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
-    return `<button class="piece${i.reward ? " rewarditem" : ""}${hl ? " tutfirst" : ""}${i.condition === "有瑕疵" && !i.fixing ? " flawed" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
+    return `<button class="piece${i.reward || i.lin ? " rewarditem" : ""}${hl ? " tutfirst" : ""}${i.condition === "有瑕疵" && !i.fixing ? " flawed" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
       <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.fixing ? '<span class="chip flaw">整理中</span>' : i.condition === "有瑕疵" ? '<span class="chip flaw">有瑕疵</span>' : ""}</button>`;
   }
   let wardView = "stock", ccat = "全部";
@@ -827,7 +828,7 @@
       if (!q) return box(`<h3>林</h3><p>${esc(C.LIN_ALL_DONE)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
       const st = linState(), [cur, n] = linProgress(q), ready = st.phase === "active" && cur >= n;
       const goal = esc(q.title || linGoalText(q.goal));
-      if (modal.acceptLine) return box(`<h3>林</h3><p>${esc(q.acceptLine)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
+      if (modal.acceptLine) return box(`<h3>林</h3><p>${esc(q.acceptLine)}</p>${q.coat ? `<div class="kv"><span style="white-space:nowrap">收到</span><span>林的${esc(q.coat.name)}（${esc(q.coat.flaw)}）</span></div>` : ""}<div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
       if (st.phase === "offer") {
         const step = modal.step === undefined ? (st.seenIntro ? 2 : 0) : modal.step;
         if (step === 0) return box(`<p class="muted">${esc(q.narration)}</p><div class="btns"><button class="btn main" id="lin-next">繼續</button></div>`);
@@ -850,11 +851,12 @@
         ${i.condition === "有瑕疵" && !i.fixing ? `<div class="kv"><span>修補後</span><span>$${i.base}</span></div><p class="muted">修補要付費，並花一天時間。</p>` : ""}
         ${i.fixing ? `<p class="muted">整理中，隔天結算時完成。完成前不能賣或留。</p>` : ""}
         ${i.cost > 0 && tutDone() ? `<div class="kv"><span>成本</span><span>$${i.cost}</span></div>` : ""}
-        <p class="muted">「留」會放進私人衣櫃，可以穿在角色身上。</p>
+        ${i.lin ? "" : `<p class="muted">「留」會放進私人衣櫃，可以穿在角色身上。</p>`}
         <div class="btns"><button class="btn alt" id="item-close">關閉</button>
           ${i.condition === "有瑕疵" && !i.fixing ? `<button class="btn alt" data-fix="${i.id}"${S.money < repairCost(i) || fixingCount() >= C.REPAIR_SLOTS ? " disabled" : ""}>修補 $${repairCost(i)}</button>` : ""}
-          <button class="btn alt" data-keepit="${i.id}"${i.fixing ? " disabled" : ""}>留</button>
-          <button class="btn main" data-sell="${i.id}"${i.fixing ? " disabled" : ""}>賣</button></div>
+          <button class="btn alt" data-keepit="${i.id}"${i.fixing || i.lin ? " disabled" : ""}>留</button>
+          <button class="btn main" data-sell="${i.id}"${i.fixing || i.lin ? " disabled" : ""}>賣</button></div>
+        ${i.lin ? `<p class="muted">這是林的外套，修好之後要還給林。</p>` : ""}
         ${i.condition === "有瑕疵" && !i.fixing && fixingCount() >= C.REPAIR_SLOTS ? `<p class="muted">同時最多整理 ${C.REPAIR_SLOTS} 件。</p>` : ""}</div></div>`;
     }
     if (modal.type === "pack") {
@@ -998,14 +1000,18 @@
     const lb = $("[data-lin]");
     if (lb) lb.onclick = () => { modal = { type: "lin", quest: linQuest() }; render(); };
     const la = $("#lin-accept");
-    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.seenIntro = true; st.base = (S.stats && (linQuest().goal.type === "repaired" ? S.stats.repaired : S.stats.sold)) || 0; modal = { type: "lin", quest: linQuest(), acceptLine: true }; save(); render(); };
+    if (la) la.onclick = () => { const st = linState(); st.phase = "active"; st.seenIntro = true; st.base = (S.stats && (/repaired|linCoat/.test(linQuest().goal.type) ? S.stats.repaired : S.stats.sold)) || 0;
+      const lq = linQuest();
+      if (lq.coat && !st.itemId) { const id = nextItemId(); S.wardrobe.push({ ...lq.coat, id, condition: "有瑕疵", cost: 0, kept: false, lin: true }); st.itemId = id; }   // 林把有瑕疵的外套交給玩家（不佔用容量檢查）
+      modal = { type: "lin", quest: lq, acceptLine: true }; save(); render(); };
     const ln = $("#lin-next"); if (ln) ln.onclick = () => { const st = linState(); modal.step = (modal.step === undefined ? 0 : modal.step) + 1; if (modal.step >= 2) st.seenIntro = true; save(); render(); };
     const cg = $("#cafe-go"); if (cg) cg.onclick = () => { view = "cafe"; window.scrollTo(0, 0); render(); };
     const lc = $("#lin-claim");
     if (lc) lc.onclick = () => {
       const st = linState(), q = linQuest();
       S.money += q.reward.money; flashMoney = true;
-      st.q += 1; st.phase = "offer"; st.base = 0; modal = null; save(); render();
+      if (st.itemId) { S.wardrobe = S.wardrobe.filter((i) => i.id !== st.itemId); showToast("已把外套還給林。"); }   // 修好的外套交還給林
+      st.q += 1; st.phase = "offer"; st.base = 0; st.itemId = null; modal = null; save(); render();
     };
     const lx = $("#lin-close"); if (lx) lx.onclick = () => { if (modal && modal.type === "lin") { const st = linState(); if (st.phase === "offer" && !st.seenIntro) st.seenIntro = true; } modal = null; render(); };
     const rf = $("#refresh"); if (rf) rf.onclick = refreshSocial;

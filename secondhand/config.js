@@ -171,16 +171,17 @@ const CONFIG = {
   ],
   // ---- 林（作者彩蛋）的任務鏈（全部為【佔位】：出現天數、目標數字、獎勵、台詞都待使用者決定）----
   // 林出現條件：伊瑪、艾蓮娜、由奈三位的 NPC 任務都完成（接在她們後面的任務，不看好感度）。LIN_DRAFT 為 true 時，另外要網址加 ?draft 才看得到。
-  // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數；repaired＝接任務後累計修補件數
+  // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數；repaired＝接任務後累計修補件數；linCoat＝修好林交給玩家的外套（接受時發一件有瑕疵的外套，領取時收回）
   LIN_DRAFT: false,        // 林改由「三位 NPC 任務完成」控制，不再用 ?draft 擋住
   // 林的任務：咖啡廳遇到的求助（先用「修補」當玩法，使用者之後會再改）。台詞是使用者要求我先擬的草案，可直接改字。
   // 流程：進咖啡廳 → narration（旁白）→ monologue（林自言自語）→ intro（林求助，接受／先不要）→ acceptLine → waiting（進行中）→ done（完成）
   LIN_QUESTS: [
-    { id: "lin1", appearDay: 1, title: "幫林修好一件衣服", goal: { type: "repaired", n: 1 }, reward: { money: 100 },
+    { id: "lin1", appearDay: 1, title: "幫林修好一件衣服", goal: { type: "linCoat", n: 1 }, reward: { money: 100 },
+      coat: { name: "牛仔外套", type: "外套", tags: ["vintage"], base: 350, color: "#6c8bb3", flaw: "袖口的縫線鬆脫" },   // 林交給玩家的有瑕疵外套（基礎價值為佔位值）
       narration: "隔壁桌的人把一件外套攤在桌上，皺著眉頭看了很久。",
       monologue: "袖口的線整個鬆掉了……明天就要穿的。這種東西，到底要找誰修才好。",
       intro: "啊，不好意思，被你聽到了。這件外套是朋友送的，不能就這樣丟掉。如果你知道誰修得好，可以幫我問問嗎？",
-      acceptLine: "真的嗎？那就拜託你了。我先在這裡等。",
+      acceptLine: "真的嗎？那就拜託你了。外套先交給你，修好了再拿來給我。我先在這裡等。",
       waiting: "不急，慢慢來。",
       done: "縫得真整齊，看不出哪裡壞過。太感謝了，這是一點心意。" },
   ],
