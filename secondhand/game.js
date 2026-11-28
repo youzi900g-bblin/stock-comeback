@@ -98,7 +98,7 @@
   const socialState = () => (S.social = S.social || { left: C.SOCIAL_REFRESHES, offers: [], seq: 0 });
   const rnd = (arr) => arr[Math.floor(Math.random() * arr.length)];
   function socialPool() {
-    const lv = (list) => list.filter((o) => !o.draft || DRAFT_MODE);
+    const lv = (list) => list.filter((o) => (!o.draft || DRAFT_MODE) && !o.reward);
     const col = () => rnd(C.HEADWEAR_COLORS).color;
     return [...lv(C.TOPS).map((o) => () => styleItem("上衣", o)), ...lv(C.BOTTOMS).map((o) => () => styleItem("下身", o)),
       ...lv(C.JACKETS).filter((o) => o.id !== "none").map((o) => () => styleItem("外套", o)),
@@ -135,12 +135,12 @@
   const totalCount = () => S.wardrobe.length + (S.closet || []).length;   // 待售加私人，共用容量
   const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...(S.closet || []).map((i) => i.id), ...S.listings.map((l) => l.item.id));
   function endTutorial() {   // 教學結束：開放社群、開始第一季流行、開始新手任務
-    S.tutorial = "done"; S.quest = 0; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "seasonHint", tutEnd: true };
+    S.tutorial = "done"; S.quest = 0; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "tutReward" };
   }
   // 新手任務：依序一個個出現；S.quest 是目前第幾個（沒有這個欄位＝沒有任務，舊存檔就是這樣）
   let questGuide = false;
   const QUEST_DONE = {
-    listAll: () => S.wardrobe.length === 0,
+    listAll: () => S.wardrobe.every((i) => i.reward),   // 教學獎勵的衣服不要求上架
     nextDay: () => S.day >= 2,
     buy: () => ((S.stats && S.stats.bought) || 0) >= 1,
     bargain: () => ((S.stats && S.stats.bargained) || 0) >= 1,
@@ -370,7 +370,7 @@
       if (modal && modal.type === "item") return q.id === "repair" ? { sel: ".sheet [data-fix]", text: "按「修補」，付費整理，隔天完成。", quest: true } : { sel: ".sheet [data-sell]", text: "按「賣」。", quest: true };
       if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
       if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」。", quest: true };
-      return piece(q.id === "repair" ? ".piece.flawed" : ".piece", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
+      return piece(q.id === "repair" ? ".piece.flawed" : ".piece:not(.rewarditem)", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
     }
     if (q.id === "nextDay") return view !== "home" ? go("home", "回首頁。") : { sel: "#nextday", text: "按「進入下一天」。", quest: true };
     if (q.id === "bargain") {
@@ -501,7 +501,7 @@
   let createTab = "face";
   // 排程新做的衣服在 config.js 標 draft: true，只有網址加 ?draft 才看得到，使用者標「通過」後才移除旗標
   const DRAFT_MODE = new URLSearchParams(location.search).has("draft");
-  const live = (list) => list.filter((o) => !o.draft || DRAFT_MODE);
+  const live = (list) => list.filter((o) => (!o.draft || DRAFT_MODE) && !o.reward);
 
   function createView() {
     const opt = (key, o, sw) => `<button class="opt ${sw ? "swatch" : ""} ${draft[key] === o.id ? "on" : ""}" aria-pressed="${draft[key] === o.id}" data-look="${key}:${o.id}"${sw ? ` style="background:${o.color}" aria-label="${o.name}"` : ""}>${sw ? "" : o.name}</button>`;
@@ -551,7 +551,7 @@
   const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
   function piece(i, hl) {
     const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
-    return `<button class="piece${hl ? " tutfirst" : ""}${i.condition === "有瑕疵" && !i.fixing ? " flawed" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
+    return `<button class="piece${i.reward ? " rewarditem" : ""}${hl ? " tutfirst" : ""}${i.condition === "有瑕疵" && !i.fixing ? " flawed" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
       <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.fixing ? '<span class="chip flaw">整理中</span>' : i.condition === "有瑕疵" ? '<span class="chip flaw">有瑕疵</span>' : ""}</button>`;
   }
   let wardView = "stock", ccat = "全部";
@@ -755,6 +755,13 @@
           <button class="btn alt" data-keepit="${i.id}"${i.fixing ? " disabled" : ""}>留</button>
           <button class="btn main" data-sell="${i.id}"${i.fixing ? " disabled" : ""}>賣</button></div>
         ${i.condition === "有瑕疵" && !i.fixing && fixingCount() >= C.REPAIR_SLOTS ? `<p class="muted">同時最多整理 ${C.REPAIR_SLOTS} 件。</p>` : ""}</div></div>`;
+    }
+    if (modal.type === "tutReward") {
+      const r = C.TUTORIAL_REWARD;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="教學完成" tabindex="-1"><h3>教學完成</h3>
+        <div class="kv"><span>${esc(r.name)}</span><span>${esc(r.type)}　基礎價值 $${r.base}</span></div>
+        <p>送你一件衣服，狀況良好。可以賣、可以留，也可以穿。</p>
+        <div class="btns"><button class="btn main" id="reward-claim">領取</button></div></div></div>`;
     }
     if (modal.type === "seasonHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="流行說明" tabindex="-1"><h3>流行與退燒</h3>
@@ -983,6 +990,11 @@
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };
     }
+    const rc = $("#reward-claim");
+    if (rc) rc.onclick = () => {
+      if (!S.rewardGot) { S.rewardGot = true; S.wardrobe.push({ ...C.TUTORIAL_REWARD, id: nextItemId(), condition: "良好", cost: 0, kept: false, reward: true }); }
+      save(); modal = { type: "seasonHint", tutEnd: true }; render();
+    };
     const cs = $("#close-summary");
     if (cs) cs.onclick = () => {
       const hint = modal.seasonHint;

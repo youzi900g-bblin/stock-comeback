@@ -35,6 +35,8 @@ const CONFIG = {
     伊瑪: { face: 0, text: "買東西不殺價怎麼行？去社群試試「還價」，出價別太低，賣家比較肯答應。" },
     艾蓮娜: { face: 1, text: "有瑕疵的衣服修一修，價值會變高。你衣櫃裡有的話，試著修補看看。" },
   },
+  // 教學完成獎勵（基礎價值 200 為【佔位值】）
+  TUTORIAL_REWARD: { name: "聖誕毛衣", type: "上衣", tags: ["可愛"], base: 200, color: "#c43a3a" },
   // 瑕疵說明（草案，待使用者確認）：每件瑕疵貨隨機一句
   FLAW_NOTES: ["袖口有一點污漬", "縫線有些鬆脫", "有輕微起毛球", "整體有點褪色", "領口有點變形", "有一小塊勾紗"],
 
@@ -92,6 +94,7 @@ const CONFIG = {
   TOPS: [
     { id: "white", name: "白 T 恤" }, { id: "black", name: "黑 T 恤" },
     { id: "stripe", name: "條紋 T 恤" }, { id: "hoodie", name: "連帽 T" },
+    { id: "xmas", name: "聖誕毛衣", reward: true },   // reward：教學完成獎勵專用，不出現在創角與社群
   ],
   BOTTOMS: [
     { id: "jeans", name: "直筒牛仔褲" }, { id: "flare", name: "喇叭牛仔褲" }, { id: "ripped", name: "破洞牛仔褲" }, { id: "shorts", name: "牛仔短褲" },

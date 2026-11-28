@@ -7,13 +7,14 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   p.on('pageerror', (e) => errs.push(String(e))); p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
   await p.goto('file://' + path.resolve(__dirname, '../../index.html')); await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.fill('#nm', '小雨'); await p.click('#start');
-  const clearHaggle = async () => { while (await p.locator('#haggle-refuse').count()) { await p.click('#haggle-refuse'); await p.click('#haggle-ok'); } };
+  const clearHaggle = async () => { while (await p.locator('#haggle-refuse').count() || await p.locator('.npcmsg').count()) { if (await p.locator('.npcmsg').count()) await p.click('#lin-close'); else { await p.click('#haggle-refuse'); await p.click('#haggle-ok'); } } };   // 也處理新手任務的 NPC 私訊
   const st = () => p.evaluate(() => { const s = window.__game.state; return { t: s.tutorial, quest: s.quest, money: s.money, day: s.day, stock: s.wardrobe.map((i) => [i.name, i.condition, !!i.fixing]) }; });
   // 教學
   await p.click('[data-nav="wardrobe"]'); await p.click('.piece.tutfirst'); await p.click('[data-sell]');
   await p.click('#spot-next'); await p.click('[data-pct="10"]'); await p.click('#confirm-price');
   await p.click('.piece.tutfirst'); await p.click('[data-keepit]');
   await p.click('[data-wseg="closet"]'); await p.click('[data-wear]:not([aria-pressed="true"])');
+  await p.click('#reward-claim');
   console.log('教學結束', JSON.stringify(await st()));
   await p.screenshot({ path: path.join(SP, 'tut_end.png') });
   await p.click('#close-hint'); await p.click('[data-nav="home"]');
@@ -26,13 +27,13 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.click('#quest-go'); await p.click('#nextday'); await p.click('#close-summary'); await clearHaggle();
   console.log('任務 2 後', JSON.stringify(await st()));
   // 任務 3：買貨（保證第一則是有瑕疵、買得起）
-  await p.evaluate(() => { window.__game.state.money = 300; });
+  await p.evaluate(() => { window.__game.state.money = 300; }); await clearHaggle();
   await p.click('[data-nav="social"]'); await p.click('#refresh');
   await p.screenshot({ path: path.join(SP, 'quest_social.png') });
   await p.click('[data-buy]:not([disabled])');
   console.log('任務 3 後', JSON.stringify(await st()));
   // 任務 4：修補
-  await p.click('[data-nav="wardrobe"]'); await p.click('[data-wseg="stock"]'); await p.click('.piece.flawed'); await p.screenshot({ path: path.join(SP, 'quest_fix.png') });
+  await clearHaggle(); await p.click('[data-nav="wardrobe"]'); await p.click('[data-wseg="stock"]'); await p.click('.piece.flawed'); await p.screenshot({ path: path.join(SP, 'quest_fix.png') });
   await p.click('[data-fix]');
   console.log('任務 4 後', JSON.stringify(await st()));
   await p.click('[data-nav="home"]'); await p.click('#nextday'); await p.click('#close-summary'); await clearHaggle();

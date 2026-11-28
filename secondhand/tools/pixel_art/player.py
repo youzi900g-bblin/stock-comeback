@@ -84,6 +84,17 @@ def _hoodie_extra(cv, t):
     for x in (CX-4, CX-3, CX+3, CX+4): cv.px(x, 19, o)
     cv.px(CX-3, 20, o); cv.px(CX+3, 20, o)
 
+def _xmas_extra(cv, t):
+    """聖誕毛衣：紅底；領口、下擺為白色羅紋；胸口一棵小聖誕樹（黃星、兩色綠、咖啡色樹幹）。"""
+    W, Wl = H('#f4f1ea'), H('#c9c3b8')
+    g, gl, star, trunk = H('#3f8a4a'), H('#2c6535'), H('#f8d838'), H('#7a4a2a')
+    for x in range(CX-2, CX+3): cv.px(x, 20, W)                              # 領口羅紋
+    for x in range(CX-4, CX+5): cv.px(x, 29, W); cv.px(x, 30, Wl)            # 下擺羅紋（上白下暗）
+    cv.px(CX, 22, star)
+    for y, hw in ((23, 0), (24, 1), (25, 1), (26, 2), (27, 2)):
+        for x in range(CX-hw, CX+hw+1): cv.px(x, y, gl if x == CX-hw and hw else g)
+    cv.px(CX, 28, trunk)
+
 def _tank(skin, shade):
     """白色吊嘎（背心）：細肩帶、方領帶圓角，無袖。回傳 _top 同樣格式的設定。"""
     t = tone('#f4f1ea'); hem = 30
@@ -108,6 +119,9 @@ def _top(tid, skin=None, shade=None):
         return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30, folds=False))
     if tid == 'hoodie':
         t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=31, hood=t['base'], hood_lo=t['lo'], detail=_top_detail(t, 31, _hoodie_extra))
+    if tid == 'xmas':
+        t = tone('#c43a3a'); W = H('#f4f1ea')
+        return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=W, cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30, _xmas_extra))
     raise KeyError(tid)
 
 def _bottom(bid, skin=None, cover=False):
@@ -148,7 +162,7 @@ JACKETS = {'cardigan': '#c9a98a', 'denim': '#6c8bb3', 'sport': '#4d4f58'}   # �
 BAGS = ('cross', 'tote', 'pack')
 BTYPE = {'brief': 'skirt', 'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'shorts': 'skirt', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
-TOPS = ('white', 'black', 'stripe', 'hoodie', 'tank')   # tank（白色吊嘎）是脫下後的內衣，不是創角選項
+TOPS = ('white', 'black', 'stripe', 'hoodie', 'tank', 'xmas')   # tank（白色吊嘎）是脫下後的內衣，不是創角選項
 BOTTOMS = ('jeans', 'flare', 'ripped', 'shorts', 'track', 'pleat', 'brief')   # brief（黑色內褲）是脫下後的內衣
 
 def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown', hair_color='darkbrown', hw_color='red',
