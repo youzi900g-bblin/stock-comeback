@@ -80,8 +80,8 @@
     if (!S.favor) { S.favor = {}; C.NPC_TASKS.forEach((t) => { if (S.npcq && S.npcq.done && S.npcq.done[t.id]) S.favor[t.npc] = (S.favor[t.npc] || 0) + ((t.reward && t.reward.favor) || 0); }); }
     return S.favor[name] || 0;
   };
-  const favorOK = () => [...new Set(C.NPC_TASKS.map((t) => t.npc))].every((n) => favorOf(n) >= C.NPC_FAVOR_UNLOCK);   // 三位好感度都達標，林才出現
-  const linVisible = () => linOn() && S && tutDone() && favorOK() && (!linQuest() || S.day >= linQuest().appearDay);
+  const npcAllDone = () => C.NPC_TASKS.every((t) => S.npcq && S.npcq.done && S.npcq.done[t.id]);   // 三位 NPC 的任務都完成，林的任務接在後面
+  const linVisible = () => linOn() && S && tutDone() && npcAllDone() && (!linQuest() || S.day >= linQuest().appearDay);
   function linProgress(q) {
     const g = q.goal;
     const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
@@ -195,7 +195,7 @@
       return `<div class="tip shipline"><span><b>${esc(t.npc)}</b>　${left}</span><button class="btn small" data-npc="${t.id}">${ph === "offer" ? "看訊息" : ph === "ready" ? (go ? "出發" : "領取獎勵") : "看任務"}</button></div>`;
     }).join("");
   }
-  // 林（作者彩蛋）：在咖啡廳遇到。三位 NPC 好感度達標後，首頁出現「咖啡廳」一行，按「出門」進去
+  // 林（作者彩蛋）：在咖啡廳遇到。三位 NPC 的任務都完成後，首頁出現「咖啡廳」一行，按「出門」進去
   const linEvent = () => { const q = linQuest(); return !!q && (linState().phase === "offer" || (linState().phase === "active" && linProgress(q)[0] >= linProgress(q)[1])); };
   function cafeCard() {
     if (!linVisible()) return "";

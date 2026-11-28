@@ -56,7 +56,6 @@ const CONFIG = {
   },
   // ---- NPC 簡單任務（第二階段末，全部為【佔位內容】，任務條件、台詞與獎勵格數都待使用者決定）----
   // 出現條件：新手任務全部完成，且天數 ≥ appearDay。goal.type：bargained（社群議價成功 n 次）、boughtTag（買下帶任一標籤的衣服 n 件）、outfit（身上穿著帶標籤的衣服 n 件，才能出門）
-  NPC_FAVOR_UNLOCK: 2,      // 林出現的條件：伊瑪、艾蓮娜、由奈三位的好感度都達到這個值【佔位值】；完成一個 NPC 任務 +2（任務的 reward.favor）
   NPC_TASKS: [
     { id: "imma1", npc: "伊瑪", face: 0, appearDay: 3, title: "幫伊瑪殺價兩次", intro: "社群的價格都太高了。你去幫我殺價，成功兩次再來找我。", done: "不錯嘛，你很會殺價！", goal: { type: "bargained", n: 2 }, reward: { capacity: 1, favor: 2 } },
     { id: "elena1", npc: "艾蓮娜", face: 1, appearDay: 5, title: "替艾蓮娜找古著", intro: "我在找帶有古著或優雅風格的衣服。社群上看到的話，幫我買一件。", done: "眼光真好，這件我很喜歡。", goal: { type: "boughtTag", tags: ["vintage", "優雅"], n: 1 }, reward: { capacity: 1, favor: 2 } },
@@ -171,9 +170,9 @@ const CONFIG = {
     { name: "帆布鞋", type: "鞋子", tags: ["日系"], base: 180, color: "#eee6d6" },
   ],
   // ---- 林（作者彩蛋）的任務鏈（全部為【佔位】：出現天數、目標數字、獎勵、台詞都待使用者決定）----
-  // 林出現條件：三位 NPC 好感度都達到 NPC_FAVOR_UNLOCK。LIN_DRAFT 為 true 時，另外要網址加 ?draft 才看得到。
+  // 林出現條件：伊瑪、艾蓮娜、由奈三位的 NPC 任務都完成（接在她們後面的任務，不看好感度）。LIN_DRAFT 為 true 時，另外要網址加 ?draft 才看得到。
   // goal.type：sold＝接任務後累計賣出件數；money＝目前金錢；free＝衣櫃空出的格數；repaired＝接任務後累計修補件數
-  LIN_DRAFT: false,        // 林改由好感度門檻控制（NPC_FAVOR_UNLOCK），不再用 ?draft 擋住
+  LIN_DRAFT: false,        // 林改由「三位 NPC 任務完成」控制，不再用 ?draft 擋住
   // 林的任務：咖啡廳遇到的求助（先用「修補」當玩法，使用者之後會再改）。台詞是使用者要求我先擬的草案，可直接改字。
   // 流程：進咖啡廳 → narration（旁白）→ monologue（林自言自語）→ intro（林求助，接受／先不要）→ acceptLine → waiting（進行中）→ done（完成）
   LIN_QUESTS: [
