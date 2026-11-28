@@ -36,12 +36,12 @@
   // 多標籤合併：各標籤加成取平均（沒影響的標籤算 0），互相調和
   const trendOf = (it) => (S.season && S.tutorial === "done" && it.tags.length ? it.tags.reduce((a, t) => a + tagCoef(t), 0) / it.tags.length : 0);
   const marketPrice = (it) => Math.round(it.base * C.MARKET_FACTOR * (1 + trendOf(it)));
-  function waitDays(price, it) {
-    const ratio = price / marketPrice(it);
-    const extra = ratio > 1 ? Math.ceil((ratio - 1) / C.WAIT_STEP) : 0;
-    return Math.min(C.WAIT_MAX_DAYS, C.WAIT_MIN_DAYS + extra);
-  }
+  // 每天成交機率（分段表在 config.js 的 SALE_CHANCE）
+  const saleChance = (price, it) => { const r = price / marketPrice(it); return (C.SALE_CHANCE.find(([max]) => r <= max) || [0, 0.03])[1]; };
+  const chanceLabel = (p) => (p >= 0.75 ? "很高" : p >= 0.5 ? "高" : p >= 0.25 ? "中" : p >= 0.1 ? "低" : "很低");
+  const chanceText = (price, it) => { const p = saleChance(price, it); return `${chanceLabel(p)}（約 ${Math.round(p * 100)}%）`; };
   const tutDone = () => S.tutorial === "done";
+  const socialOpen = () => tutDone() || ["social", "refresh", "read", "buy"].includes(S.tutorial);   // 教學接到社群的步驟中，社群分頁就開放
   const findItem = (id) => S.wardrobe.find((i) => i.id === id);
 
   // ---------- 林的任務鏈（內容為佔位，見 config.js）----------
@@ -101,6 +101,12 @@
       offers.push({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1 + Math.floor(Math.random() * 55),
         text: rnd(C.SOCIAL_LINES), likes: Math.floor(Math.random() * 16), cm: Math.floor(Math.random() * 5) });
     }
+    if (S.tutorial === "refresh") {   // 教學：第一則保證是低於市場價、而且買得起的貨
+      const R = C.SOCIAL_PRICE_ROUND, item = pool.map((f) => f()).sort((a, b) => marketPrice(a) - marketPrice(b))[0], mk = marketPrice(item);
+      const ask = Math.min(Math.max(R, Math.round(mk * 0.7 / R) * R), Math.max(R, Math.floor(S.money / R) * R));
+      offers.unshift({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1, text: rnd(C.SOCIAL_LINES), likes: 8, cm: 1 });
+      offers.length = C.SOCIAL_BATCH; S.tutorial = "read";
+    }
     offers.sort((x, y) => x.mins - y.mins);
     so.offers = offers; // 沒買的貨隨刷新消失
     save(); render();
@@ -113,6 +119,9 @@
     S.money -= o.ask; flashMoney = true;
     S.wardrobe.push({ ...o.item, id: nextItemId(), cost: o.ask });
     so.offers = so.offers.filter((x) => x.oid !== oid);
+    if (S.tutorial === "buy") {   // 教學最後一步：買下後教學結束，開始第一季流行
+      S.tutorial = "done"; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "seasonHint", tutEnd: true };
+    }
     save(); showToast(`已買下「${o.item.name}」$${o.ask}`);
   }
 
@@ -160,27 +169,25 @@
     const up = rnd(tags.filter((t) => t !== prev.up));
     const down = rnd(tags.filter((t) => t !== prev.down && t !== up));
     S.season = { start: S.day, up, down };
-    S.listings.forEach((l) => { l.waitDays = waitDays(l.price, l.item); }); // 已上架商品依新市場價重算等待天數
   }
 
   function nextDay() {
     S.day += 1;
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
+    const sell = (l) => { S.money += l.price; sales.push({ name: l.item.name, price: l.price, item: l.item }); };
     S.listings = S.listings.filter((l) => {
-      if (S.day - l.listedDay >= l.waitDays) {
-        S.money += l.price;
-        sales.push({ name: l.item.name, price: l.price, item: l.item });
-        return false;
-      }
+      if (Math.random() < saleChance(l.price, l.item)) { sell(l); return false; }   // 每件各抽一次
       return true;
     });
+    if (S.tutorial === "wait" && !sales.length && S.listings.length) {   // 教學保底：第一次結算至少成交 1 件（挑成交機會最高的）
+      const best = S.listings.reduce((a, b) => (saleChance(b.price, b.item) > saleChance(a.price, a.item) ? b : a));
+      sell(best); S.listings = S.listings.filter((l) => l !== best);
+    }
     S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     modal = { type: "summary", sales };
-    if (S.tutorial === "wait") {
-      S.tutorial = "done"; modal.tutEnd = true;
-      rollSeason(); modal.season = S.season; modal.seasonHint = !(S.seen && S.seen.season);
-    } else if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
+    if (S.tutorial === "wait") { S.tutorial = "social"; modal.tutSocial = true; }
+    else if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
@@ -313,9 +320,16 @@
       return { sel: `[data-wear="${S.tutKept}"]`, text: "第 8 步　點這件衣服，穿到角色身上。" };
     }
     if (t === "price" && modal && modal.type === "price") {
-      if (tutSub === 0) return { sel: ".prices", text: "第 4 步　這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越快賣掉。", next: "我知道了" };
-      if (tutSub === 1) return { sel: '[data-pct="10"]', text: "標價越高，要等越久。按一下「+10%」試試看。" };
-      return { sel: "#confirm-price", text: "「預計等待」變長了。這樣就可以了，按「上架」。" };
+      if (tutSub === 0) return { sel: ".prices", text: "第 4 步　這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越容易賣掉。", next: "我知道了" };
+      if (tutSub === 1) return { sel: '[data-pct="10"]', text: "標價越高，成交機會越低。按一下「+10%」試試看。" };
+      return { sel: "#confirm-price", text: "「每天成交機會」變低了。這樣就可以了，按「上架」。" };
+    }
+    if (["social", "refresh", "read", "buy"].includes(t)) {
+      if (modal) return null;   // 結算視窗開著時不壓暗
+      if (view !== "social") return go("social", t === "social" ? "第 11 步　點「社群」，看看別人在賣什麼。" : "點下方的「社群」。");
+      if (t === "refresh") return { sel: "#refresh", text: "第 12 步　按「刷新看看」，看今天有什麼貨。" };
+      if (t === "read") return { sel: ".post .price", text: "第 13 步　這是「開價」和「市場價」。開價比市場價低，買來再賣，就有價差可賺。", next: "我知道了", onNext: () => { S.tutorial = "buy"; save(); render(); } };
+      if (t === "buy") return { sel: "[data-buy]:not([disabled])", text: "第 14 步　按「買下」，買這一件。" };
     }
     if (t === "wait") {
       if (view !== "home") return go("home", "第 6 步　回首頁，準備進入下一天。");
@@ -348,7 +362,7 @@
     placeSpot();
     cap.querySelector("#spot-skip").onclick = () => { S.tutorial = "done"; save(); render(); };
     const nx = cap.querySelector("#spot-next");
-    if (nx) nx.onclick = () => { tutSub += 1; render(); };
+    if (nx) nx.onclick = sp.onNext || (() => { tutSub += 1; render(); });
   }
   window.addEventListener("scroll", () => placeSpot && placeSpot(), { passive: true });
   window.addEventListener("resize", () => placeSpot && placeSpot());
@@ -395,7 +409,7 @@
     return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${S.money}</span>
         <button class="gear" id="open-settings" aria-label="設定">設定</button></div>
       ${tipView()}${body}${primary}
-      <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${tutDone() ? nav("social", "社群") : ""}${nav("market", "賣場")}</nav>
+      <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${socialOpen() ? nav("social", "社群") : ""}${nav("market", "賣場")}</nav>
       ${modalView()}${toast && !modal ? `<div class="toast" role="status">${esc(toast)}</div>` : ""}`;
   }
 
@@ -541,14 +555,14 @@
 
   let marketTab = "all";
   function marketView() {
-    const left = (l) => Math.max(1, l.waitDays - (S.day - l.listedDay));
-    const tabs = [["all", `全部 ${S.listings.length}`], ["wait", "等待中"], ["soon", "快成交"]].map(([id, n]) => `<button class="${marketTab === id ? "on" : ""}" aria-pressed="${marketTab === id}" data-mtab="${id}">${n}</button>`).join("");
-    const list = S.listings.filter((l) => marketTab === "all" || (marketTab === "soon" ? left(l) <= 1 : left(l) > 1));
+    const ch = (l) => saleChance(l.price, l.item);
+    const tabs = [["all", `全部 ${S.listings.length}`], ["high", "機會高"], ["low", "機會低"]].map(([id, n]) => `<button class="${marketTab === id ? "on" : ""}" aria-pressed="${marketTab === id}" data-mtab="${id}">${n}</button>`).join("");
+    const list = S.listings.filter((l) => marketTab === "all" || (marketTab === "high" ? ch(l) >= 0.5 : ch(l) < 0.5));
     const cards = list.map((l) => {
       const d = S.day - l.listedDay, stale = d > C.STALE_DAYS;
       return `<div class="prod"><span class="ptag">$${l.price}</span><div class="ppic">${thumbSvg(l.item) || ""}</div>
-        <div class="pinfo"><div>${esc(l.item.name)}</div><div class="muted">已掛 ${d} 天${tutDone() ? `・市場價 $${marketPrice(l.item)}` : ""}</div>
-          ${tutDone() ? `<div class="muted">約 ${left(l)} 天後成交</div>` : ""}${stale ? `<div class="warn">掛太久了，考慮調整價格</div>` : ""}</div>
+        <div class="pinfo"><div>${esc(l.item.name)}</div><div class="muted">已掛 ${d} 天・市場價 $${marketPrice(l.item)}</div>
+          <div class="muted">成交機會 ${chanceText(l.price, l.item)}</div>${stale ? `<div class="warn">掛太久了，考慮調整價格</div>` : ""}</div>
         <div class="pbtns"><button class="btn small" data-reprice="${l.item.id}">改價</button><button class="btn small alt" data-pull="${l.item.id}">撤下</button></div></div>`;
     }).join("");
     const empty = S.listings.length ? "這個分頁沒有商品。" : "還沒有上架的衣服。到衣櫃挑一件「賣」。";
@@ -566,8 +580,8 @@
              <div class="p-mkt"><small>市場價</small>$${mk}</div>
              <div class="p-you"><small>你的標價</small><span id="yp">$${p}</span></div></div>
            ${trendOf(it) ? `<div class="kv"><span>流行影響</span><span class="${trendOf(it) > 0 ? "money-up" : "warn"}">${trendOf(it) > 0 ? "+" : ""}${Math.round(trendOf(it) * 100)}%</span></div>` : ""}
-           <div class="kv"><span>預計等待</span><span id="eta">${p > 0 ? waitDays(p, it) + " 天" : "—"}</span></div>
-           <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`;
+           <div class="kv"><span>每天成交機會</span><span id="eta">${p > 0 ? chanceText(p, it) : "—"}</span></div>
+           <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，很難賣掉。</div>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(it)}<h3 style="margin:0">${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3></div>
         ${prices}
         <div class="stepper">
@@ -588,7 +602,7 @@
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         ${modal.season ? `<p>換季了：流行 <b>${esc(modal.season.up)}</b> ▲，退燒 <b>${esc(modal.season.down)}</b> ▼。</p>` : ""}
-        ${modal.tutEnd ? '<p class="muted">教學完成。之後每天結算一次，買家會依你的標價陸續成交。</p>' : ""}
+        ${modal.tutSocial ? '<p class="muted">買家來看過了。每天結算時，標價越低、越容易成交。接下來認識社群，看看別人在賣什麼。</p>' : ""}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
@@ -630,6 +644,8 @@
     }
     if (modal.type === "seasonHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="流行說明" tabindex="-1"><h3>流行與退燒</h3>
+        ${modal.tutEnd ? '<p><b>教學完成。</b>之後每天結算一次，買家會依你的標價陸續成交。</p>' : ""}
+        ${S.season ? `<p>這一季：流行 <b>${esc(S.season.up)}</b> ▲，退燒 <b>${esc(S.season.down)}</b> ▼。</p>` : ""}
         <p>每隔幾天會換季。<b>流行</b>（▲）的風格，市場價會變高；<b>退燒</b>（▼）的風格，市場價會變低。</p>
         <p class="muted" style="margin-top:0">一件衣服有多個風格時，影響會互相平均。收貨與標價前，先看看這一季流行什麼。</p>
         <div class="btns"><button class="btn main" id="close-hint">我知道了</button></div></div></div>`;
@@ -686,6 +702,7 @@
 
     all("[data-nav]", (b) => b.onclick = () => {
       view = b.dataset.nav;
+      if (view === "social" && S.tutorial === "social") { S.tutorial = "refresh"; S.seen = { ...(S.seen || {}), social: true }; }   // 教學中不跳說明卡
       if (view === "social" && !(S.seen && S.seen.social)) { S.seen = { ...(S.seen || {}), social: true }; modal = { type: "socialHint" }; }
       if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "pick";
       save(); render();
@@ -780,7 +797,7 @@
           rng.value = modal.price;
         }
         const eta = $("#eta"), yp = $("#yp"), hi = $("#high");
-        if (eta) eta.textContent = modal.price > 0 ? waitDays(modal.price, modal.item) + " 天" : "—";
+        if (eta) eta.textContent = modal.price > 0 ? chanceText(modal.price, modal.item) : "—";
         if (yp) yp.textContent = "$" + modal.price;
         if (hi) hi.hidden = !(modal.price > marketPrice(modal.item) * C.HIGH_PRICE_RATIO);
       };
@@ -799,10 +816,10 @@
         const wasEdit = modal.edit;
         if (wasEdit) {
           const l = S.listings.find((x) => x.item.id === it.id);
-          l.price = price; l.waitDays = waitDays(price, it); // 改價重算等待天數，但掛賣天數照舊，滯銷提醒不會被洗掉
+          l.price = price; // 改價不重設掛賣天數，滯銷提醒不會被洗掉
         } else {
           S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id);
-          S.listings.push({ item: it, price, listedDay: S.day, waitDays: waitDays(price, it) });
+          S.listings.push({ item: it, price, listedDay: S.day });
           if (S.tutorial === "price") S.tutorial = S.wardrobe.length ? "keep" : "wait";
           else if (S.tutorial === "rest") S.tutorial = S.wardrobe.length ? "rest" : "wait";
         }
@@ -821,6 +838,6 @@
   }
 
   // 供自我檢查與測試使用
-  window.__game = { get state() { return S; }, linVisible, playerLook, trendOf, tagCoef, nextDay, waitDays, marketPrice, sprite };
+  window.__game = { get state() { return S; }, linVisible, playerLook, trendOf, tagCoef, nextDay, saleChance, marketPrice, sprite };
   render();
 })();
