@@ -336,3 +336,6 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .qbtns .btn { margin-top: 0; }
 .tip.shipline .btn { white-space: nowrap; flex: none; }
 .tip.shipline > span { min-width: 0; }
+
+.outfit-prev { display: flex; justify-content: center; margin: 4px 0 8px; background: #f0e2ea; border: 2px solid var(--line); padding: 6px 0; }
+.outfit-prev .sprite { width: 81px; height: 159px; }

@@ -173,17 +173,19 @@
   }
   // NPC 簡單任務：offer（來訊）→ active（進行中）→ 領取後 done
   const npcState = () => (S.npcq = S.npcq || { acc: {}, done: {} });
-  const npcCount = (t) => (t.goal.type === "bargained" ? (S.stats && S.stats.bargained) || 0 : t.goal.tags.reduce((a, tg) => a + (((S.stats && S.stats.boughtTags) || {})[tg] || 0), 0));
-  const npcProgress = (t) => Math.min(t.goal.n, npcCount(t) - ((npcState().acc[t.id] || { base: 0 }).base));
+  const wornTagCount = (tag) => { const w = Object.values((S && S.worn) || {}); return (S.closet || []).filter((i) => w.includes(i.id) && (i.tags || []).includes(tag)).length; };
+  const npcCount = (t) => (t.goal.type === "outfit" ? wornTagCount(t.goal.tag) : t.goal.type === "bargained" ? (S.stats && S.stats.bargained) || 0 : t.goal.tags.reduce((a, tg) => a + (((S.stats && S.stats.boughtTags) || {})[tg] || 0), 0));
+  const npcProgress = (t) => Math.min(t.goal.n, npcCount(t) - (t.goal.type === "outfit" ? 0 : (npcState().acc[t.id] || { base: 0 }).base));   // 穿搭是看「現在身上穿的」，不用基準
   const npcPhase = (t) => (npcState().done[t.id] ? "done" : npcState().acc[t.id] ? (npcProgress(t) >= t.goal.n ? "ready" : "active") : "offer");
   const npcVisible = (t) => S && tutDone() && typeof S.quest === "number" && S.quest >= C.QUESTS.length && S.day >= t.appearDay && npcPhase(t) !== "done";
   const npcTasks = () => C.NPC_TASKS.filter(npcVisible);
-  const npcGoalText = (t) => (t.goal.type === "bargained" ? `社群議價成功 ${t.goal.n} 次` : `買下 ${t.goal.tags.join("或")}風格的衣服 ${t.goal.n} 件`);
+  const npcGoalText = (t) => (t.goal.type === "outfit" ? `穿上 ${t.goal.tag}風格的衣服 ${t.goal.n} 件，再回首頁出發` : t.goal.type === "bargained" ? `社群議價成功 ${t.goal.n} 次` : `買下 ${t.goal.tags.join("或")}風格的衣服 ${t.goal.n} 件`);
   function npcCard() {
     return npcTasks().map((t) => {
       const ph = npcPhase(t);
-      const left = ph === "offer" ? "來訊了" : ph === "ready" ? `${esc(t.title)}　完成！` : `${esc(t.title)}　${npcProgress(t)}/${t.goal.n}`;
-      return `<div class="tip shipline"><span><b>${esc(t.npc)}</b>　${left}</span><button class="btn small" data-npc="${t.id}">${ph === "offer" ? "看訊息" : ph === "ready" ? "領取獎勵" : "看任務"}</button></div>`;
+      const go = t.goal.type === "outfit";
+      const left = ph === "offer" ? "來訊了" : ph === "ready" ? `${esc(t.title)}　${go ? "可以出發了" : "完成！"}` : `${esc(t.title)}　${npcProgress(t)}/${t.goal.n}`;
+      return `<div class="tip shipline"><span><b>${esc(t.npc)}</b>　${left}</span><button class="btn small" data-npc="${t.id}">${ph === "offer" ? "看訊息" : ph === "ready" ? (go ? "出發" : "領取獎勵") : "看任務"}</button></div>`;
     }).join("");
   }
   function shipCard() {
@@ -788,10 +790,11 @@
     }
     if (modal.type === "npcTask") {
       const t = C.NPC_TASKS.find((x) => x.id === modal.id), ph = npcPhase(t);
-      const body = ph === "ready" ? t.done : t.intro;
+      const body = ph === "ready" ? t.done : t.intro, outing = t.goal.type === "outfit";
       const btns = ph === "offer" ? `<button class="btn alt" id="npct-close">先不要</button><button class="btn main" id="npct-accept">接受</button>`
-        : ph === "ready" ? `<button class="btn main" id="npct-claim">領取獎勵</button>` : `<button class="btn main" id="npct-close">好</button>`;
+        : ph === "ready" ? `<button class="btn main" id="npct-claim">${outing ? "出發，領取獎勵" : "領取獎勵"}</button>` : `<button class="btn main" id="npct-close">好</button>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(t.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${t.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(t.npc)}</h3><p>${esc(body)}</p></div></div>
+        ${outing && ph === "ready" ? `<div class="outfit-prev">${sprite(playerLook())}</div>` : ""}${outing && ph === "active" ? `<p class="muted">到衣櫃把「私人」裡的衣服穿在角色身上，穿好後回首頁按「出發」。</p>` : ""}
         <div class="kv"><span>${ph === "active" || ph === "ready" ? "進度" : "目標"}</span><span>${ph === "offer" ? esc(npcGoalText(t)) : `${npcProgress(t)}/${t.goal.n}`}</span></div>
         <div class="kv"><span>獎勵</span><span>衣櫃 +${t.reward.capacity} 格</span></div>
         <div class="btns">${btns}</div></div></div>`;

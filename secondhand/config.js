@@ -55,11 +55,11 @@ const CONFIG = {
     bad: ["比想像中貴，不太划算。", "價格偏高，不太推薦。"],
   },
   // ---- NPC 簡單任務（第二階段末，全部為【佔位內容】，任務條件、台詞與獎勵格數都待使用者決定）----
-  // 出現條件：新手任務全部完成，且天數 ≥ appearDay。goal.type：bargained（社群議價成功 n 次）、boughtTag（買下帶任一標籤的衣服 n 件）
+  // 出現條件：新手任務全部完成，且天數 ≥ appearDay。goal.type：bargained（社群議價成功 n 次）、boughtTag（買下帶任一標籤的衣服 n 件）、outfit（身上穿著帶標籤的衣服 n 件，才能出門）
   NPC_TASKS: [
     { id: "imma1", npc: "伊瑪", face: 0, appearDay: 3, title: "幫伊瑪殺價兩次", intro: "社群的價格都太高了。你去幫我殺價，成功兩次再來找我。", done: "不錯嘛，你很會殺價！", goal: { type: "bargained", n: 2 }, reward: { capacity: 1 } },
     { id: "elena1", npc: "艾蓮娜", face: 1, appearDay: 5, title: "替艾蓮娜找古著", intro: "我在找帶有古著或優雅風格的衣服。社群上看到的話，幫我買一件。", done: "眼光真好，這件我很喜歡。", goal: { type: "boughtTag", tags: ["vintage", "優雅"], n: 1 }, reward: { capacity: 1 } },
-    { id: "yuna1", npc: "由奈", face: 2, appearDay: 7, title: "陪由奈逛社群", intro: "一起逛社群吧！幫我買一件可愛風格的衣服。", done: "謝謝你陪我逛，好開心。", goal: { type: "boughtTag", tags: ["可愛"], n: 1 }, reward: { capacity: 1 } },
+    { id: "yuna1", npc: "由奈", face: 2, appearDay: 7, title: "和由奈出門", intro: "這個週末一起出去玩吧！穿可愛一點的衣服，我們風格才搭。", done: "哇，今天的穿搭好可愛！我們出發吧。", goal: { type: "outfit", tag: "可愛", n: 2 }, reward: { capacity: 1 } },
   ],
   // 教學完成獎勵（基礎價值 200 為【佔位值】）
   TUTORIAL_REWARD: { name: "聖誕毛衣", type: "上衣", tags: ["可愛"], base: 200, color: "#c43a3a" },
