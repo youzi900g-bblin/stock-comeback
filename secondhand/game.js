@@ -105,28 +105,53 @@
     so.offers = offers; // 沒買的貨隨刷新消失
     save(); render();
   }
-  const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...S.listings.map((l) => l.item.id));
+  const totalCount = () => S.wardrobe.length + (S.closet || []).length;   // 待售加私人，共用容量
+  const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...(S.closet || []).map((i) => i.id), ...S.listings.map((l) => l.item.id));
   function buyOffer(oid) {
     const so = socialState(), o = so.offers.find((x) => x.oid === oid);
-    if (!o || S.money < o.ask || S.wardrobe.length >= C.WARDROBE_CAPACITY) return;
+    if (!o || S.money < o.ask || totalCount() >= C.WARDROBE_CAPACITY) return;
     S.money -= o.ask; flashMoney = true;
     S.wardrobe.push({ ...o.item, id: nextItemId(), cost: o.ask });
     so.offers = so.offers.filter((x) => x.oid !== oid);
     save(); showToast(`已買下「${o.item.name}」$${o.ask}`);
   }
 
+  // 新遊戲：創角穿的衣物自動放進私人衣櫃並穿在身上；待售衣櫃是隨機的基本款
   function newGame(p) {
-    const wardrobe = starterPicks(p).slice(0, C.START_ITEM_COUNT).map((it, i) => ({ id: i + 1, ...it }));
-    // 不足的件數從基本款隨機補（避免和已有的同名）
-    const have = new Set(wardrobe.map((x) => x.name));
+    const closet = starterPicks(p).map((it, i) => ({ id: i + 1, ...it }));
+    const worn = {};
+    closet.forEach((it) => { worn[SLOT_OF[it.type]] = it.id; });
+    const have = new Set(closet.map((x) => x.name));
     const pool = C.ITEM_TEMPLATES.filter((t) => !have.has(t.name)).sort(() => Math.random() - 0.5);
-    for (let i = wardrobe.length, k = 0; i < C.START_ITEM_COUNT && k < pool.length; i++, k++) {
-      const t = pool[k];
-      wardrobe.push({ id: i + 1, name: t.name, type: t.type, tags: t.tags, condition: "良好",
-        base: t.base, cost: 0, color: t.color, kept: false });
-    }
-    return { player: p, money: C.START_MONEY, day: 1, wardrobe, listings: [],
+    const wardrobe = pool.slice(0, C.START_ITEM_COUNT).map((t, k) => ({ id: closet.length + k + 1, name: t.name, type: t.type, tags: t.tags, condition: "良好",
+      base: t.base, cost: 0, color: t.color, kept: false }));
+    return { player: p, money: C.START_MONEY, day: 1, wardrobe, closet, worn, listings: [],
       tutorial: "goWardrobe", settings: { contrast: false }, social: { left: C.SOCIAL_REFRESHES, offers: [], seq: 0 }, stats: { sold: 0 } };
+  }
+
+  // 舊存檔：標為「留」的衣服搬進私人衣櫃，再把創角時穿的衣物補進私人衣櫃並穿上
+  function ensureCloset() {
+    if (!S || S.closet) return;
+    S.closet = S.wardrobe.filter((i) => i.kept).map((i) => ({ ...i, kept: false }));
+    S.wardrobe = S.wardrobe.filter((i) => !i.kept);
+    S.worn = {};
+    starterPicks(S.player || {}).forEach((it) => {
+      const item = { ...it, id: nextItemId() };
+      S.closet.push(item); S.worn[SLOT_OF[item.type]] = item.id;
+    });
+    save();
+  }
+
+  // 目前身上穿的：私人衣櫃裡穿著的衣物；沒穿的部位是內衣（白色吊嘎、黑色內褲、赤腳），外套與包包就是沒有
+  function playerLook() {
+    const w = S.worn || {}, get = (slot) => (S.closet || []).find((i) => i.id === w[slot]);
+    const t = get("top"), b = get("bottom"), j = get("jacket"), s = get("shoes"), g2 = get("bag");
+    const L = { ...S.player };
+    L.top = t ? OPT[t.name] : "tank"; L.bottom = b ? OPT[b.name] : "brief"; L.jacket = j ? OPT[j.name] : "none";
+    L.shoes = s ? OPT[s.name] : "bare"; L.shoeHex = s ? s.color : null;
+    L.bag = g2 ? OPT[g2.name] : "none"; L.bagHex = g2 ? g2.color : null;
+    if (!s) L.socks = "none";
+    return L;
   }
 
   // 換季：隨機挑 1 個流行與 1 個退燒標籤，不和上一季重複；標籤取自目前所有款式
@@ -178,8 +203,10 @@
   const sprite = (p) => {
     const q = { ...C.DEFAULT_LOOK, ...p }, F = window.PLAYER_FACE, col = F.colors[`${q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown"}_${q.skin}`];
     const hairColor = q.hairColor || LEGACY_HAIR_COLOR[q.hair] || "darkbrown";
-    const it = (id) => F.pal.item[id], pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor],
-      shoe: it(q.shoesColor).base, shoe_lo: it(q.shoesColor).lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: it(q.bagColor).base, bag_hi: it(q.bagColor).hi, bag_lo: it(q.bagColor).lo };
+    const it = (id) => F.pal.item[id], hexPal = (h) => ({ base: h, hi: toHex(hiOf(rgb(h))), lo: toHex(loOf(rgb(h))) });
+    const sc = q.shoeHex ? hexPal(q.shoeHex) : it(q.shoesColor), bc = q.bagHex ? hexPal(q.bagHex) : it(q.bagColor);   // 穿搭時鞋與包用衣物本身的顏色
+    const pal = { ...F.pal.skin[q.skin], ...F.pal.hair[hairColor], ...F.pal.hw[q.headwearColor],
+      shoe: sc.base, shoe_lo: sc.lo, sock: it(q.socksColor).base, sock_lo: it(q.socksColor).lo, bag: bc.base, bag_hi: bc.hi, bag_lo: bc.lo };
     const bt = F.pal.btype[q.bottom];
     const over = bt === "pants" && (q.bottom === "flare" || q.shoes === "boot"); // 喇叭褲與穿短靴的長褲，褲口蓋住鞋子
     const resolve = (spec) => {
@@ -199,6 +226,13 @@
     return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}">${body}${face}${gl}</svg>`;
   };
   // 衣物縮圖：取用角色圖層中該件衣物的格子（略過皮膚），依衣物顏色套色，裁到該件的範圍。找不到圖層就退回色塊。
+  // 私人衣櫃與穿搭：物品類型 → 穿著部位；物品名稱 → 創角選項 id（用來取角色圖層）
+  const SLOT_OF = { 上衣: "top", 下身: "bottom", 外套: "jacket", 鞋子: "shoes", 包包: "bag" };
+  const OPT = (() => {
+    const m = {};
+    [C.TOPS, C.BOTTOMS, C.JACKETS, C.SHOES, C.BAGS].forEach((list) => list.forEach((o) => { if (o.id !== "none") m[o.name] = o.id; }));
+    return m;
+  })();
   const LAYER_KEY = (() => {
     const m = {};
     C.TOPS.forEach((o) => { m[o.name] = "top:" + o.id; });
@@ -261,10 +295,18 @@
   function tutSpec() {
     const t = S.tutorial, go = (id, text) => ({ sel: `[data-nav="${id}"]`, text });
     if (t === "goWardrobe") return go("wardrobe", "第 1 步　點下方的「衣櫃」，打開你的衣櫃。");
-    if (t === "pick") {
-      if (modal && modal.type === "item") return { sel: ".sheet [data-sell]", text: "第 3 步　按「賣」，把這件衣服拿去賣。" };
+    if (t === "pick" || t === "keep") {
+      if (modal && modal.type === "item") return t === "pick"
+        ? { sel: ".sheet [data-sell]", text: "第 3 步　按「賣」，把這件衣服拿去賣。" }
+        : { sel: ".sheet [data-keepit]", text: "第 6 步　按「留」，把它放進你的私人衣櫃。" };
       if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
-      return { sel: ".piece.tutfirst", text: "第 2 步　點這件衣服。" };
+      if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」，回到要賣的衣服。" };
+      return { sel: ".piece.tutfirst", text: t === "pick" ? "第 2 步　點這件衣服。" : "第 5 步　這件不賣，留著自己穿。點這件衣服。" };
+    }
+    if (t === "dress") {
+      if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
+      if (wardView !== "closet") return { sel: '[data-wseg="closet"]', text: "第 7 步　點「私人」，打開你的私人衣櫃。" };
+      return { sel: `[data-wear="${S.tutKept}"]`, text: "第 8 步　點這件衣服，穿到角色身上。" };
     }
     if (t === "price" && modal && modal.type === "price") {
       if (tutSub === 0) return { sel: ".prices", text: "第 4 步　這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越快賣掉。", next: "我知道了" };
@@ -311,6 +353,7 @@
   }, true);
 
   function render() {
+    ensureCloset();
     if (S && S.tutorial === "done" && !S.season) rollSeason();
     const cur = selOf(document.activeElement);
     applyContrast();
@@ -354,8 +397,8 @@
   // 教學：主要步驟用聚光燈（見 applySpot），只有「自己試試看」這一步用頂部提示
   function tipView() {
     if (!S || S.tutorial !== "rest") return "";
-    const n = S.wardrobe.filter((i) => !i.kept).length;
-    return `<div class="tip"><b>新手教學</b>　第 5 步　剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架。全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
+    const n = S.wardrobe.length;
+    return `<div class="tip"><b>新手教學</b>　第 9 步　待售衣櫃剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架。全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
   }
 
   // 創角分頁：每頁列出的欄位（key、顯示名、選項清單、是否用色塊）
@@ -398,7 +441,7 @@
 
   function homeView() {
     const stale = staleListings().length;
-    const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
+    const full = totalCount() >= C.WARDROBE_CAPACITY;
     const tidy = S.wardrobe.length <= C.TIDY_AT;
     const roomImg = `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">`;
     // 林（作者彩蛋）：依任務鏈出現，點她開對話
@@ -408,8 +451,8 @@
     return `${roomHtml}
       ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
-        ${sprite(S.player)}
-        <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
+        ${sprite(playerLook())}
+        <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${totalCount()}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
       </div></div>
       ${stale ? `<div class="tip"><b>提醒</b>　有 ${stale} 件掛賣超過 ${C.STALE_DAYS} 天，可到賣場調整價格。</div>` : ""}`;
   }
@@ -418,23 +461,46 @@
   const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
   function piece(i, hl) {
     const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
-    return `<button class="piece${hl ? " tutfirst" : ""}${i.kept ? " kept" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}${i.kept ? "（留）" : ""}">
-      <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.kept ? '<span class="badge">留</span>' : ""}</button>`;
+    return `<button class="piece${hl ? " tutfirst" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
+      <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span></button>`;
   }
+  let wardView = "stock", ccat = "全部";
   function wardrobeView() {
+    const cl = S.closet || [];
+    const seg = `<div class="seg" role="tablist"><button role="tab" aria-selected="${wardView === "stock"}" class="${wardView === "stock" ? "on" : ""}" data-wseg="stock">待售 ${S.wardrobe.length}</button><button role="tab" aria-selected="${wardView === "closet"}" class="${wardView === "closet" ? "on" : ""}" data-wseg="closet">私人 ${cl.length}</button></div>`;
+    return seg + (wardView === "closet" ? closetView() : stockView());
+  }
+
+  // 私人衣櫃＝穿搭：左邊角色、右邊衣服格子；點衣服穿上或脫下，沒穿的可以放回待售
+  function closetView() {
+    const worn = new Set(Object.values(S.worn || {}));
+    const items = (S.closet || []).filter((i) => ccat === "全部" || i.type === ccat);
+    const tabs = C.CATEGORIES.map((c) => `<button class="opt ${ccat === c ? "on" : ""}" aria-pressed="${ccat === c}" data-ccat="${c}">${c}</button>`).join("");
+    const tiles = items.map((i) => {
+      const on = worn.has(i.id);
+      return `<div class="it${on ? " on" : ""}"><button class="wear" data-wear="${i.id}" aria-pressed="${on}" aria-label="${esc(i.name)}${on ? "，穿著中，點一下脫下" : "，點一下穿上"}">
+        ${on ? '<span class="on-badge">穿著</span>' : ""}<span class="p">${thumbSvg(i) || ""}</span><small>${esc(i.name)}</small></button>
+        ${on ? "" : `<button class="btn small alt" data-unkeep="${i.id}" aria-label="放回待售：${esc(i.name)}">放回</button>`}</div>`;
+    }).join("");
+    const empty = (S.closet || []).length ? "這個分類沒有衣服。" : "私人衣櫃是空的。在待售衣櫃點衣服按「留」，就會放進來。";
+    return `<div class="split"><div class="left"><div class="stage">${sprite(playerLook())}</div><button class="btn alt block" data-strip>全部脫下</button></div>
+      <div class="right"><div class="cats">${tabs}</div><div class="cgrid">${tiles || `<p class="muted empty" style="grid-column:1/-1">${empty}</p>`}</div></div></div>`;
+  }
+
+  function stockView() {
     const tabs = C.CATEGORIES.map((c) => `<button class="opt ${cat === c ? "on" : ""}" aria-pressed="${cat === c}" data-cat="${c}">${c}</button>`).join("");
-    const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
+    const full = totalCount() >= C.WARDROBE_CAPACITY;
     const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
-    const first = items.find((i) => !i.kept);
-    const tut = S.tutorial === "pick";
+    const first = items[0];
+    const tut = S.tutorial === "pick" || S.tutorial === "keep";
     const rows = RACK.map(([label, types, kind]) => {
       const list = items.filter((i) => types.includes(i.type));
       if (!list.length) return "";
       return `<div class="rack-row ${kind}"><span class="rlabel">${label}</span><div class="pieces">${list.map((i) => piece(i, tut && i === first)).join("")}</div></div>`;
     }).join("");
-    const empty = S.wardrobe.length === 0 ? "衣櫃是空的。" : "這個分類沒有衣服。";
+    const empty = S.wardrobe.length === 0 ? "沒有待售的衣服了。到社群收貨，或把私人衣櫃的衣服放回來。" : "這個分類沒有衣服。";
     return `<div class="tabs">${tabs}</div>
-      <div class="rack-note"><span>衣櫃</span><span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></div>
+      <div class="rack-note"><span>衣櫃</span><span class="${full ? "full" : ""}">${totalCount()}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></div>
       <div class="rack">${rows || `<p class="muted empty" style="padding:16px">${empty}</p>`}<div class="rack-floor"></div></div>`;
   }
 
@@ -442,7 +508,7 @@
   const HEART = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#a65a89" d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/></svg>';
   const CHAT = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#6c4a50" d="M0 0h7v4H4v1H3V4H0z"/></svg>';
   function socialView() {
-    const so = socialState(), full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
+    const so = socialState(), full = totalCount() >= C.WARDROBE_CAPACITY;
     const tabs = [["new", "最新"], ["deal", "撿漏"], ["hot", "熱門"]].map(([id, n]) => `<button class="${socialTab === id ? "on" : ""}" role="tab" aria-selected="${socialTab === id}" data-stab="${id}">${n}</button>`).join("");
     let offers = so.offers.slice();
     if (socialTab === "deal") offers = offers.filter((o) => o.ask < marketPrice(o.item));
@@ -552,10 +618,10 @@
           <div><h3 style="margin:0">${esc(i.name)}</h3><div class="muted">${meta}・${esc(i.condition)}</div></div></div>
         <div class="kv"><span>基礎價值</span><span>$${i.base}</span></div>
         ${i.cost > 0 && tutDone() ? `<div class="kv"><span>成本</span><span>$${i.cost}</span></div>` : ""}
-        ${i.kept ? '<p class="muted">已標為「留」。要賣先按「不留」。</p>' : ""}
+        <p class="muted">「留」會放進私人衣櫃，可以穿在角色身上。</p>
         <div class="btns"><button class="btn alt" id="item-close">關閉</button>
-          <button class="btn alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>
-          ${i.kept ? "" : `<button class="btn main" data-sell="${i.id}">賣</button>`}</div></div></div>`;
+          <button class="btn alt" data-keepit="${i.id}">留</button>
+          <button class="btn main" data-sell="${i.id}">賣</button></div></div></div>`;
     }
     if (modal.type === "seasonHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="流行說明" tabindex="-1"><h3>流行與退燒</h3>
@@ -624,7 +690,30 @@
     const ic = $("#item-close"); if (ic) ic.onclick = () => { modal = null; render(); };
     all("[data-stab]", (b) => b.onclick = () => { socialTab = b.dataset.stab; render(); });
     all("[data-mtab]", (b) => b.onclick = () => { marketTab = b.dataset.mtab; render(); });
-    all("[data-keep]", (b) => b.onclick = () => { const it = findItem(+b.dataset.keep); it.kept = !it.kept; save(); render(); });
+    all("[data-wseg]", (b) => b.onclick = () => { wardView = b.dataset.wseg; render(); });
+    all("[data-ccat]", (b) => b.onclick = () => { ccat = b.dataset.ccat; render(); });
+    all("[data-keepit]", (b) => b.onclick = () => {
+      const it = findItem(+b.dataset.keepit);
+      if (!it) return;
+      S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id); S.closet.push({ ...it, kept: false });
+      if (S.tutorial === "keep") { S.tutorial = "dress"; S.tutKept = it.id; ccat = "全部"; }
+      modal = null; save(); showToast(`已放進私人衣櫃：${it.name}`);
+    });
+    all("[data-wear]", (b) => b.onclick = () => {
+      const id = +b.dataset.wear, it = (S.closet || []).find((x) => x.id === id);
+      if (!it) return;
+      const slot = SLOT_OF[it.type]; S.worn = S.worn || {};
+      S.worn[slot] = S.worn[slot] === id ? null : id;
+      if (S.tutorial === "dress" && S.worn[slot] === id) S.tutorial = S.wardrobe.length ? "rest" : "wait";
+      save(); render();
+    });
+    all("[data-strip]", (b) => b.onclick = () => { S.worn = {}; save(); render(); });
+    all("[data-unkeep]", (b) => b.onclick = () => {
+      const id = +b.dataset.unkeep, it = (S.closet || []).find((x) => x.id === id);
+      if (!it || Object.values(S.worn || {}).includes(id)) return;
+      S.closet = S.closet.filter((x) => x.id !== id); S.wardrobe.push(it);
+      save(); showToast(`已放回待售：${it.name}`);
+    });
     all("[data-sell]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.sell);
       if (S.tutorial === "pick") { S.tutorial = "price"; tutSub = 0; }
@@ -709,7 +798,8 @@
         } else {
           S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id);
           S.listings.push({ item: it, price, listedDay: S.day, waitDays: waitDays(price, it) });
-          if (S.tutorial === "price" || S.tutorial === "rest") S.tutorial = S.wardrobe.some((x) => !x.kept) ? "rest" : "wait";
+          if (S.tutorial === "price") S.tutorial = S.wardrobe.length ? "keep" : "wait";
+          else if (S.tutorial === "rest") S.tutorial = S.wardrobe.length ? "rest" : "wait";
         }
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };
@@ -726,6 +816,6 @@
   }
 
   // 供自我檢查與測試使用
-  window.__game = { get state() { return S; }, linVisible, trendOf, tagCoef, nextDay, waitDays, marketPrice, sprite };
+  window.__game = { get state() { return S; }, linVisible, playerLook, trendOf, tagCoef, nextDay, waitDays, marketPrice, sprite };
   render();
 })();

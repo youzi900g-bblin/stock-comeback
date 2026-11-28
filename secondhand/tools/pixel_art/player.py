@@ -137,14 +137,14 @@ def _bottom(bid, skin=None, cover=False):
     raise KeyError(bid)
 
 HEADWEAR = ('beret', 'bow', 'cap', 'star')
-SHOES = ('canvas', 'sneaker', 'boot', 'sandal')
+SHOES = ('canvas', 'sneaker', 'boot', 'sandal', 'bare')   # bare（赤腳）是脫下鞋子後的樣子
 SOCKS = ('short', 'long', 'stripe')
 JACKETS = {'cardigan': '#c9a98a', 'denim': '#6c8bb3', 'sport': '#4d4f58'}   # 配色取自基本款樣板【佔位】
 BAGS = ('cross', 'tote', 'pack')
 BTYPE = {'brief': 'skirt', 'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'shorts': 'skirt', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
-TOPS = ('white', 'black', 'stripe', 'hoodie')
-BOTTOMS = ('jeans', 'flare', 'ripped', 'shorts', 'track', 'pleat')
+TOPS = ('white', 'black', 'stripe', 'hoodie', 'tank')   # tank（白色吊嘎）是脫下後的內衣，不是創角選項
+BOTTOMS = ('jeans', 'flare', 'ripped', 'shorts', 'track', 'pleat', 'brief')   # brief（黑色內褲）是脫下後的內衣
 
 def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='mid', freckles=False, features=True, hw=None, iris='brown', hair_color='darkbrown', hw_color='red',
            shoes='canvas', shoe_color='white', socks=None, sock_color='white', jacket=None, bag=None, bag_color='blue',
@@ -213,7 +213,7 @@ def face_data():
 # 每個選項輸出自己的圖層（格子加色名），顏色在網頁上才套入。圖層依 Z 由小到大疊，
 # 順序與 engine.build 的繪製順序一致，所以疊出來的結果與整張重畫逐格相同（有比對測試）。
 Z = {'hair_back': 10, 'legs': 20, 'pants': 20, 'socks': 21, 'shoes': 22, 'skirt': 23,
-     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'face': 70, 'hair_front': 80, 'headwear': 90, 'pants_over': 24,
+     'hood': 30, 'arms': 40, 'torso': 50, 'neck': 60, 'tank_neck': 62, 'face': 70, 'hair_front': 80, 'headwear': 90, 'pants_over': 24,
      'bag_back': 15, 'jarms': 45, 'bracelet': 47, 'jacket': 55, 'bag_front': 57, 'necklace': 65, 'earring': 85}
 # 可換色的色名 → 標記色（引擎跑一遍後，由標記色反查是哪個色名；邊線色由標記色推得）
 MARK = {'skin': (251, 1, 3), 'skin_s': (251, 7, 9), 'hair': (3, 251, 1), 'hair_hi': (9, 251, 7),
@@ -237,6 +237,7 @@ def _marked(hair_id, top, bottom, hw=None, shoes='canvas', socks=None, jacket=No
     P.update(skin=MARK['skin'], skin_s=MARK['skin_s'], hair=MARK['hair'], hair_hi=MARK['hair_hi'],
              shoe=MARK['shoe'], shoe_hi=MARK['shoe_lo'])
     P['bottom'] = _bottom(bottom, MARK['skin'], cover)   # 破洞牛仔褲的破洞用膚色，要用色名標記
+    P.update(_top(top, MARK['skin'], MARK['skin_s']))   # 背心的領口皮膚也要用色名標記
     if hw: P['hw'] = dict(kind=hw, base=MARK['hw'], hi=MARK['hw_hi'], lo=MARK['hw_lo'])
     if socks: P['socks'] = dict(kind=socks, base=MARK['sock'], lo=MARK['sock_lo'])
     if bag: P['bag'] = dict(kind=bag, base=MARK['bag'], hi=MARK['bag_hi'], lo=MARK['bag_lo'])
@@ -266,7 +267,7 @@ def _layers(P, names):
 def layer_data():
     L = {'base': _layers(_marked('bob', 'white', 'jeans'), ('neck', 'face'))}
     for h in HAIR: L['hair:'+h] = _layers(_marked(h, 'white', 'jeans'), ('hair_back', 'hair_front'))
-    for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso'))
+    for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso', 'tank_neck'))
     for b in BOTTOMS:
         L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'skirt'))
         if BTYPE[b] == 'pants': L['bottom:'+b+':over'] = _layers(_marked('bob', 'white', b, cover=True), ('pants_over',))
