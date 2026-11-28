@@ -214,7 +214,7 @@
       const [role, op] = spec.split(":"), c = rgb(pal[role]);
       return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
     };
-    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...F.layers[over ? `bottom:${q.bottom}:over` : "bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...(q.jacket !== "none" && F.layers["top:" + q.top + ":hoodover"] ? F.layers["top:" + q.top + ":hoodover"] : []), ...F.layers[over ? `bottom:${q.bottom}:over` : "bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
       ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear]), ...(q.socks === "none" || bt !== "skirt" ? [] : F.layers["socks:" + q.socks]),
       ...(q.jacket === "none" ? [] : F.layers["jacket:" + q.jacket]), ...(q.bag === "none" ? [] : F.layers["bag:" + q.bag]),
       ...["earring", "necklace", "bracelet"].filter((k) => q[k] === "on").flatMap((k) => F.layers["jewel:" + k])].sort((a, b) => a.z - b.z);
@@ -303,6 +303,10 @@
       if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」，回到要賣的衣服。" };
       return { sel: ".piece.tutfirst", text: t === "pick" ? "第 2 步　點這件衣服。" : "第 5 步　這件不賣，留著自己穿。點這件衣服。" };
     }
+    if (t === "backStock") {
+      if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
+      return { sel: '[data-wseg="stock"]', text: "第 9 步　穿好了。點「待售」，回到要賣的衣服。" };
+    }
     if (t === "dress") {
       if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
       if (wardView !== "closet") return { sel: '[data-wseg="closet"]', text: "第 7 步　點「私人」，打開你的私人衣櫃。" };
@@ -324,6 +328,7 @@
     spotT = null; placeSpot = null;
     if (!S || view === "create") return;
     if (S.tutorial === "price" && !(modal && modal.type === "price")) S.tutorial = "pick";
+    if (S.tutorial === "backStock" && view === "wardrobe" && wardView === "stock") S.tutorial = "rest";
     const sp = tutSpec(), t = sp && app.querySelector(sp.sel);
     if (!t) return;
     spotT = t;
@@ -398,7 +403,7 @@
   function tipView() {
     if (!S || S.tutorial !== "rest") return "";
     const n = S.wardrobe.length;
-    return `<div class="tip"><b>新手教學</b>　第 9 步　待售衣櫃剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架。全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
+    return `<div class="tip"><b>新手教學</b>　第 10 步　待售衣櫃剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架，一件一件來，全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
   }
 
   // 創角分頁：每頁列出的欄位（key、顯示名、選項清單、是否用色塊）
@@ -690,7 +695,7 @@
     const ic = $("#item-close"); if (ic) ic.onclick = () => { modal = null; render(); };
     all("[data-stab]", (b) => b.onclick = () => { socialTab = b.dataset.stab; render(); });
     all("[data-mtab]", (b) => b.onclick = () => { marketTab = b.dataset.mtab; render(); });
-    all("[data-wseg]", (b) => b.onclick = () => { wardView = b.dataset.wseg; render(); });
+    all("[data-wseg]", (b) => b.onclick = () => { wardView = b.dataset.wseg; if (S.tutorial === "backStock" && wardView === "stock") S.tutorial = "rest"; save(); render(); });
     all("[data-ccat]", (b) => b.onclick = () => { ccat = b.dataset.ccat; render(); });
     all("[data-keepit]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.keepit);
@@ -704,7 +709,7 @@
       if (!it) return;
       const slot = SLOT_OF[it.type]; S.worn = S.worn || {};
       S.worn[slot] = S.worn[slot] === id ? null : id;
-      if (S.tutorial === "dress" && S.worn[slot] === id) S.tutorial = S.wardrobe.length ? "rest" : "wait";
+      if (S.tutorial === "dress" && S.worn[slot] === id) S.tutorial = S.wardrobe.length ? "backStock" : "wait";
       save(); render();
     });
     all("[data-strip]", (b) => b.onclick = () => { S.worn = {}; save(); render(); });

@@ -338,6 +338,9 @@ def build(P,want_log=False):
                 for sd in (-1,1): cv.px(CX+sd*3,26,jk['lo']); cv.px(CX+sd*3,27,jk['lo'])
             else:
                 for x in range(CX-tw,CX+tw+1): cv.px(x,h2,jk['lo'])
+    if P.get('hood') and jk:   # 穿外套時，帽子疊在外套領口之上（圖層 hood_over）
+        cv.L='hood_over'
+        cv.paint(mask_poly('ell',[CX-nw-4,15,CX+nw+4,21]),P['hood'])
     cv.L='bag_front'
     if bg:
         k=bg['kind']
