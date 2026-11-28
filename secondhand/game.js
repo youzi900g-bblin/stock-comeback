@@ -413,9 +413,9 @@
     return null;
   }
   function applySpot() {
-    document.querySelectorAll(".spot-hole,.spot-cap").forEach((e) => e.remove());
+    document.querySelectorAll(".spot-hole,.spot-cap,.spot-skip").forEach((e) => e.remove());
     spotT = null; placeSpot = null;
-    if (!S || view === "create") return;
+    if (!S || view === "create" || (modal && modal.type === "skipTut")) return;
     if (S.tutorial === "price" && !(modal && modal.type === "price")) S.tutorial = "pick";
     const sp = tutSpec(), t = sp && app.querySelector(sp.sel);
     if (!t) return;
@@ -424,8 +424,10 @@
     if (key !== spotKey) { spotKey = key; t.scrollIntoView({ block: "center" }); }
     const hole = document.createElement("div"), cap = document.createElement("div");
     hole.className = "spot-hole"; cap.className = "spot-cap"; cap.setAttribute("role", "status");
-    cap.innerHTML = `<div>${esc(sp.text)}</div><div class="spot-btns">${sp.next ? `<button class="btn small" id="spot-next">${sp.next}</button>` : ""}<button class="skip" id="spot-skip">${sp.quest ? "不用帶路" : "跳過教學"}</button></div>`;
-    document.body.append(hole, cap);
+    cap.innerHTML = `<div>${esc(sp.text)}</div>${sp.next ? `<div class="spot-btns"><button class="btn small" id="spot-next">${sp.next}</button></div>` : ""}`;
+    const skipBtn = document.createElement("button");   // 固定在右上角，不放在說明框裡，避免誤觸
+    skipBtn.className = "spot-skip"; skipBtn.id = "spot-skip"; skipBtn.textContent = sp.quest ? "不用帶路" : "跳過教學";
+    document.body.append(hole, cap, skipBtn);
     placeSpot = () => {
       const r = t.getBoundingClientRect();
       Object.assign(hole.style, { left: r.left - 4 + "px", top: r.top - 4 + "px", width: r.width + 8 + "px", height: r.height + 8 + "px" });
@@ -434,14 +436,14 @@
       else if (r.top > innerHeight / 2) { cap.style.top = "auto"; cap.style.bottom = innerHeight - r.top + 14 + "px"; } else { cap.style.bottom = "auto"; cap.style.top = r.bottom + 14 + "px"; }
     };
     placeSpot();
-    cap.querySelector("#spot-skip").onclick = () => { if (sp.quest) questGuide = false; else { S.tutorial = "done"; S.quest = 0; } save(); render(); };
+    skipBtn.onclick = () => { if (sp.quest) { questGuide = false; save(); render(); } else { modal = { type: "skipTut" }; render(); } };   // 跳過教學要再確認一次
     const nx = cap.querySelector("#spot-next");
     if (nx) nx.onclick = sp.onNext || (() => { tutSub += 1; render(); });
   }
   window.addEventListener("scroll", () => placeSpot && placeSpot(), { passive: true });
   window.addEventListener("resize", () => placeSpot && placeSpot());
   document.addEventListener("click", (e) => {
-    if (!spotT || !document.contains(spotT) || spotT.contains(e.target) || e.target.closest(".spot-cap")) return;
+    if (!spotT || !document.contains(spotT) || spotT.contains(e.target) || e.target.closest(".spot-cap, .spot-skip")) return;
     e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
   }, true);
 
@@ -467,7 +469,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
+    const b = app.querySelector("#cancel, #skip-cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
     if (b) b.click();
   });
 
@@ -756,6 +758,11 @@
           <button class="btn main" data-sell="${i.id}"${i.fixing ? " disabled" : ""}>賣</button></div>
         ${i.condition === "有瑕疵" && !i.fixing && fixingCount() >= C.REPAIR_SLOTS ? `<p class="muted">同時最多整理 ${C.REPAIR_SLOTS} 件。</p>` : ""}</div></div>`;
     }
+    if (modal.type === "skipTut") {
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="跳過教學" tabindex="-1"><h3>跳過教學？</h3>
+        <p>跳過後不會領取教學完成的獎勵，也無法回頭重看教學。</p>
+        <div class="btns"><button class="btn alt" id="skip-cancel">取消</button><button class="btn main" id="skip-ok">確定跳過</button></div></div></div>`;
+    }
     if (modal.type === "tutReward") {
       const r = C.TUTORIAL_REWARD;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="教學完成" tabindex="-1"><h3>教學完成</h3>
@@ -990,6 +997,8 @@
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };
     }
+    const skc = $("#skip-cancel"); if (skc) skc.onclick = () => { modal = null; render(); };
+    const so2 = $("#skip-ok"); if (so2) so2.onclick = () => { S.tutorial = "done"; S.quest = 0; modal = null; save(); render(); };
     const rc = $("#reward-claim");
     if (rc) rc.onclick = () => {
       if (!S.rewardGot) { S.rewardGot = true; S.wardrobe.push({ ...C.TUTORIAL_REWARD, id: nextItemId(), condition: "良好", cost: 0, kept: false, reward: true }); }
