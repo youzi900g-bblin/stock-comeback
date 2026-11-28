@@ -102,7 +102,7 @@ def _top(tid, skin=None, shade=None):
         t = tone('#9db7d6'); f = _stripe(dict(base=t['base'], hi=H('#f4f1ea')))
         return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30, folds=False))
     if tid == 'hoodie':
-        t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=31, hood=t['base'], detail=_top_detail(t, 31, _hoodie_extra))
+        t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=31, hood=t['base'], detail=_top_detail(t, 31, _hoodie_extra))
     raise KeyError(tid)
 
 def _bottom(bid, skin=None, cover=False):
