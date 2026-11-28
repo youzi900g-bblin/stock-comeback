@@ -93,8 +93,10 @@
     for (let k = 0; k < C.SOCIAL_BATCH; k++) {
       const item = rnd(pool)(), f = C.SOCIAL_PRICE_MIN + Math.random() * (C.SOCIAL_PRICE_MAX - C.SOCIAL_PRICE_MIN);
       const ask = Math.max(C.SOCIAL_PRICE_ROUND, Math.round(marketPrice(item) * f / C.SOCIAL_PRICE_ROUND) * C.SOCIAL_PRICE_ROUND);
-      offers.push({ oid: ++so.seq, item, ask });
+      offers.push({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1 + Math.floor(Math.random() * 55),
+        text: rnd(C.SOCIAL_LINES), likes: Math.floor(Math.random() * 16), cm: Math.floor(Math.random() * 5) });
     }
+    offers.sort((x, y) => x.mins - y.mins);
     so.offers = offers; // 沒買的貨隨刷新消失
     save(); render();
   }
@@ -188,9 +190,10 @@
   })();
   const hiOf = (c) => c.map((v) => Math.min(255, Math.floor(v * 1.28) + 8)), loOf = (c) => c.map((v) => Math.floor(v * 0.72));
   const thumbCache = {};
-  function thumb(i) {
+  // 衣物圖（只有 svg）。找不到圖層回傳 null
+  function thumbSvg(i) {
     const F = window.PLAYER_FACE, key = LAYER_KEY[i.name], ls = key && F && F.layers[key];
-    if (!ls) return `<div class="swatch-item" style="background:${i.color}"></div>`;
+    if (!ls) return null;
     const ck = key + i.color;
     if (!thumbCache[ck]) {
       const base = rgb(i.color), pal = { shoe: i.color, shoe_lo: toHex(loOf(base)), bag: i.color, bag_hi: toHex(hiOf(base)), bag_lo: toHex(loOf(base)) };
@@ -212,7 +215,11 @@
       const s = Math.max(x1 - x0, y1 - y0) + 2, vx = x0 - (s - (x1 - x0)) / 2, vy = y0 - (s - (y1 - y0)) / 2;
       thumbCache[ck] = `<svg class="sprite" viewBox="${vx} ${vy} ${s} ${s}" role="img" aria-label="${esc(i.name)}">${cells}</svg>`;
     }
-    return `<div class="swatch-item thumb">${thumbCache[ck]}</div>`;
+    return thumbCache[ck];
+  }
+  function thumb(i) {
+    const s = thumbSvg(i);
+    return s ? `<div class="swatch-item thumb">${s}</div>` : `<div class="swatch-item" style="background:${i.color}"></div>`;
   }
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
@@ -244,7 +251,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint");
+    const b = app.querySelector("#cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
     if (b) b.click();
   });
 
@@ -274,8 +281,8 @@
 
   function tipView() {
     const msg = {
-      goWardrobe: "<b>新手教學</b>　衣櫃塞滿了。點下方「衣櫃」，挑一件賣掉。",
-      sell: "<b>新手教學</b>　按任何一件衣服的「賣」。",
+      goWardrobe: "<b>新手教學</b>　衣櫃塞滿了。點下方「衣櫃」，點一件衣服，再按「賣」。",
+      sell: "<b>新手教學</b>　點任何一件衣服，再按「賣」。",
       wait: "<b>新手教學</b>　已上架。回首頁按「進入下一天」，等買家。",
     }[S.tutorial];
     return msg ? `<div class="tip">${msg}<br><button class="skip" id="skip-tut">跳過教學</button></div>` : "";
@@ -330,72 +337,76 @@
       ${stale ? `<div class="tip"><b>提醒</b>　有 ${stale} 件掛賣超過 ${C.STALE_DAYS} 天，可到賣場調整價格。</div>` : ""}`;
   }
 
-  function itemCard(i, first) {
-    const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && first && !i.kept ? " hl" : "";
-    const meta = i.tags.length ? `${esc(i.type)}・${i.tags.map(esc).join("、")}` : esc(i.type);
-    const costTxt = i.cost > 0 && tutDone() ? `・成本 $${i.cost}` : "";
-    const val = tutDone() ? `<div class="muted">基礎價值 $${i.base}</div>` : "";
-    // 留下的衣服不顯示「賣」，要賣得先按「不留」，避免誤賣
-    const acts = `${i.kept ? "" : `<button class="btn small${hl}" data-sell="${i.id}">賣</button>`}
-      <button class="btn small alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>`;
-    const name = `${esc(i.name)}${i.kept ? ' <span class="badge">留</span>' : ""}`;
-    if (layout === "grid") {
-      return `<div class="card">${thumb(i)}
-        <div>${name}</div><div class="muted">${meta}${costTxt}</div>${val}<div class="btns2">${acts}</div></div>`;
-    }
-    return `<div class="item">${thumb(i)}
-      <div class="info"><div>${name}</div><div class="muted">${meta}${costTxt}・${esc(i.condition)}</div>${val}</div>
-      <div class="acts">${acts}</div></div>`;
+  // 衣櫃：開放式衣架加層架。上衣與外套、下身掛在衣桿上，鞋子與包包放在層架上；點衣服開詳情，再選賣或留。
+  const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
+  function piece(i, hl) {
+    const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
+    return `<button class="piece${hl ? " hl" : ""}${i.kept ? " kept" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}${i.kept ? "（留）" : ""}">
+      <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.kept ? '<span class="badge">留</span>' : ""}</button>`;
   }
-
   function wardrobeView() {
     const tabs = C.CATEGORIES.map((c) => `<button class="opt ${cat === c ? "on" : ""}" aria-pressed="${cat === c}" data-cat="${c}">${c}</button>`).join("");
-    const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    const firstSellable = items.find((i) => !i.kept);
-    const cards = items.map((i) => itemCard(i, i === firstSellable)).join("");
-    const list = layout === "grid" ? `<div class="grid">${cards}</div>` : cards;
+    const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
+    const first = items.find((i) => !i.kept);
+    const tut = S.tutorial === "goWardrobe" || S.tutorial === "sell";
+    const rows = RACK.map(([label, types, kind]) => {
+      const list = items.filter((i) => types.includes(i.type));
+      if (!list.length) return "";
+      return `<div class="rack-row ${kind}"><span class="rlabel">${label}</span><div class="pieces">${list.map((i) => piece(i, tut && i === first)).join("")}</div></div>`;
+    }).join("");
     const empty = S.wardrobe.length === 0 ? "衣櫃是空的。" : "這個分類沒有衣服。";
     return `<div class="tabs">${tabs}</div>
-      <div class="viewsw"><button class="opt ${layout === "grid" ? "on" : ""}" aria-pressed="${layout === "grid"}" data-layout="grid">網格</button>
-        <button class="opt ${layout === "list" ? "on" : ""}" aria-pressed="${layout === "list"}" data-layout="list">清單</button></div>
-      <div class="win"><h2>衣櫃　<span class="${full ? "full" : ""}" style="${full ? "color:#ffd0b8" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></h2>
-        <div class="body">${cards ? list : `<p class="muted empty">${empty}</p>`}</div></div>`;
+      <div class="rack-note"><span>衣櫃</span><span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></div>
+      <div class="rack">${rows || `<p class="muted empty" style="padding:16px">${empty}</p>`}<div class="rack-floor"></div></div>`;
   }
 
+  let socialTab = "new";
+  const HEART = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#a65a89" d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/></svg>';
+  const CHAT = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#6c4a50" d="M0 0h7v4H4v1H3V4H0z"/></svg>';
   function socialView() {
     const so = socialState(), full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
-    const rows = so.offers.map((o) => {
+    const tabs = [["new", "最新"], ["deal", "撿漏"], ["hot", "熱門"]].map(([id, n]) => `<button class="${socialTab === id ? "on" : ""}" role="tab" aria-selected="${socialTab === id}" data-stab="${id}">${n}</button>`).join("");
+    let offers = so.offers.slice();
+    if (socialTab === "deal") offers = offers.filter((o) => o.ask < marketPrice(o.item));
+    if (socialTab === "hot") offers.sort((x, y) => y.likes - x.likes);
+    const posts = offers.map((o) => {
       const mk = marketPrice(o.item), d = o.ask - mk;
       const diff = d < 0 ? `<span class="money-up">低於市場價 $${-d}</span>` : d > 0 ? `<span class="warn">高於市場價 $${d}</span>` : `<span class="muted">與市場價相同</span>`;
-      const meta = o.item.tags.length ? `${esc(o.item.type)}・${o.item.tags.map(esc).join("、")}` : esc(o.item.type);
+      const chips = o.item.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("");
       const can = S.money >= o.ask && !full;
-      return `<div class="item">${thumb(o.item)}
-        <div class="info"><div>${esc(o.item.name)}</div><div class="muted">${meta}</div>
-          <div>開價 $${o.ask}</div><div class="muted">市場價 $${mk}</div><div>${diff}</div></div>
-        <div class="acts"><button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></div>`;
+      return `<article class="post"><div class="hd"><div class="av" style="background:${o.color}" aria-hidden="true">${esc(o.who[1].toUpperCase())}</div>
+          <div class="nm">${esc(o.who)}<small>${o.mins} 分鐘前</small></div></div>
+        <div>${esc(o.text)}</div>
+        <div class="pimg">${thumbSvg(o.item) || ""}</div>
+        <div><b>${esc(o.item.name)}</b>　<span class="muted">${esc(o.item.type)}</span></div>
+        <div class="price"><b>開價 $${o.ask}</b><span class="muted">市場價 $${mk}</span>${diff}</div>
+        <div class="ft">${HEART}<span>${o.likes}</span>${CHAT}<span>${o.cm}</span>${chips}<span class="sp"></span>
+          <button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></article>`;
     }).join("");
-    return `<div class="win"><h2>社群　<span style="font-weight:normal">刷新 ${so.left}/${C.SOCIAL_REFRESHES}</span></h2><div class="body">
-      <button class="btn block" id="refresh" ${so.left > 0 ? "" : "disabled"}>${so.left > 0 ? "刷新看看" : "今天刷完了"}</button>
-      ${full ? '<p class="warn">衣櫃已滿，先賣或清掉幾件才買得下。</p>' : ""}
-      ${rows || '<p class="muted empty">還沒有貨。按「刷新看看」。</p>'}</div></div>`;
+    const empty = !so.offers.length ? "還沒有貨。按「刷新看看」。" : "這個分頁目前沒有貨。";
+    return `<div class="stabs" role="tablist">${tabs}</div>
+      <div class="sbar"><span>刷新 ${so.left}/${C.SOCIAL_REFRESHES}</span><button class="btn small" id="refresh" ${so.left > 0 ? "" : "disabled"}>${so.left > 0 ? "刷新看看" : "今天刷完了"}</button></div>
+      ${full ? '<p class="warn" style="padding:0 12px">衣櫃已滿，先賣或清掉幾件才買得下。</p>' : ""}
+      <div class="feed">${posts || `<p class="muted empty" style="padding:16px">${empty}</p>`}</div>`;
   }
 
+  let marketTab = "all";
   function marketView() {
-    const rows = S.listings.map((l) => {
-      const d = S.day - l.listedDay;
-      const stale = d > C.STALE_DAYS;
-      return `<div class="item">
-        ${thumb(l.item)}
-        <div class="info"><div>${esc(l.item.name)}</div>
-          <div>標價 $${l.price}・已掛 ${d} 天</div>
-          ${tutDone() ? `<div class="muted">市場價 $${marketPrice(l.item)}・約 ${Math.max(1, l.waitDays - d)} 天後成交</div>` : ""}
-          ${stale ? `<div class="warn">掛太久了，考慮調整價格</div>` : ""}</div>
-        <div class="acts"><button class="btn small" data-reprice="${l.item.id}">改價</button>
-          <button class="btn small alt" data-pull="${l.item.id}">撤下</button></div></div>`;
+    const left = (l) => Math.max(1, l.waitDays - (S.day - l.listedDay));
+    const tabs = [["all", `全部 ${S.listings.length}`], ["wait", "等待中"], ["soon", "快成交"]].map(([id, n]) => `<button class="${marketTab === id ? "on" : ""}" aria-pressed="${marketTab === id}" data-mtab="${id}">${n}</button>`).join("");
+    const list = S.listings.filter((l) => marketTab === "all" || (marketTab === "soon" ? left(l) <= 1 : left(l) > 1));
+    const cards = list.map((l) => {
+      const d = S.day - l.listedDay, stale = d > C.STALE_DAYS;
+      return `<div class="prod"><span class="ptag">$${l.price}</span><div class="ppic">${thumbSvg(l.item) || ""}</div>
+        <div class="pinfo"><div>${esc(l.item.name)}</div><div class="muted">已掛 ${d} 天${tutDone() ? `・市場價 $${marketPrice(l.item)}` : ""}</div>
+          ${tutDone() ? `<div class="muted">約 ${left(l)} 天後成交</div>` : ""}${stale ? `<div class="warn">掛太久了，考慮調整價格</div>` : ""}</div>
+        <div class="pbtns"><button class="btn small" data-reprice="${l.item.id}">改價</button><button class="btn small alt" data-pull="${l.item.id}">撤下</button></div></div>`;
     }).join("");
-    return `<div class="win"><h2>我的賣場（${S.listings.length}）</h2><div class="body">
-      ${rows || '<p class="muted empty">還沒有上架的衣服。到衣櫃挑一件「賣」。</p>'}</div></div>`;
+    const empty = S.listings.length ? "這個分頁沒有商品。" : "還沒有上架的衣服。到衣櫃挑一件「賣」。";
+    return `<div class="banner"><div>${esc(S.player.name)}的賣場</div><small>掛賣 ${S.listings.length} 件</small></div>
+      <div class="mtabs">${tabs}</div>
+      <div class="pgrid">${cards || `<p class="muted empty" style="grid-column:1/-1">${empty}</p>`}</div>`;
   }
 
   function modalView() {
@@ -455,6 +466,21 @@
         : ready ? `<button class="btn main" id="lin-claim">領取獎勵</button>` : `<button class="btn main" id="lin-close">好</button>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1"><h3>林</h3>${body}<div class="btns">${btns}</div></div></div>`;
     }
+    if (modal.type === "item") {
+      const i = findItem(modal.id);
+      if (!i) return "";
+      const meta = i.tags.length ? `${esc(i.type)}・${i.tags.map(esc).join("、")}` : esc(i.type);
+      const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && !i.kept ? " hl" : "";
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(i.name)}" tabindex="-1">
+        <div class="kv" style="justify-content:flex-start;gap:12px;align-items:center"><div class="swatch-item thumb" style="width:88px;height:88px">${thumbSvg(i) || ""}</div>
+          <div><h3 style="margin:0">${esc(i.name)}</h3><div class="muted">${meta}・${esc(i.condition)}</div></div></div>
+        ${tutDone() ? `<div class="kv"><span>基礎價值</span><span>$${i.base}</span></div>` : ""}
+        ${i.cost > 0 && tutDone() ? `<div class="kv"><span>成本</span><span>$${i.cost}</span></div>` : ""}
+        ${i.kept ? '<p class="muted">已標為「留」。要賣先按「不留」。</p>' : ""}
+        <div class="btns"><button class="btn alt" id="item-close">關閉</button>
+          <button class="btn alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>
+          ${i.kept ? "" : `<button class="btn main${hl}" data-sell="${i.id}">賣</button>`}</div></div></div>`;
+    }
     if (modal.type === "socialHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="社群說明" tabindex="-1"><h3>社群上的貨</h3>
         <p>開價不一定等於市場價。開價比市場價低，買下來再賣就有價差可賺；開價比市場價高，就是買貴了。</p>
@@ -512,7 +538,10 @@
       save(); render();
     });
     all("[data-cat]", (b) => b.onclick = () => { cat = b.dataset.cat; render(); });
-    all("[data-layout]", (b) => b.onclick = () => { layout = b.dataset.layout; render(); });
+    all("[data-item]", (b) => b.onclick = () => { modal = { type: "item", id: +b.dataset.item }; render(); });
+    const ic = $("#item-close"); if (ic) ic.onclick = () => { modal = null; render(); };
+    all("[data-stab]", (b) => b.onclick = () => { socialTab = b.dataset.stab; render(); });
+    all("[data-mtab]", (b) => b.onclick = () => { marketTab = b.dataset.mtab; render(); });
     all("[data-keep]", (b) => b.onclick = () => { const it = findItem(+b.dataset.keep); it.kept = !it.kept; save(); render(); });
     all("[data-sell]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.sell);

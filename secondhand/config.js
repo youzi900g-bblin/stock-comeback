@@ -139,5 +139,9 @@ const CONFIG = {
   SOCIAL_PRICE_MIN: 0.6,   // 開價 = 市場價 × 係數（隨機，範圍如下）【佔位值】
   SOCIAL_PRICE_MAX: 1.4,   // 【佔位值】
   SOCIAL_PRICE_ROUND: 10,  // 開價四捨五入到幾元【佔位值】
+  // 社群貼文的賣家、文案、頭像色（全部為【佔位】示意內容，之後由使用者決定）
+  SOCIAL_HANDLES: ["@mimi_vintage", "@littlecloud", "@shoes_lab", "@momo_closet", "@sunny_swap", "@hazel_thrift", "@pocket_pie", "@kiki_reuse"],
+  SOCIAL_LINES: ["搬家清衣櫃，這件只穿過兩次。", "朋友送的，尺寸不合，便宜出。", "整理衣櫃找到的，沒穿過幾次。", "換季出清。", "買重複了，讓給有緣人。", "狀況良好，一直好好收著。"],
+  SOCIAL_COLORS: ["#c85088", "#3a5a8a", "#1f6b45", "#8a5838", "#5a5ab8", "#a8461f"],
   START_ITEM_COUNT: 20,    // 開場衣櫃件數：等於初始容量，呈現「爆滿」【佔位值】
 };
