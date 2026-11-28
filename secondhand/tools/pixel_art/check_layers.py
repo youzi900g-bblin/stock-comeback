@@ -16,7 +16,7 @@ def compose(h,s,t,b,hc='darkbrown',hw=None,hwc='red',sh='canvas',shc='white',so=
     layers=L['base']+L['hair:'+h]+L['top:'+t]+L['bottom:'+b+(':over' if over else '')]+L[f'shoes:{sh}:{bt}']
     if hw: layers+=L['hw:'+hw]
     if so and bt=='skirt': layers+=L['socks:'+so]
-    if jk: layers+=L['jacket:'+jk]+L.get('top:'+t+':hoodover',[])
+    if jk: layers+=L['jacket:'+jk]+L.get('top:'+t+':hoodover:'+jk,[])
     if bg: layers+=L['bag:'+bg]
     for k in jw: layers+=L['jewel:'+k]
     g=[[None]*27 for _ in range(53)]

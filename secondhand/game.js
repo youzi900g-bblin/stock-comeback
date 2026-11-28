@@ -221,7 +221,7 @@
       const [role, op] = spec.split(":"), c = rgb(pal[role]);
       return toHex(op === "dk" ? dk(c) : op === "warm" ? warm(c) : c);
     };
-    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...(q.jacket !== "none" && F.layers["top:" + q.top + ":hoodover"] ? F.layers["top:" + q.top + ":hoodover"] : []), ...F.layers[over ? `bottom:${q.bottom}:over` : "bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
+    const layers = [...F.layers.base, ...F.layers["hair:" + q.hair], ...F.layers["top:" + q.top], ...(q.jacket !== "none" && F.layers["top:" + q.top + ":hoodover:" + q.jacket] ? F.layers["top:" + q.top + ":hoodover:" + q.jacket] : []), ...F.layers[over ? `bottom:${q.bottom}:over` : "bottom:" + q.bottom], ...F.layers[`shoes:${q.shoes}:${bt}`],
       ...(q.headwear === "none" ? [] : F.layers["hw:" + q.headwear]), ...(q.socks === "none" || bt !== "skirt" ? [] : F.layers["socks:" + q.socks]),
       ...(q.jacket === "none" ? [] : F.layers["jacket:" + q.jacket]), ...(q.bag === "none" ? [] : F.layers["bag:" + q.bag]),
       ...["earring", "necklace", "bracelet"].filter((k) => q[k] === "on").flatMap((k) => F.layers["jewel:" + k])].sort((a, b) => a.z - b.z);

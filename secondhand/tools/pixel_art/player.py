@@ -78,6 +78,11 @@ def _hoodie_extra(cv, t):
     for x in range(CX-3, CX+4): cv.px(x, 26, t['lo'])                      # 口袋上緣
     for y in (27, 28, 29): cv.px(CX-3, y, t['lo']); cv.px(CX+3, y, t['lo'])
     for y in (21, 22): cv.px(CX-1, y, t['hi']); cv.px(CX+1, y, t['hi'])  # 抽繩
+    # 領口依使用者手繪稿：帽緣兩側改回帽色，第 19 列領口線與兩個角落改成邊線色
+    o = dk(t['base'])
+    for x in (CX-4, CX-3, CX+3, CX+4): cv.px(x, 18, t['base'])
+    for x in (CX-4, CX-3, CX-2, CX+3, CX+4): cv.px(x, 19, o)
+    cv.px(CX-2, 20, o); cv.px(CX+3, 20, o)
 
 def _tank(skin, shade):
     """白色吊嘎（背心）：細肩帶、方領帶圓角，無袖。回傳 _top 同樣格式的設定。"""
@@ -102,7 +107,7 @@ def _top(tid, skin=None, shade=None):
         t = tone('#9db7d6'); f = _stripe(dict(base=t['base'], hi=H('#f4f1ea')))
         return dict(top=dict(fill=f, **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30, folds=False))
     if tid == 'hoodie':
-        t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=31, hood=t['base'], detail=_top_detail(t, 31, _hoodie_extra))
+        t = tone('#e3b93c'); return dict(top=dict(fill=_torso_fill(dict(t, hi=t['base'])), **t), sleeve=dict(long=True, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=31, hood=t['base'], hood_lo=t['lo'], detail=_top_detail(t, 31, _hoodie_extra))
     raise KeyError(tid)
 
 def _bottom(bid, skin=None, cover=False):
@@ -269,8 +274,9 @@ def layer_data():
     for h in HAIR: L['hair:'+h] = _layers(_marked(h, 'white', 'jeans'), ('hair_back', 'hair_front'))
     for t in TOPS: L['top:'+t] = _layers(_marked('bob', t, 'jeans'), ('hood', 'arms', 'torso', 'tank_neck'))
     for t in TOPS:   # 有帽子的上衣：穿外套時帽子疊在外套之上
-        ov = _layers(_marked('bob', t, 'jeans', jacket='denim'), ('hood_over',))
-        if ov: L['top:'+t+':hoodover'] = ov
+        for jk in JACKETS:   # 帽緣下方會露出外套，所以每種外套各一份
+            ov = _layers(_marked('bob', t, 'jeans', jacket=jk), ('hood_over',))
+            if ov: L['top:'+t+':hoodover:'+jk] = ov
     for b in BOTTOMS:
         L['bottom:'+b] = _layers(_marked('bob', 'white', b), ('legs', 'pants', 'skirt'))
         if BTYPE[b] == 'pants': L['bottom:'+b+':over'] = _layers(_marked('bob', 'white', b, cover=True), ('pants_over',))
