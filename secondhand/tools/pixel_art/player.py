@@ -79,7 +79,21 @@ def _hoodie_extra(cv, t):
     for y in (27, 28, 29): cv.px(CX-3, y, t['lo']); cv.px(CX+3, y, t['lo'])
     for y in (21, 22): cv.px(CX-1, y, t['hi']); cv.px(CX+1, y, t['hi'])  # 抽繩
 
-def _top(tid):
+def _tank(skin, shade):
+    """白色吊嘎（背心）：細肩帶、圓領，無袖。回傳 _top 同樣格式的設定。"""
+    t = tone('#f4f1ea'); hem = 30
+    S = lambda y, *segs: {(x, y) for a, b in segs for x in range(a, b + 1)}
+    mask = set()
+    mask |= S(19, (CX-3, CX-2), (CX+2, CX+3)); mask |= S(20, (CX-3, CX-2), (CX+2, CX+3))
+    mask |= S(21, (CX-4, CX-2), (CX+2, CX+4)); mask |= S(22, (CX-4, CX-1), (CX+1, CX+4))
+    for y in range(23, hem + 1): mask |= S(y, (CX-4, CX+4))
+    pre = [(x, y, skin) for y in (19, 20, 21) for x in (CX-1, CX, CX+1)] + [(CX, 22, skin)] + [(x, y, skin) for y in (19, 20) for x in (CX-4, CX+4)]
+    def det(cv, tw, h):
+        for x in range(CX-4, CX+5): cv.px(x, h, t['lo'])              # 下擺陰影
+    return dict(top=dict(fill=_torso_fill(t), **t), sleeve=None, torso_hem=hem, detail=det, torso_mask=mask, pre_torso=pre)
+
+def _top(tid, skin=None, shade=None):
+    if tid == 'tank': return _tank(skin, shade)
     if tid == 'white':  t = tone('#f4f1ea'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
     if tid == 'black':  t = tone('#2b2b30'); return dict(top=dict(fill=_torso_fill(t), **t), sleeve=dict(long=False, fill=_sleeve_fill(t), cuff=t['lo'], cuff_outline=False, **t), torso_hem=30, detail=_top_detail(t, 30))
     if tid == 'stripe':
@@ -107,6 +121,12 @@ def _bottom(bid, skin=None, cover=False):
         def det(cv):
             for x in list(range(CX-5, CX-1)) + list(range(CX+2, CX+6)): cv.px(x, 38, t['lo'])   # 褲口陰影
         return dict(type='skirt', shorts=True, base=t['base'], fill=diag(t['base'], t['hi'], t['lo'], 30, 0.4), skirt_end=38, flare=0, legL=3, skin_y0=39, detail=det)
+    if bid == 'brief':   # 白色短褲：比牛仔短褲更短，露出大腿
+        t = tone('#f4f1ea')
+        def det(cv):
+            for x in list(range(CX-5, CX-1)) + list(range(CX+2, CX+6)): cv.px(x, 35, t['lo'])   # 褲口陰影
+            for x in range(CX-4, CX+5): cv.px(x, 30, t['hi'])                                  # 腰帶亮邊
+        return dict(type='skirt', shorts=True, base=t['base'], fill=lambda x, y: t['hi'] if (x - CX) >= 2 else t['base'], skirt_end=35, flare=0, legL=3, skin_y0=36, detail=det)
     if bid == 'pleat':
         t = tone('#d98aa6')
         return dict(type='skirt', base=t['base'], fill=lambda x, y: t['lo'] if (x-CX) % 3 == 0 else (t['hi'] if y < 32 else t['base']),
@@ -119,7 +139,7 @@ SHOES = ('canvas', 'sneaker', 'boot', 'sandal')
 SOCKS = ('short', 'long', 'stripe')
 JACKETS = {'cardigan': '#c9a98a', 'denim': '#6c8bb3', 'sport': '#4d4f58'}   # 配色取自基本款樣板【佔位】
 BAGS = ('cross', 'tote', 'pack')
-BTYPE = {'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'shorts': 'skirt', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
+BTYPE = {'brief': 'skirt', 'jeans': 'pants', 'flare': 'pants', 'ripped': 'pants', 'track': 'pants', 'shorts': 'skirt', 'pleat': 'skirt'}   # 鞋子的位置依下身是褲子或裙子而不同
 IRIS = {'brown': '#3a2a28', 'blue': '#4a6aa8', 'green': '#4a8a5a', 'violet': '#7a5a9a'}  # 眼珠色【佔位色】
 TOPS = ('white', 'black', 'stripe', 'hoodie')
 BOTTOMS = ('jeans', 'flare', 'ripped', 'shorts', 'track', 'pleat')
@@ -140,7 +160,7 @@ def player(hair_id, skin_id, top='white', bottom='jeans', eyes='normal', mouth='
         jt = tone(JACKETS[jacket]); P['jacket'] = dict(kind=jacket, fill=_torso_fill(jt), sfill=_sleeve_fill(jt), **jt)
     if bag: P['bag'] = dict(kind=bag, **tone(HW_COLORS[bag_color]))
     P['jewel'] = dict(earring=earring, necklace=necklace, bracelet=bracelet)
-    P.update(_top(top))
+    P.update(_top(top, sk, shade))
     return P
 
 def _hex(c): return '#%02x%02x%02x' % tuple(int(v) for v in c)

@@ -137,6 +137,9 @@ def draw_shoes(cv,P,x0,x1,pants=False):
         for x in range(x0-1,x1+2): cv.px(x,50,hi)
         return
     wh=H('#f4f1ea')
+    if st=='bare':   # 赤腳：腿直接接腳掌，腳趾那一列各往外多一格；沒有鞋與鞋帶
+        cv.paint(rows_mask({49:(x0,x1),50:(x0,x1),51:(x0-1,x1+1)}),sk,base=sk,warm=True)
+        return
     if st=='canvas':
         cv.paint(rows_mask({49:(x0-1,x1+1),50:(x0-1,x1+1)}),sh,base=sh)
         cv.paint(rows_mask({51:(x0-1,x1+1)}),wh,base=wh)
@@ -295,13 +298,14 @@ def build(P,want_log=False):
             x0=xc-aw//2; x1=x0+aw-1
             for x in range(x0,x1+1): sp.add((x,y))
         return sp
-    sl=P['sleeve']
+    sl=P['sleeve']   # sleeve 為 None 表示無袖（背心）：只畫裸臂
     for side in (-1,1):
         cv.paint(arm_cells(side,20,31),sk,base=sk,warm=True)   # bare arm
-        sleeve_end=31 if sl['long'] else 24
-        cv.paint(arm_cells(side,20,sleeve_end),sl.get('fill') or diag(sl['base'],sl['hi'],sl['lo'],20),base=sl['base'])
-        if sl.get('cuff'):
-            cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'],outline=sl.get('cuff_outline',True))
+        if sl:
+            sleeve_end=31 if sl['long'] else 24
+            cv.paint(arm_cells(side,20,sleeve_end),sl.get('fill') or diag(sl['base'],sl['hi'],sl['lo'],20),base=sl['base'])
+            if sl.get('cuff'):
+                cv.paint(arm_cells(side,sleeve_end-1,sleeve_end),sl['cuff'],base=sl['cuff'],outline=sl.get('cuff_outline',True))
         hy=arm_cells(side,32,34)
         cv.paint(hy,sk,base=sk,warm=True)
     jk=P.get('jacket')
@@ -317,7 +321,8 @@ def build(P,want_log=False):
     # --- torso
     cv.L='torso'
     tb=P['top']; hem=P['torso_hem']
-    cv.paint(rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),tb.get('fill') or diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
+    for (x,y,c) in P.get('pre_torso',()): cv.px(x,y,c)   # 背心露出的肩與胸口（先畫，衣身的邊線會蓋在上面）
+    cv.paint(P.get('torso_mask') or rows_mask({y:(CX-tw,CX+tw) for y in range(19,hem+1)}),tb.get('fill') or diag(tb['base'],tb['hi'],tb['lo'],19),base=tb['base'])
     if 'detail' in P: P['detail'](cv,tw,hem)
     if jk:
         cv.L='jacket'
