@@ -450,6 +450,8 @@
     if (S && S.tutorial === "done" && !S.season) rollSeason();
     questCheck();
     if (S && view !== "create" && S.haggles && S.haggles.length && !modal) modal = openHaggle();
+    { const nq = curQuest();   // 新手任務有 NPC 的，開始時跳一次私訊
+      if (nq && nq.npc && !modal && view !== "create" && !(S.seen && S.seen["npc_" + nq.id])) { S.seen = { ...(S.seen || {}), ["npc_" + nq.id]: true }; save(); modal = { type: "npcMsg", npc: nq.npc, q: nq }; } }
     const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
@@ -717,6 +719,11 @@
         <div class="kv"><span>市場價</span><span>$${marketPrice(it)}</span></div>
         <p class="muted" style="margin-top:0">現在市場上願意買的價格。標價越接近市場價，成交越快；高出越多，等得越久。目前市場價等於基礎價值，之後會隨流行波動。</p>
         <div class="btns"><button class="btn main" id="close-market">我知道了</button></div></div></div>`;
+    }
+    if (modal.type === "npcMsg") {
+      const n = C.QUEST_NPC[modal.npc];
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(modal.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${n.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(modal.npc)}</h3><p>${esc(n.text)}</p></div></div>
+        <div class="kv"><span>新手任務</span><span>${esc(modal.q.title)}</span></div><div class="btns"><button class="btn main" id="lin-close">知道了</button></div></div></div>`;
     }
     if (modal.type === "lin") {
       const q = modal.quest;
