@@ -303,3 +303,6 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .cgrid .wear small { text-align: center; line-height: 1.2; margin-top: 2px; }
 .on-badge { position: absolute; top: -2px; right: -2px; background: var(--ok); color: #fff; padding: 0 4px; }
 .cgrid .it .btn.small { width: 100%; padding: 2px 4px; }
+
+.chip.flaw { border-color: #b4572f; color: #b4572f; }
+.piece .chip.flaw { font-size: 11px; padding: 0 4px; }
