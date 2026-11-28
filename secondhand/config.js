@@ -15,7 +15,7 @@ const CONFIG = {
   WARDROBE_CAPACITY: 20,   // 衣櫃初始容量（系統設計：初始 20 件，佔位值）
   START_MONEY: 0,          // 初始金錢【佔位值】
   MARKET_FACTOR: 1,        // 市場係數：第一階段固定為 1（計畫書已定）
-  TIDY_AT: 10,             // 衣櫃件數不高於此值時，首頁換成「整理後」房間圖【佔位值】
+  TIDY_AT: 2,             // 衣櫃件數不高於此值時，首頁換成「整理後」房間圖【佔位值】
   STALE_DAYS: 7,           // 滯銷提示天數【佔位值】（設計為 5 到 10 天，確切天數待定）
 
   // 等待天數 = 依「標價 ÷ 市場價」換算【佔位值】
@@ -122,8 +122,8 @@ const CONFIG = {
     { id: "lin2", appearDay: 6, goal: { type: "money", n: 800 }, reward: { money: 200 },
       intro: "賣了幾件之後，手邊的錢開始有用了。先存到 $800，之後收貨需要本金。",
       done: "存下來了。錢不用全花掉，留一點給下一次。" },
-    { id: "lin3", appearDay: 9, goal: { type: "free", n: 8 }, reward: { money: 300 },
-      intro: "衣櫃還是太滿。清出八格空位，空間要留給真正想穿的。",
+    { id: "lin3", appearDay: 9, goal: { type: "free", n: 16 }, reward: { money: 300 },
+      intro: "衣櫃還是太滿。清到只剩四件，空間要留給真正想穿的。",
       done: "空出來的位置，之後會有更好的東西住進去。" },
   ],
   LIN_ALL_DONE: "目前只有這些。之後再見。", // 【佔位台詞】
@@ -143,5 +143,5 @@ const CONFIG = {
   SOCIAL_HANDLES: ["@mimi_vintage", "@littlecloud", "@shoes_lab", "@momo_closet", "@sunny_swap", "@hazel_thrift", "@pocket_pie", "@kiki_reuse"],
   SOCIAL_LINES: ["搬家清衣櫃，這件只穿過兩次。", "朋友送的，尺寸不合，便宜出。", "整理衣櫃找到的，沒穿過幾次。", "換季出清。", "買重複了，讓給有緣人。", "狀況良好，一直好好收著。"],
   SOCIAL_COLORS: ["#c85088", "#3a5a8a", "#1f6b45", "#8a5838", "#5a5ab8", "#a8461f"],
-  START_ITEM_COUNT: 20,    // 開場衣櫃件數：等於初始容量，呈現「爆滿」【佔位值】
+  START_ITEM_COUNT: 5,     // 開場衣櫃件數：創角選的衣物優先，不足就隨機補基本款；教學要把這幾件全部上架【佔位值】
 };

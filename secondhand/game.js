@@ -20,6 +20,7 @@
       const raw = localStorage.getItem(C.SAVE_KEY);
       const s = raw ? JSON.parse(raw) : null;
       if (s && s.tutorial === "market") s.tutorial = "done"; // 舊版卡住的狀態
+      if (s && s.tutorial === "sell") s.tutorial = "pick";   // 舊版教學狀態對應新版
       return s;
     } catch (e) { return null; }
   }
@@ -111,9 +112,12 @@
   }
 
   function newGame(p) {
-    const wardrobe = starterPicks(p).map((it, i) => ({ id: i + 1, ...it }));
-    for (let i = wardrobe.length; i < C.START_ITEM_COUNT; i++) {
-      const t = C.ITEM_TEMPLATES[i % C.ITEM_TEMPLATES.length];
+    const wardrobe = starterPicks(p).slice(0, C.START_ITEM_COUNT).map((it, i) => ({ id: i + 1, ...it }));
+    // 不足的件數從基本款隨機補（避免和已有的同名）
+    const have = new Set(wardrobe.map((x) => x.name));
+    const pool = C.ITEM_TEMPLATES.filter((t) => !have.has(t.name)).sort(() => Math.random() - 0.5);
+    for (let i = wardrobe.length, k = 0; i < C.START_ITEM_COUNT && k < pool.length; i++, k++) {
+      const t = pool[k];
       wardrobe.push({ id: i + 1, name: t.name, type: t.type, tags: t.tags, condition: "良好",
         base: t.base, cost: 0, color: t.color, kept: false });
     }
@@ -135,7 +139,7 @@
     });
     S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     modal = { type: "summary", sales };
-    if (sales.length && S.tutorial === "wait") { S.tutorial = "done"; modal.intro = sales[0].item; }
+    if (S.tutorial === "wait") { S.tutorial = "done"; modal.tutEnd = true; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
@@ -236,6 +240,60 @@
     const el = sel && app.querySelector(sel);
     if (el) el.focus({ preventScroll: true });
   }
+  // ---------- 教學聚光燈：只亮要點的地方，其餘壓暗且點不到 ----------
+  let tutSub = 0, spotKey = "", spotT = null, placeSpot = null;
+  function tutSpec() {
+    const t = S.tutorial, go = (id, text) => ({ sel: `[data-nav="${id}"]`, text });
+    if (t === "goWardrobe") return go("wardrobe", "第 1 步　點下方的「衣櫃」，打開你的衣櫃。");
+    if (t === "pick") {
+      if (modal && modal.type === "item") return { sel: ".sheet [data-sell]", text: "第 3 步　按「賣」，把這件衣服拿去賣。" };
+      if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
+      return { sel: ".piece.tutfirst", text: "第 2 步　點這件衣服。" };
+    }
+    if (t === "price" && modal && modal.type === "price") {
+      if (tutSub === 0) return { sel: ".prices", text: "第 4 步　這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越快賣掉。", next: "我知道了" };
+      if (tutSub === 1) return { sel: '[data-pct="10"]', text: "標價越高，要等越久。按一下「+10%」試試看。" };
+      return { sel: "#confirm-price", text: "「預計等待」變長了。這樣就可以了，按「上架」。" };
+    }
+    if (t === "wait") {
+      if (view !== "home") return go("home", "第 6 步　回首頁，準備進入下一天。");
+      return { sel: "#nextday", text: "第 6 步　按「進入下一天」，看買家有沒有成交。" };
+    }
+    return null;
+  }
+  function applySpot() {
+    document.querySelectorAll(".spot-hole,.spot-cap").forEach((e) => e.remove());
+    spotT = null; placeSpot = null;
+    if (!S || view === "create") return;
+    if (S.tutorial === "price" && !(modal && modal.type === "price")) S.tutorial = "pick";
+    const sp = tutSpec(), t = sp && app.querySelector(sp.sel);
+    if (!t) return;
+    spotT = t;
+    const key = S.tutorial + sp.sel + tutSub;
+    if (key !== spotKey) { spotKey = key; t.scrollIntoView({ block: "center" }); }
+    const hole = document.createElement("div"), cap = document.createElement("div");
+    hole.className = "spot-hole"; cap.className = "spot-cap"; cap.setAttribute("role", "status");
+    cap.innerHTML = `<div>${esc(sp.text)}</div><div class="spot-btns">${sp.next ? `<button class="btn small" id="spot-next">${sp.next}</button>` : ""}<button class="skip" id="spot-skip">跳過教學</button></div>`;
+    document.body.append(hole, cap);
+    placeSpot = () => {
+      const r = t.getBoundingClientRect();
+      Object.assign(hole.style, { left: r.left - 4 + "px", top: r.top - 4 + "px", width: r.width + 8 + "px", height: r.height + 8 + "px" });
+      const sheet = t.closest(".sheet");
+      if (sheet) { cap.style.top = "auto"; cap.style.bottom = innerHeight - sheet.getBoundingClientRect().top + 12 + "px"; }   // 視窗開著時，提示放在視窗上方，不蓋住視窗內容
+      else if (r.top > innerHeight / 2) { cap.style.top = "auto"; cap.style.bottom = innerHeight - r.top + 14 + "px"; } else { cap.style.bottom = "auto"; cap.style.top = r.bottom + 14 + "px"; }
+    };
+    placeSpot();
+    cap.querySelector("#spot-skip").onclick = () => { S.tutorial = "done"; save(); render(); };
+    const nx = cap.querySelector("#spot-next");
+    if (nx) nx.onclick = () => { tutSub += 1; render(); };
+  }
+  window.addEventListener("scroll", () => placeSpot && placeSpot(), { passive: true });
+  window.addEventListener("resize", () => placeSpot && placeSpot());
+  document.addEventListener("click", (e) => {
+    if (!spotT || !document.contains(spotT) || spotT.contains(e.target) || e.target.closest(".spot-cap")) return;
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  }, true);
+
   function render() {
     const cur = selOf(document.activeElement);
     applyContrast();
@@ -247,6 +305,7 @@
       if (sh) sh.focus({ preventScroll: true });
     } else focusSel(modal ? cur : hadModal ? returnSel : cur);
     hadModal = !!modal;
+    applySpot();
   }
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
@@ -262,14 +321,10 @@
     else if (view === "social") body = socialView();
     else body = marketView();
     const nav = (id, label) => {
-      const hl = S.tutorial === "goWardrobe" && id === "wardrobe" ? " hl" : "";
-      // 教學第一步：先淡出其他分頁，只留要點的那個
-      const dim = S.tutorial === "goWardrobe" && id !== "wardrobe" && id !== view ? " dim" : "";
-      const goHome = S.tutorial === "wait" && id === "home" && view !== "home" ? " hl" : "";
-      return `<button data-nav="${id}" class="${view === id ? "on" : ""}${hl}${dim}${goHome}"${view === id ? ' aria-current="page"' : ""}>${label}</button>`;
+      return `<button data-nav="${id}" class="${view === id ? "on" : ""}"${view === id ? ' aria-current="page"' : ""}>${label}</button>`;
     };
     const primary = view === "home"
-      ? `<div class="primary-bar"><button class="btn ${S.tutorial === "wait" ? "hl" : ""}" id="nextday">進入下一天</button></div>` : "";
+      ? `<div class="primary-bar"><button class="btn" id="nextday">進入下一天</button></div>` : "";
     const f = flashMoney ? " flash" : "";
     flashMoney = false;
     return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${S.money}</span>
@@ -279,13 +334,11 @@
       ${modalView()}${toast && !modal ? `<div class="toast" role="status">${esc(toast)}</div>` : ""}`;
   }
 
+  // 教學：主要步驟用聚光燈（見 applySpot），只有「自己試試看」這一步用頂部提示
   function tipView() {
-    const msg = {
-      goWardrobe: "<b>新手教學</b>　衣櫃塞滿了。點下方「衣櫃」，點一件衣服，再按「賣」。",
-      sell: "<b>新手教學</b>　點任何一件衣服，再按「賣」。",
-      wait: "<b>新手教學</b>　已上架。回首頁按「進入下一天」，等買家。",
-    }[S.tutorial];
-    return msg ? `<div class="tip">${msg}<br><button class="skip" id="skip-tut">跳過教學</button></div>` : "";
+    if (!S || S.tutorial !== "rest") return "";
+    const n = S.wardrobe.filter((i) => !i.kept).length;
+    return `<div class="tip"><b>新手教學</b>　第 5 步　剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架。全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
   }
 
   // 創角分頁：每頁列出的欄位（key、顯示名、選項清單、是否用色塊）
@@ -341,7 +394,7 @@
   const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
   function piece(i, hl) {
     const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
-    return `<button class="piece${hl ? " hl" : ""}${i.kept ? " kept" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}${i.kept ? "（留）" : ""}">
+    return `<button class="piece${hl ? " tutfirst" : ""}${i.kept ? " kept" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}${i.kept ? "（留）" : ""}">
       <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.kept ? '<span class="badge">留</span>' : ""}</button>`;
   }
   function wardrobeView() {
@@ -349,7 +402,7 @@
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
     const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
     const first = items.find((i) => !i.kept);
-    const tut = S.tutorial === "goWardrobe" || S.tutorial === "sell";
+    const tut = S.tutorial === "pick";
     const rows = RACK.map(([label, types, kind]) => {
       const list = items.filter((i) => types.includes(i.type));
       if (!list.length) return "";
@@ -414,22 +467,19 @@
     if (modal.type === "price") {
       const it = modal.item, p = modal.price, mk = marketPrice(it);
       const max = Math.max(mk * C.PRICE_SLIDER_MAX_RATIO, p);
-      const known = tutDone();
-      const prices = known
-        ? `<div class="prices"><div class="p-base"><small>基礎價值</small>$${it.base}</div>
+      const prices = `<div class="prices"><div class="p-base"><small>基礎價值</small>$${it.base}</div>
              <div class="p-mkt"><small>市場價</small>$${mk}</div>
              <div class="p-you"><small>你的標價</small><span id="yp">$${p}</span></div></div>
            <div class="kv"><span>預計等待</span><span id="eta">${p > 0 ? waitDays(p, it) + " 天" : "—"}</span></div>
-           <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`
-        : `<p class="muted">先隨意標一個價格。標得越高，通常等得越久。</p>`;
+           <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(it)}<h3 style="margin:0">${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3></div>
         ${prices}
         <div class="stepper">
-          <button class="btn alt" data-step="-${C.PRICE_STEP_LARGE}">-${C.PRICE_STEP_LARGE}</button>
+          <button class="btn alt" data-pct="-10">-10%</button>
           <button class="btn alt" data-step="-${C.PRICE_STEP_SMALL}">-${C.PRICE_STEP_SMALL}</button>
           <input id="pr" type="number" inputmode="numeric" min="${C.PRICE_MIN}" value="${p}" aria-label="標價">
           <button class="btn alt" data-step="${C.PRICE_STEP_SMALL}">+${C.PRICE_STEP_SMALL}</button>
-          <button class="btn alt" data-step="${C.PRICE_STEP_LARGE}">+${C.PRICE_STEP_LARGE}</button>
+          <button class="btn alt" data-pct="10">+10%</button>
         </div>
         <input id="rng" type="range" min="${C.PRICE_MIN}" max="${max}" value="${Math.max(p, C.PRICE_MIN)}" aria-label="標價滑桿">
         <div class="btns"><button class="btn alt" id="cancel">取消</button><button class="btn main" id="confirm-price">${modal.edit ? "確定" : "上架"}</button></div>
@@ -441,6 +491,7 @@
         ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
+        ${modal.tutEnd ? '<p class="muted">教學完成。之後每天結算一次，買家會依你的標價陸續成交。</p>' : ""}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
@@ -470,16 +521,15 @@
       const i = findItem(modal.id);
       if (!i) return "";
       const meta = i.tags.length ? `${esc(i.type)}・${i.tags.map(esc).join("、")}` : esc(i.type);
-      const hl = (S.tutorial === "goWardrobe" || S.tutorial === "sell") && !i.kept ? " hl" : "";
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(i.name)}" tabindex="-1">
         <div class="kv" style="justify-content:flex-start;gap:12px;align-items:center"><div class="swatch-item thumb" style="width:88px;height:88px">${thumbSvg(i) || ""}</div>
           <div><h3 style="margin:0">${esc(i.name)}</h3><div class="muted">${meta}・${esc(i.condition)}</div></div></div>
-        ${tutDone() ? `<div class="kv"><span>基礎價值</span><span>$${i.base}</span></div>` : ""}
+        <div class="kv"><span>基礎價值</span><span>$${i.base}</span></div>
         ${i.cost > 0 && tutDone() ? `<div class="kv"><span>成本</span><span>$${i.cost}</span></div>` : ""}
         ${i.kept ? '<p class="muted">已標為「留」。要賣先按「不留」。</p>' : ""}
         <div class="btns"><button class="btn alt" id="item-close">關閉</button>
           <button class="btn alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>
-          ${i.kept ? "" : `<button class="btn main${hl}" data-sell="${i.id}">賣</button>`}</div></div></div>`;
+          ${i.kept ? "" : `<button class="btn main" data-sell="${i.id}">賣</button>`}</div></div></div>`;
     }
     if (modal.type === "socialHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="社群說明" tabindex="-1"><h3>社群上的貨</h3>
@@ -534,7 +584,7 @@
     all("[data-nav]", (b) => b.onclick = () => {
       view = b.dataset.nav;
       if (view === "social" && !(S.seen && S.seen.social)) { S.seen = { ...(S.seen || {}), social: true }; modal = { type: "socialHint" }; }
-      if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "sell";
+      if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "pick";
       save(); render();
     });
     all("[data-cat]", (b) => b.onclick = () => { cat = b.dataset.cat; render(); });
@@ -545,6 +595,7 @@
     all("[data-keep]", (b) => b.onclick = () => { const it = findItem(+b.dataset.keep); it.kept = !it.kept; save(); render(); });
     all("[data-sell]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.sell);
+      if (S.tutorial === "pick") { S.tutorial = "price"; tutSub = 0; }
       modal = { type: "price", item: it, price: marketPrice(it), edit: false };
       render();
     });
@@ -610,7 +661,11 @@
       pr.addEventListener("input", () => setPrice(pr.value, "input"));
       rng.addEventListener("input", () => setPrice(rng.value, "range"));
       all("[data-step]", (b) => b.onclick = () => setPrice(Math.max(C.PRICE_MIN, modal.price + (+b.dataset.step)), "step"));
-      $("#cancel").onclick = () => { modal = null; render(); };
+      all("[data-pct]", (b) => b.onclick = () => {
+        setPrice(Math.max(C.PRICE_MIN, Math.round(modal.price + marketPrice(modal.item) * (+b.dataset.pct) / 100)), "step");
+        if (S.tutorial === "price" && tutSub === 1) { tutSub = 2; render(); }
+      });
+      $("#cancel").onclick = () => { if (S.tutorial === "price") S.tutorial = "pick"; modal = null; render(); };
       $("#confirm-price").onclick = () => {
         const price = Math.floor(+pr.value);
         if (!(price >= C.PRICE_MIN)) { pr.focus(); return; }
@@ -622,7 +677,7 @@
         } else {
           S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id);
           S.listings.push({ item: it, price, listedDay: S.day, waitDays: waitDays(price, it) });
-          if (S.tutorial === "sell") S.tutorial = "wait";
+          if (S.tutorial === "price" || S.tutorial === "rest") S.tutorial = S.wardrobe.some((x) => !x.kept) ? "rest" : "wait";
         }
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };

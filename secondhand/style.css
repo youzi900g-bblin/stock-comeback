@@ -186,7 +186,8 @@ body.contrast .btn.alt { background: #fff; }
 .prices .p-base { background: #e6efe2; } .prices .p-mkt { background: #e2e8f4; } .prices .p-you { background: #f6e8c4; }
 .prices div { color: #2c2638; } .prices small { color: #4a4460; }
 .stepper { display: flex; gap: 6px; margin: 8px 0; }
-.stepper .btn { flex: 1; padding: 2px 0; }
+.stepper .btn { flex: 1; padding: 2px 0; min-width: 0; }
+.stepper .btn[data-pct] { flex: 1.5; }
 .stepper input[type=number] {
   flex: 2; min-width: 0; min-height: 44px; text-align: center; font: inherit; color: #000; background: #fff;
   border: 3px solid; border-color: var(--line) #fff #fff var(--line); border-radius: 0;
@@ -268,3 +269,10 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .pinfo { padding: 6px 8px; flex: 1; }
 .pbtns { display: flex; gap: 6px; padding: 0 8px 8px; }
 .pbtns .btn { flex: 1; padding: 2px 4px; }
+
+/* ---- 教學聚光燈 ---- */
+.spot-hole { position: fixed; z-index: 100; pointer-events: none; border: 3px solid #ffd24a; box-shadow: 0 0 0 9999px rgba(24, 12, 24, .82); }
+.spot-cap { position: fixed; z-index: 110; left: 12px; right: 12px; max-width: 456px; margin: 0 auto; background: #f9e7ef; border: 2px solid var(--line); padding: 10px 12px; box-shadow: 4px 4px 0 var(--line); }
+.spot-btns { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.spot-cap .skip { min-height: 44px; padding: 0 12px; background: #fff; border: 2px solid #a87c4c; cursor: pointer; margin-left: auto; }
+.piece.tutfirst { }
