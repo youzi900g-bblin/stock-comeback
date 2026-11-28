@@ -80,19 +80,17 @@ def _hoodie_extra(cv, t):
     for y in (21, 22): cv.px(CX-1, y, t['hi']); cv.px(CX+1, y, t['hi'])  # 抽繩
 
 def _tank(skin, shade):
-    """白色吊嘎（背心）：細肩帶、圓領（U 形領口），無袖。回傳 _top 同樣格式的設定。"""
+    """白色吊嘎（背心）：細肩帶、方領帶圓角，無袖。回傳 _top 同樣格式的設定。"""
     t = tone('#f4f1ea'); hem = 30
     S = lambda y, *segs: {(x, y) for a, b in segs for x in range(a, b + 1)}
     mask = set()
-    mask |= S(19, (CX-3, CX-2), (CX+2, CX+3)); mask |= S(20, (CX-3, CX-2), (CX+2, CX+3))
-    mask |= S(21, (CX-4, CX-3), (CX+3, CX+4)); mask |= S(22, (CX-4, CX-3), (CX+3, CX+4)); mask |= S(23, (CX-4, CX-2), (CX+2, CX+4))
+    for y in range(19, 23): mask |= S(y, (CX-4, CX-3), (CX+3, CX+4))                         # 肩帶貼著衣身外緣，領口兩側垂直
+    mask |= S(23, (CX-4, CX-2), (CX+2, CX+4))                                                # 領口底部兩角收一格（圓角）
     for y in range(24, hem + 1): mask |= S(y, (CX-4, CX+4))
-    opening = {19: (CX-1, CX+1), 20: (CX-1, CX+1), 21: (CX-2, CX+2), 22: (CX-2, CX+2), 23: (CX-1, CX+1)}   # 領口露出的胸口：上窄、中寬、底部圓
-    pre = [(x, y, skin) for y in (19, 20) for x in (CX-4, CX+4)]   # 肩頭的皮膚（先畫，衣身邊線蓋在上面）
+    opening = {**{y: (CX-2, CX+2) for y in range(19, 23)}, 23: (CX-1, CX+1)}                # 領口：方形，底部兩角圓
+    pre = [(x, y, skin) for y, (a, b) in opening.items() for x in range(a, b + 1)]          # 領口內的皮膚（先畫，衣身的灰色邊線蓋在上面）
     def det(cv, tw, h):
         for x in range(CX-4, CX+5): cv.px(x, h, t['lo'])              # 下擺陰影
-        for y, (a, b) in opening.items():                             # 領口：皮膚直接接衣身，不畫邊線
-            for x in range(a, b + 1): cv.px(x, y, skin)
     return dict(top=dict(fill=_torso_fill(t), **t), sleeve=None, torso_hem=hem, detail=det, torso_mask=mask, pre_torso=pre)
 
 def _top(tid, skin=None, shade=None):
