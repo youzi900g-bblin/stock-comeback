@@ -2,6 +2,7 @@
  * 所有數值來自 config.js（皆為佔位值）。 */
 (function () {
   "use strict";
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";   // 重新載入一律從最上面開始，不沿用舊的捲動位置
   const C = CONFIG;
   const app = document.getElementById("app");
 
@@ -875,12 +876,13 @@
       $("#start").onclick = () => {
         if (!draft.name.trim()) return;
         S = newGame({ ...draft, name: draft.name.trim() });
-        view = "home"; save(); render();
+        view = "home"; window.scrollTo(0, 0); save(); render();
       };
       return;
     }
 
     all("[data-nav]", (b) => b.onclick = () => {
+      if (b.dataset.nav !== view) window.scrollTo(0, 0);   // 換頁回到最上面，不要沿用上一頁的捲動位置
       view = b.dataset.nav;
       if (view === "social" && !(S.seen && S.seen.social)) { S.seen = { ...(S.seen || {}), social: true }; modal = { type: "socialHint" }; }
       if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "pick";
