@@ -44,7 +44,9 @@
   const trendOf = (it) => (S.season && S.tutorial === "done" && it.tags.length ? it.tags.reduce((a, t) => a + tagCoef(t), 0) / it.tags.length : 0);
   // 基礎價值＝良好狀況的價值 × 狀況係數（有瑕疵 0.6）；修補一級就回到良好
   const valueOf = (it) => Math.round(it.base * (C.COND_FACTOR[it.condition] || 1));
-  const marketPrice = (it) => Math.round(valueOf(it) * C.MARKET_FACTOR * (1 + trendOf(it)));
+  const marketAdj = (it) => (S && S.market && tutDone() && S.market[it.type]) || 0;   // 整體行情：該類別今天的漲跌（−0.15 到 +0.15）
+  const marketPrice = (it) => Math.round(valueOf(it) * C.MARKET_FACTOR * (1 + trendOf(it)) * (1 + marketAdj(it)));
+  const pctText = (a) => { const n = Math.round(a * 100); return n > 0 ? `▲${n}%` : n < 0 ? `▼${-n}%` : "持平"; };
   const repairCost = (it) => Math.max(C.REPAIR_MIN, Math.round(it.base * C.REPAIR_RATE));
   const fixingCount = () => S.wardrobe.filter((i) => i.fixing).length;
   // 每天成交機率（分段表在 config.js 的 SALE_CHANCE）
@@ -242,6 +244,8 @@
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
     const sell = (l) => { addShipping(l.item, l.price); sales.push({ name: l.item.name, price: l.price, item: l.item, buyer: S.shipping[S.shipping.length - 1].buyer }); };
+    S.market = S.market || {};   // 整體行情：每個類別每天隨機波動，累積不超過上下限
+    C.MARKET_TYPES.forEach((t) => { S.market[t] = Math.max(-C.MARKET_CAP, Math.min(C.MARKET_CAP, (S.market[t] || 0) + (Math.random() * 2 - 1) * C.MARKET_DAILY)); });
     S.haggles = [];
     S.listings = S.listings.filter((l) => {
       if (Math.random() < saleChance(l.price, l.item)) {   // 每件各抽一次
@@ -566,7 +570,7 @@
   function trendBar() {
     if (!S.season || !tutDone()) return "";
     const left = Math.max(0, S.season.start + C.SEASON_DAYS - S.day);
-    return `<div class="trend"><span>本季流行　<b class="up">${esc(S.season.up)} ▲</b>　退燒　<b class="down">${esc(S.season.down)} ▼</b></span><small>還有 ${left} 天換季</small></div>`;
+    return `<div class="trend"><span>本季流行　<b class="up">${esc(S.season.up)} ▲</b>　退燒　<b class="down">${esc(S.season.down)} ▼</b></span><small>還有 ${left} 天換季</small></div>${S.market ? `<div class="trend2"><b>今日行情</b>　${C.MARKET_TYPES.map((t) => { const a = S.market[t] || 0, n = Math.round(a * 100); return `${t} <span class="${n > 0 ? "up" : n < 0 ? "down" : "muted"}">${pctText(a)}</span>`; }).join("　")}</div>` : ""}`;
   }
 
   function homeView() {
@@ -696,6 +700,7 @@
              <div class="p-mkt"><small>市場價</small>$${mk}</div>
              <div class="p-you"><small>你的標價</small><span id="yp">$${p}</span></div></div>
            ${trendOf(it) ? `<div class="kv"><span>流行影響</span><span class="${trendOf(it) > 0 ? "money-up" : "warn"}">${trendOf(it) > 0 ? "+" : ""}${Math.round(trendOf(it) * 100)}%</span></div>` : ""}
+           ${marketAdj(it) ? `<div class="kv"><span>${esc(it.type)}行情</span><span class="${marketAdj(it) > 0 ? "money-up" : "warn"}">${pctText(marketAdj(it))}</span></div>` : ""}
            <div class="kv"><span>每天成交機會</span><span id="eta">${p > 0 ? chanceText(p, it) : "—"}</span></div>
            <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，很難賣掉。</div>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(it)}<h3 style="margin:0">${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3></div>
