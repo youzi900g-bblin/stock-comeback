@@ -79,7 +79,7 @@
   function linProgress(q) {
     const g = q.goal;
     const cur = g.type === "sold" ? (S.stats ? S.stats.sold : 0) - linState().base
-      : g.type === "money" ? S.money : C.WARDROBE_CAPACITY - S.wardrobe.length;
+      : g.type === "money" ? S.money : capacity() - S.wardrobe.length;
     return [Math.max(0, cur), g.n];
   }
   const linGoalText = (g) => g.type === "sold" ? `賣出 ${g.n} 件` : g.type === "money" ? `金錢達到 $${g.n}` : `衣櫃空出 ${g.n} 格`;
@@ -145,6 +145,7 @@
   }
   // 貼文文案：有瑕疵的貨不能寫「狀況良好」「沒穿過幾次」
   const lineFor = (item) => rnd(item.condition === "有瑕疵" ? C.SOCIAL_LINES.filter((s) => !/良好|沒穿過/.test(s)) : C.SOCIAL_LINES);
+  const capacity = () => C.WARDROBE_CAPACITY + ((S && S.capBonus) || 0);   // 初始容量加上任務獎勵的格數
   const totalCount = () => S.wardrobe.length + (S.closet || []).length;   // 待售加私人，共用容量
   const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...(S.closet || []).map((i) => i.id), ...S.listings.map((l) => l.item.id));
   function endTutorial() {   // 教學結束：開放社群、開始第一季流行、開始新手任務
@@ -170,6 +171,21 @@
     }
     if (!curQuest()) S.quest = C.QUESTS.length;
   }
+  // NPC 簡單任務：offer（來訊）→ active（進行中）→ 領取後 done
+  const npcState = () => (S.npcq = S.npcq || { acc: {}, done: {} });
+  const npcCount = (t) => (t.goal.type === "bargained" ? (S.stats && S.stats.bargained) || 0 : t.goal.tags.reduce((a, tg) => a + (((S.stats && S.stats.boughtTags) || {})[tg] || 0), 0));
+  const npcProgress = (t) => Math.min(t.goal.n, npcCount(t) - ((npcState().acc[t.id] || { base: 0 }).base));
+  const npcPhase = (t) => (npcState().done[t.id] ? "done" : npcState().acc[t.id] ? (npcProgress(t) >= t.goal.n ? "ready" : "active") : "offer");
+  const npcVisible = (t) => S && tutDone() && typeof S.quest === "number" && S.quest >= C.QUESTS.length && S.day >= t.appearDay && npcPhase(t) !== "done";
+  const npcTasks = () => C.NPC_TASKS.filter(npcVisible);
+  const npcGoalText = (t) => (t.goal.type === "bargained" ? `社群議價成功 ${t.goal.n} 次` : `買下 ${t.goal.tags.join("或")}風格的衣服 ${t.goal.n} 件`);
+  function npcCard() {
+    return npcTasks().map((t) => {
+      const ph = npcPhase(t);
+      const left = ph === "offer" ? "來訊了" : ph === "ready" ? `${esc(t.title)}　完成！` : `${esc(t.title)}　${npcProgress(t)}/${t.goal.n}`;
+      return `<div class="tip shipline"><span><b>${esc(t.npc)}</b>　${left}</span><button class="btn small" data-npc="${t.id}">${ph === "offer" ? "看訊息" : ph === "ready" ? "領取獎勵" : "看任務"}</button></div>`;
+    }).join("");
+  }
   function shipCard() {
     const list = shippingList();
     if (!list.length) return "";
@@ -185,12 +201,13 @@
   function buyOffer(oid, price, silent) {
     const so = socialState(), o = so.offers.find((x) => x.oid === oid);
     if (price === undefined) price = o && o.ask;
-    if (!o || S.money < price || totalCount() >= C.WARDROBE_CAPACITY) return;
+    if (!o || S.money < price || totalCount() >= capacity()) return;
     S.money -= price; flashMoney = true;
     const bought = { ...o.item, id: nextItemId(), cost: price };
     S.wardrobe.push(bought);
     so.offers = so.offers.filter((x) => x.oid !== oid);
     S.stats = S.stats || { sold: 0 }; S.stats.bought = (S.stats.bought || 0) + 1;
+    S.stats.boughtTags = S.stats.boughtTags || {}; (bought.tags || []).forEach((t) => { S.stats.boughtTags[t] = (S.stats.boughtTags[t] || 0) + 1; });
     save(); if (!silent) showToast(`已買下「${o.item.name}」$${price}`);
   }
 
@@ -495,6 +512,8 @@
     if (S && S.tutorial === "done" && !S.season) rollSeason();
     questCheck();
     if (S && view !== "create" && S.haggles && S.haggles.length && !modal) modal = openHaggle();
+    { const nt = npcTasks().find((t) => npcPhase(t) === "offer" && !(S.seen && S.seen["npct_" + t.id]));   // 新來訊跳一次
+      if (nt && !modal && view !== "create" && !curQuest()) { S.seen = { ...(S.seen || {}), ["npct_" + nt.id]: true }; save(); modal = { type: "npcTask", id: nt.id }; } }
     { const nq = curQuest();   // 新手任務有 NPC 的，開始時跳一次私訊
       if (nq && C.QUEST_NPC[nq.id] && !modal && view !== "create" && !(S.seen && S.seen["npc_" + nq.id])) { S.seen = { ...(S.seen || {}), ["npc_" + nq.id]: true }; save(); modal = { type: "npcMsg", q: nq }; } }
     const cur = selOf(document.activeElement);
@@ -512,7 +531,7 @@
   // Esc 關閉彈窗（等同按該彈窗的關閉鈕）
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape" || !modal) return;
-    const b = app.querySelector("#cancel, #pack-close, #skip-cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
+    const b = app.querySelector("#cancel, #npct-close, #pack-close, #skip-cancel, #close-settings, #close-summary, #close-market, #lin-close, #close-hint, #item-close");
     if (b) b.click();
   });
 
@@ -576,18 +595,18 @@
 
   function homeView() {
     const stale = staleListings().length;
-    const full = totalCount() >= C.WARDROBE_CAPACITY;
+    const full = totalCount() >= capacity();
     const tidy = S.wardrobe.length <= C.TIDY_AT;
     const roomImg = `<img class="room" src="art/${tidy ? "小套房_整理後" : "小套房背景"}.png" alt="${tidy ? "整理後的小套房" : "小套房"}" width="832" height="768">`;
     // 林（作者彩蛋）：依任務鏈出現，點她開對話
     const lq = linVisible() ? linQuest() : null;
     const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
     const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
-    return `${questCard()}${shipCard()}${roomHtml}
+    return `${questCard()}${npcCard()}${shipCard()}${roomHtml}
       ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(playerLook())}
-        <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${totalCount()}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
+        <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${totalCount()}/${capacity()}</span>　賣場 ${S.listings.length} 件</div></div>
       </div></div>
       ${stale ? `<div class="tip"><b>提醒</b>　有 ${stale} 件掛賣超過 ${C.STALE_DAYS} 天，可到賣場調整價格。</div>` : ""}`;
   }
@@ -624,7 +643,7 @@
 
   function stockView() {
     const tabs = C.CATEGORIES.map((c) => `<button class="opt ${cat === c ? "on" : ""}" aria-pressed="${cat === c}" data-cat="${c}">${c}</button>`).join("");
-    const full = totalCount() >= C.WARDROBE_CAPACITY;
+    const full = totalCount() >= capacity();
     const items = S.wardrobe.filter((i) => cat === "全部" || i.type === cat);
     const first = items[0];
     const tut = S.tutorial === "pick" || S.tutorial === "keep";
@@ -635,7 +654,7 @@
     }).join("");
     const empty = S.wardrobe.length === 0 ? "沒有待售的衣服了。到社群收貨，或把私人衣櫃的衣服放回來。" : "這個分類沒有衣服。";
     return `<div class="tabs">${tabs}</div>
-      <div class="rack-note"><span>衣櫃</span><span class="${full ? "full" : ""}">${totalCount()}/${C.WARDROBE_CAPACITY}${full ? "　已爆滿" : ""}</span></div>
+      <div class="rack-note"><span>衣櫃</span><span class="${full ? "full" : ""}">${totalCount()}/${capacity()}${full ? "　已爆滿" : ""}</span></div>
       <div class="rack">${rows || `<p class="muted empty" style="padding:16px">${empty}</p>`}<div class="rack-floor"></div></div>`;
   }
 
@@ -643,7 +662,7 @@
   const HEART = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#a65a89" d="M1 0h2v1h1V0h2v1h1v2H6v1H5v1H4v1H3V5H2V4H1V3H0V1h1z"/></svg>';
   const CHAT = '<svg viewBox="0 0 7 6" width="21" height="18" aria-hidden="true"><path fill="#6c4a50" d="M0 0h7v4H4v1H3V4H0z"/></svg>';
   function socialView() {
-    const so = socialState(), full = totalCount() >= C.WARDROBE_CAPACITY;
+    const so = socialState(), full = totalCount() >= capacity();
     const tabs = [["new", "最新"], ["deal", "撿漏"], ["hot", "熱門"]].map(([id, n]) => `<button class="${socialTab === id ? "on" : ""}" role="tab" aria-selected="${socialTab === id}" data-stab="${id}">${n}</button>`).join("");
     let offers = so.offers.slice();
     if (socialTab === "deal") offers = offers.filter((o) => o.ask < marketPrice(o.item));
@@ -766,6 +785,16 @@
         <div class="kv"><span>市場價</span><span>$${marketPrice(it)}</span></div>
         <p class="muted" style="margin-top:0">現在市場上願意買的價格。標價越接近市場價，成交越快；高出越多，等得越久。目前市場價等於基礎價值，之後會隨流行波動。</p>
         <div class="btns"><button class="btn main" id="close-market">我知道了</button></div></div></div>`;
+    }
+    if (modal.type === "npcTask") {
+      const t = C.NPC_TASKS.find((x) => x.id === modal.id), ph = npcPhase(t);
+      const body = ph === "ready" ? t.done : t.intro;
+      const btns = ph === "offer" ? `<button class="btn alt" id="npct-close">先不要</button><button class="btn main" id="npct-accept">接受</button>`
+        : ph === "ready" ? `<button class="btn main" id="npct-claim">領取獎勵</button>` : `<button class="btn main" id="npct-close">好</button>`;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(t.npc)}" tabindex="-1"><div class="npcmsg"><span class="npcface" style="background-position:${t.face * 50}% 50%" aria-hidden="true"></span><div><h3>${esc(t.npc)}</h3><p>${esc(body)}</p></div></div>
+        <div class="kv"><span>${ph === "active" || ph === "ready" ? "進度" : "目標"}</span><span>${ph === "offer" ? esc(npcGoalText(t)) : `${npcProgress(t)}/${t.goal.n}`}</span></div>
+        <div class="kv"><span>獎勵</span><span>衣櫃 +${t.reward.capacity} 格</span></div>
+        <div class="btns">${btns}</div></div></div>`;
     }
     if (modal.type === "npcMsg") {
       const n = C.QUEST_NPC[modal.q.id];
@@ -994,6 +1023,10 @@
     all("[data-buy]", (b) => b.onclick = () => buyOffer(+b.dataset.buy));
     const ch = $("#close-hint"); if (ch) ch.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
+    all("[data-npc]", (b) => b.onclick = () => { modal = { type: "npcTask", id: b.dataset.npc }; render(); });
+    const nx2 = $("#npct-close"); if (nx2) nx2.onclick = () => { modal = null; render(); };
+    const na = $("#npct-accept"); if (na) na.onclick = () => { const t = C.NPC_TASKS.find((x) => x.id === modal.id); npcState().acc[t.id] = { base: npcCount(t) }; save(); modal = null; render(); };
+    const nc = $("#npct-claim"); if (nc) nc.onclick = () => { const t = C.NPC_TASKS.find((x) => x.id === modal.id); if (npcPhase(t) === "ready") { npcState().done[t.id] = true; S.capBonus = (S.capBonus || 0) + t.reward.capacity; save(); } modal = null; render(); };
     const qm = $("#quest-more"); if (qm) qm.onclick = () => { questOpen = !questOpen; render(); };
     const qg = $("#quest-go"); if (qg) qg.onclick = () => { questGuide = true; render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
