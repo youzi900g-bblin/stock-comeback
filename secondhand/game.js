@@ -198,7 +198,7 @@
   }
   // 林（作者彩蛋）：在咖啡廳遇到。三位 NPC 的任務都完成後，首頁出現「咖啡廳」一行，按「出門」進去
   const linAway = () => { const st = linState(); return !!linQuest() && st.phase === "active" && !!st.meetDay && S.day < st.meetDay; };   // 約定日之前林不在咖啡廳
-  const linEvent = () => { const q = linQuest(); return !!q && !linAway() && (linState().phase === "offer" || (linState().phase === "active" && linProgress(q)[0] >= linProgress(q)[1])); };
+  const linEvent = () => { const q = linQuest(); return !!q && !linAway() && (linState().phase === "offer" || linState().phase === "active"); };
   function cafeCard() {
     if (!linVisible()) return "";
     const st = linState(), hint = linEvent() ? "　有人在那裡" : linAway() ? `　約好第 ${st.meetDay} 天` : "";
@@ -208,7 +208,7 @@
     const q = linQuest(), st = linState(), away = linAway();
     const mark = linEvent() ? '<span class="mark" aria-hidden="true">!</span>' : "";
     const note = away ? `林約好第 ${st.meetDay} 天再在這裡見面。今天沒有看到人。`
-      : q && st.phase === "offer" ? `${esc(q.narration)}<br>點林頭上的驚嘆號。` : "點林說話。";
+      : q && st.phase === "offer" ? `${esc(q.narration)}<br>點擊！` : "點林說話。";
     return `<div class="roomwrap"><img class="room" src="art/咖啡廳.png" alt="咖啡廳" width="832" height="768">${away ? "" : `<button class="lin cafe" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button>`}</div>
       <div class="tip"><b>咖啡廳</b><br><span class="muted">${away ? esc(note) : note}</span><br><button class="btn small alt" data-nav="home">回家</button></div>`;
   }
@@ -829,18 +829,19 @@
     }
     if (modal.type === "lin") {
       const q = linQuest(), box = (inner) => `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="林" tabindex="-1">${inner}</div></div>`;
-      if (!q) return box(`<h3>林</h3><p>${esc(C.LIN_ALL_DONE)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
+      if (!q) return box(`<h3>林</h3><p>${esc(linState().failed ? C.LIN_ALL_FAILED : C.LIN_ALL_DONE)}</p><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
       const st = linState(), [cur, n] = linProgress(q), ready = st.phase === "active" && cur >= n;
       const goal = esc(q.title || linGoalText(q.goal));
-      if (modal.acceptLine) return box(`<h3>林</h3><p>${esc(q.acceptLine)}</p>${q.coat ? `<div class="kv"><span style="white-space:nowrap">收到</span><span>林的${esc(q.coat.name)}（${esc(q.coat.flaw)}）</span></div>` : ""}<div class="kv"><span style="white-space:nowrap">約定</span><span>第 ${linState().meetDay} 天，在咖啡廳</span></div><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
+      if (modal.acceptLine) return box(`<h3>林</h3><p>${esc(q.acceptLine.replace("{n}", C.LIN_WAIT_DAYS))}</p>${q.coat ? `<div class="kv"><span style="white-space:nowrap">收到</span><span>林的${esc(q.coat.name)}（${esc(q.coat.flaw)}）</span></div>` : ""}<div class="kv"><span style="white-space:nowrap">約定</span><span>第 ${linState().meetDay} 天，在咖啡廳</span></div><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
       if (st.phase === "offer") {
         const step = modal.step === undefined ? (st.seenIntro ? 2 : 0) : modal.step;
         if (step === 0) return box(`<h3>林</h3><p>${esc(q.greet)}</p><div class="btns"><button class="btn main" id="lin-next">繼續</button></div>`);
-        if (step === 1) return box(`<h3>林</h3><p>${esc(q.monologue)}</p><div class="btns"><button class="btn main" id="lin-next">繼續</button></div>`);
+        if (step === 1) return box(`<h3>林</h3><p>${esc(q.monologue.replace("{n}", C.LIN_WAIT_DAYS))}</p><div class="btns"><button class="btn main" id="lin-next">繼續</button></div>`);
         return box(`<h3>林</h3><p>${esc(q.intro)}</p><div class="kv"><span>目標</span><span>${goal}</span></div><div class="kv"><span>獎勵</span><span>$${q.reward.money}</span></div>
           <div class="btns"><button class="btn main" id="lin-accept">接受</button></div>`);
       }
-      if (ready) return box(`<h3>林</h3><p>${esc(q.done)}</p><div class="kv"><span>獎勵</span><span class="money-up">+$${q.reward.money}</span></div><div class="btns"><button class="btn main" id="lin-claim">領取獎勵</button></div>`);
+      if (ready) return box(`<h3>林</h3><p>${esc(q.done)}</p><div class="kv"><span>獎勵</span><span class="money-up">+$${q.reward.money}${q.reward.favor ? `、好感度 +${q.reward.favor}` : ""}</span></div><div class="btns"><button class="btn main" id="lin-claim">領取獎勵</button></div>`);
+      if (st.meetDay && q.fail) return box(`<h3>林</h3><p>${esc(q.fail)}</p><div class="kv"><span>任務失敗</span><span class="warn">好感度 ${C.LIN_FAIL_FAVOR}</span></div><div class="btns"><button class="btn main" id="lin-fail">好</button></div>`);
       return box(`<h3>林</h3><p>${esc(q.waiting || q.intro)}</p><div class="kv"><span>${goal}</span><span>${Math.min(cur, n)}/${n}</span></div><div class="btns"><button class="btn main" id="lin-close">好</button></div>`);
     }
     if (modal.type === "item") {
@@ -1014,8 +1015,16 @@
     if (lc) lc.onclick = () => {
       const st = linState(), q = linQuest();
       S.money += q.reward.money; flashMoney = true;
+      if (q.reward.favor) { S.favor = S.favor || {}; S.favor["林"] = favorOf("林") + q.reward.favor; }
       if (st.itemId) { S.wardrobe = S.wardrobe.filter((i) => i.id !== st.itemId); showToast("已把外套還給林。"); }   // 修好的外套交還給林
       st.q += 1; st.phase = "offer"; st.base = 0; st.itemId = null; st.meetDay = null; modal = null; save(); render();
+    };
+    const lf = $("#lin-fail");
+    if (lf) lf.onclick = () => {   // 約定日到了外套還沒修好：外套還給林，好感度降低，任務結束（失敗）
+      const st = linState();
+      S.favor = S.favor || {}; S.favor["林"] = favorOf("林") + C.LIN_FAIL_FAVOR;
+      if (st.itemId) { S.wardrobe = S.wardrobe.filter((i) => i.id !== st.itemId); showToast("已把外套還給林。"); }
+      st.q += 1; st.phase = "offer"; st.base = 0; st.itemId = null; st.meetDay = null; st.failed = true; modal = null; save(); render();
     };
     const lx = $("#lin-close"); if (lx) lx.onclick = () => { if (modal && modal.type === "lin") { const st = linState(); if (st.phase === "offer" && !st.seenIntro) st.seenIntro = true; } modal = null; render(); };
     const rf = $("#refresh"); if (rf) rf.onclick = refreshSocial;
