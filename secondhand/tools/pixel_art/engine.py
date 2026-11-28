@@ -361,6 +361,7 @@ def build(P,want_log=False):
     cv.L='neck'
     sp={y:(CX-nw,CX+nw) for y in range(15,19)}
     cv.paint(rows_mask(sp),lambda x,y: sks if y<=16 else sk,base=sk,warm=True)
+    for (x,y,c) in P.get('post_neck',()): cv.px(x,y,c)   # 背心領口內的皮膚：蓋掉脖子底部的邊線
     cv.L='necklace'
     if P.get('jewel',{}).get('necklace'):
         for (x,y) in [(CX-2,18),(CX-1,19),(CX,20),(CX+1,19),(CX+2,18)]: cv.px(x,y,H('#e0b040'))
