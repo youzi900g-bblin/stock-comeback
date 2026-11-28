@@ -143,5 +143,9 @@ const CONFIG = {
   SOCIAL_HANDLES: ["@mimi_vintage", "@littlecloud", "@shoes_lab", "@momo_closet", "@sunny_swap", "@hazel_thrift", "@pocket_pie", "@kiki_reuse"],
   SOCIAL_LINES: ["搬家清衣櫃，這件只穿過兩次。", "朋友送的，尺寸不合，便宜出。", "整理衣櫃找到的，沒穿過幾次。", "換季出清。", "買重複了，讓給有緣人。", "狀況良好，一直好好收著。"],
   SOCIAL_COLORS: ["#c85088", "#3a5a8a", "#1f6b45", "#8a5838", "#5a5ab8", "#a8461f"],
+  // ---- 流行與標籤（第二階段第 2 段，全部為【佔位值】）----
+  SEASON_DAYS: 7,          // 幾天換一季【佔位值】
+  SEASON_UP: 0.3,          // 流行標籤的市場價加成【佔位值】
+  SEASON_DOWN: -0.2,       // 退燒標籤的市場價加成【佔位值】
   START_ITEM_COUNT: 5,     // 開場衣櫃件數：創角選的衣物優先，不足就隨機補基本款；教學要把這幾件全部上架【佔位值】
 };

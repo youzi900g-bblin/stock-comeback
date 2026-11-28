@@ -31,7 +31,11 @@
   function applyContrast() { document.body.classList.toggle("contrast", !!settings().contrast); }
 
   // ---------- 規則 ----------
-  const marketPrice = (it) => Math.round(it.base * C.MARKET_FACTOR);
+  // 單一標籤的加成：流行 +、退燒 −，其餘 0
+  const tagCoef = (t) => (S.season && S.season.up === t ? C.SEASON_UP : S.season && S.season.down === t ? C.SEASON_DOWN : 0);
+  // 多標籤合併：各標籤加成取平均（沒影響的標籤算 0），互相調和
+  const trendOf = (it) => (S.season && S.tutorial === "done" && it.tags.length ? it.tags.reduce((a, t) => a + tagCoef(t), 0) / it.tags.length : 0);
+  const marketPrice = (it) => Math.round(it.base * C.MARKET_FACTOR * (1 + trendOf(it)));
   function waitDays(price, it) {
     const ratio = price / marketPrice(it);
     const extra = ratio > 1 ? Math.ceil((ratio - 1) / C.WAIT_STEP) : 0;
@@ -125,6 +129,15 @@
       tutorial: "goWardrobe", settings: { contrast: false }, social: { left: C.SOCIAL_REFRESHES, offers: [], seq: 0 }, stats: { sold: 0 } };
   }
 
+  // 換季：隨機挑 1 個流行與 1 個退燒標籤，不和上一季重複；標籤取自目前所有款式
+  function rollSeason() {
+    const tags = [...new Set(C.ITEM_TEMPLATES.flatMap((t) => t.tags))], prev = S.season || {};
+    const up = rnd(tags.filter((t) => t !== prev.up));
+    const down = rnd(tags.filter((t) => t !== prev.down && t !== up));
+    S.season = { start: S.day, up, down };
+    S.listings.forEach((l) => { l.waitDays = waitDays(l.price, l.item); }); // 已上架商品依新市場價重算等待天數
+  }
+
   function nextDay() {
     S.day += 1;
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
@@ -139,7 +152,10 @@
     });
     S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     modal = { type: "summary", sales };
-    if (S.tutorial === "wait") { S.tutorial = "done"; modal.tutEnd = true; }
+    if (S.tutorial === "wait") {
+      S.tutorial = "done"; modal.tutEnd = true;
+      rollSeason(); modal.season = S.season; modal.seasonHint = !(S.seen && S.seen.season);
+    } else if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
@@ -295,6 +311,7 @@
   }, true);
 
   function render() {
+    if (S && S.tutorial === "done" && !S.season) rollSeason();
     const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
@@ -373,6 +390,12 @@
       </div></div>`;
   }
 
+  function trendBar() {
+    if (!S.season || !tutDone()) return "";
+    const left = Math.max(0, S.season.start + C.SEASON_DAYS - S.day);
+    return `<div class="trend"><span>本季流行　<b class="up">${esc(S.season.up)} ▲</b>　退燒　<b class="down">${esc(S.season.down)} ▼</b></span><small>還有 ${left} 天換季</small></div>`;
+  }
+
   function homeView() {
     const stale = staleListings().length;
     const full = S.wardrobe.length >= C.WARDROBE_CAPACITY;
@@ -383,6 +406,7 @@
     const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
     const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
     return `${roomHtml}
+      ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(S.player)}
         <div><div class="muted">衣櫃 <span class="${full ? "full" : ""}">${S.wardrobe.length}/${C.WARDROBE_CAPACITY}</span>　賣場 ${S.listings.length} 件</div></div>
@@ -426,7 +450,7 @@
     const posts = offers.map((o) => {
       const mk = marketPrice(o.item), d = o.ask - mk;
       const diff = d < 0 ? `<span class="money-up">低於市場價 $${-d}</span>` : d > 0 ? `<span class="warn">高於市場價 $${d}</span>` : `<span class="muted">與市場價相同</span>`;
-      const chips = o.item.tags.map((t) => `<span class="chip">${esc(t)}</span>`).join("");
+      const chips = o.item.tags.map((t) => `<span class="chip">${esc(t)}${tagCoef(t) > 0 ? " ▲" : tagCoef(t) < 0 ? " ▼" : ""}</span>`).join("");
       const can = S.money >= o.ask && !full;
       return `<article class="post"><div class="hd"><div class="av" style="background:${o.color}" aria-hidden="true">${esc(o.who[1].toUpperCase())}</div>
           <div class="nm">${esc(o.who)}<small>${o.mins} 分鐘前</small></div></div>
@@ -438,7 +462,7 @@
           <button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></article>`;
     }).join("");
     const empty = !so.offers.length ? "還沒有貨。按「刷新看看」。" : "這個分頁目前沒有貨。";
-    return `<div class="stabs" role="tablist">${tabs}</div>
+    return `${trendBar()}<div class="stabs" role="tablist">${tabs}</div>
       <div class="sbar"><span>刷新 ${so.left}/${C.SOCIAL_REFRESHES}</span><button class="btn small" id="refresh" ${so.left > 0 ? "" : "disabled"}>${so.left > 0 ? "刷新看看" : "今天刷完了"}</button></div>
       ${full ? '<p class="warn" style="padding:0 12px">衣櫃已滿，先賣或清掉幾件才買得下。</p>' : ""}
       <div class="feed">${posts || `<p class="muted empty" style="padding:16px">${empty}</p>`}</div>`;
@@ -470,6 +494,7 @@
       const prices = `<div class="prices"><div class="p-base"><small>基礎價值</small>$${it.base}</div>
              <div class="p-mkt"><small>市場價</small>$${mk}</div>
              <div class="p-you"><small>你的標價</small><span id="yp">$${p}</span></div></div>
+           ${trendOf(it) ? `<div class="kv"><span>流行影響</span><span class="${trendOf(it) > 0 ? "money-up" : "warn"}">${trendOf(it) > 0 ? "+" : ""}${Math.round(trendOf(it) * 100)}%</span></div>` : ""}
            <div class="kv"><span>預計等待</span><span id="eta">${p > 0 ? waitDays(p, it) + " 天" : "—"}</span></div>
            <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(it)}<h3 style="margin:0">${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3></div>
@@ -491,6 +516,7 @@
         ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
+        ${modal.season ? `<p>換季了：流行 <b>${esc(modal.season.up)}</b> ▲，退燒 <b>${esc(modal.season.down)}</b> ▼。</p>` : ""}
         ${modal.tutEnd ? '<p class="muted">教學完成。之後每天結算一次，買家會依你的標價陸續成交。</p>' : ""}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
@@ -530,6 +556,12 @@
         <div class="btns"><button class="btn alt" id="item-close">關閉</button>
           <button class="btn alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>
           ${i.kept ? "" : `<button class="btn main" data-sell="${i.id}">賣</button>`}</div></div></div>`;
+    }
+    if (modal.type === "seasonHint") {
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="流行說明" tabindex="-1"><h3>流行與退燒</h3>
+        <p>每隔幾天會換季。<b>流行</b>（▲）的風格，市場價會變高；<b>退燒</b>（▼）的風格，市場價會變低。</p>
+        <p class="muted" style="margin-top:0">一件衣服有多個風格時，影響會互相平均。收貨與標價前，先看看這一季流行什麼。</p>
+        <div class="btns"><button class="btn main" id="close-hint">我知道了</button></div></div></div>`;
     }
     if (modal.type === "socialHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="社群說明" tabindex="-1"><h3>社群上的貨</h3>
@@ -684,15 +716,16 @@
     }
     const cs = $("#close-summary");
     if (cs) cs.onclick = () => {
-      const intro = modal.intro;
-      modal = intro ? { type: "market", item: intro } : null;
-      render();
+      const hint = modal.seasonHint;
+      if (hint) S.seen = { ...(S.seen || {}), season: true };
+      modal = hint ? { type: "seasonHint" } : null;
+      save(); render();
     };
     const cm = $("#close-market");
     if (cm) cm.onclick = () => { modal = null; render(); };
   }
 
   // 供自我檢查與測試使用
-  window.__game = { get state() { return S; }, linVisible, waitDays, marketPrice, sprite };
+  window.__game = { get state() { return S; }, linVisible, trendOf, tagCoef, nextDay, waitDays, marketPrice, sprite };
   render();
 })();

@@ -276,3 +276,9 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .spot-btns { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
 .spot-cap .skip { min-height: 44px; padding: 0 12px; background: #fff; border: 2px solid #a87c4c; cursor: pointer; margin-left: auto; }
 .piece.tutfirst { }
+
+/* ---- 流行 ---- */
+.trend { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 10px 12px 0; padding: 8px 12px; background: #fff; border: 2px solid var(--line); }
+.trend .up { color: var(--ok); }
+.trend .down { color: var(--warn); }
+.trend small { color: var(--muted); }
