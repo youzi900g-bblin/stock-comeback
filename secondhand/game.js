@@ -13,6 +13,7 @@
   let modal = null;    // {type, ...}
   let toast = "";
   let flashMoney = false;
+  const fmtMoney = (n) => (n >= 1000 ? (Math.floor(n / 10) / 100).toFixed(2) + "K" : String(n));   // 1000 以上顯示 1.25K（小數第二位，捨去）
   let draft = { name: "", hair: C.HAIR_STYLES[0].id, skin: C.SKIN_TONES[1].id, ...C.DEFAULT_LOOK };
 
   function load() {
@@ -486,7 +487,7 @@
       ? `<div class="primary-bar"><button class="btn" id="nextday">進入下一天</button></div>` : "";
     const f = flashMoney ? " flash" : "";
     flashMoney = false;
-    return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${S.money}</span>
+    return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${fmtMoney(S.money)}</span>
         <button class="gear" id="open-settings" aria-label="設定">設定</button></div>
       ${body}${primary}
       <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${socialOpen() ? nav("social", "社群") : ""}${nav("market", "賣場")}</nav>
@@ -709,7 +710,7 @@
         ${modal.haggles ? `<p>有 ${modal.haggles} 位買家想殺價，按「好」之後逐一處理。</p>` : ""}
         ${(modal.fixed || []).map((n) => `<div class="kv"><span>整理完成：${esc(n)}</span><span class="money-up">良好</span></div>`).join("")}
         ${modal.season ? `<p>換季了：流行 <b>${esc(modal.season.up)}</b> ▲，退燒 <b>${esc(modal.season.down)}</b> ▼。</p>` : ""}
-        <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
+        <div class="kv"><span>目前金錢</span><span>$${fmtMoney(S.money)}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
     if (modal.type === "market") {
