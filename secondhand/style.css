@@ -195,7 +195,7 @@ body.contrast .btn.alt { background: #fff; }
 input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(130px + env(safe-area-inset-bottom)); z-index: 30;
-  background: var(--lo); color: #fff; padding: 6px 14px; border: 2px solid var(--hi); width: max-content; max-width: 92%; white-space: nowrap;
+  background: var(--lo); color: #fff; padding: 6px 14px; border: 2px solid var(--hi); width: max-content; max-width: 92%; white-space: normal; text-align: center;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -315,3 +315,8 @@ input[type=range] { width: 100%; height: 44px; accent-color: var(--accent); }
 .npcface { flex: none; width: 72px; height: 72px; border: 2px solid #2a1c26; background: url(art/三個臉.png) 0 50% / 300% auto no-repeat; image-rendering: pixelated; }
 
 .spot-skip { position: fixed; z-index: 120; top: 58px; right: 8px; min-height: 24px; padding: 0 8px; background: rgba(255,255,255,.88); color: #5a4350; border: 2px solid #a87c4c; font-size: 12px; cursor: pointer; }
+
+.rating { display: flex; align-items: center; gap: 4px; padding: 6px 12px; }
+.rating .muted { margin-left: 8px; font-size: 13px; }
+.star { width: 18px; height: 18px; background: #c9bcc4; clip-path: polygon(50% 0, 62% 35%, 98% 38%, 69% 59%, 80% 94%, 50% 73%, 20% 94%, 31% 59%, 2% 38%, 38% 35%); }
+.star.on { background: #e8b630; }

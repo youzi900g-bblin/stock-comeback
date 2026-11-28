@@ -22,8 +22,12 @@
       const s = raw ? JSON.parse(raw) : null;
       if (s && s.tutorial === "market") s.tutorial = "done"; // 舊版卡住的狀態
       if (s && s.tutorial === "sell") s.tutorial = "pick";   // 舊版教學狀態對應新版
-      if (s && ["backStock", "rest", "wait", "social", "refresh", "read", "buy", "fixGo", "fixPick", "fixDo"].includes(s.tutorial)) { s.tutorial = "done"; s.quest = 0; }   // 這些步驟已改成任務
-      if (s && typeof s.quest === "number" && !s.questV) { if (s.quest >= 2) s.quest += 1; s.questV = 1; }   // 任務表第 3 個新增了「出貨」
+      if (s && ["backStock", "rest", "wait", "social", "refresh", "read", "buy", "fixGo", "fixPick", "fixDo"].includes(s.tutorial)) { s.tutorial = "done"; s.quest = 0; s.questV = 2; }   // 這些步驟已改成任務
+      if (s && typeof s.quest === "number" && s.quest < 99 && (s.questV || 0) < 2) {   // 任務表改版：第 3 個新增「出貨」（v1），再於「出貨」後新增「好評」（v2）
+        if (!s.questV && s.quest >= 2) s.quest += 1;
+        if (s.quest >= 3) s.quest += 1;
+        s.questV = 2;
+      }
       return s;
     } catch (e) { return null; }
   }
@@ -44,7 +48,11 @@
   const repairCost = (it) => Math.max(C.REPAIR_MIN, Math.round(it.base * C.REPAIR_RATE));
   const fixingCount = () => S.wardrobe.filter((i) => i.fixing).length;
   // 每天成交機率（分段表在 config.js 的 SALE_CHANCE）
-  const saleChance = (price, it) => { const r = price / marketPrice(it); return (C.SALE_CHANCE.find(([max]) => r <= max) || [0, 0.03])[1]; };
+  // 賣場評價：分數每 10 分一顆星（至少 1 顆）；星星影響每天成交機率
+  const reviewScore = () => (S && S.review && typeof S.review.score === "number" ? S.review.score : C.REVIEW_START);
+  const reviewStars = () => Math.min(5, Math.max(1, Math.floor(reviewScore() / 10)));
+  const reviewBonus = () => ((reviewStars() - 3) / 2) * C.REVIEW_CHANCE_MAX;
+  const saleChance = (price, it) => { const r = price / marketPrice(it); return Math.min(1, Math.max(0, (C.SALE_CHANCE.find(([max]) => r <= max) || [0, 0.03])[1] + reviewBonus())); };
   const chanceLabel = (p) => (p >= 0.75 ? "很高" : p >= 0.5 ? "高" : p >= 0.25 ? "中" : p >= 0.1 ? "低" : "很低");
   const chanceText = (price, it) => { const p = saleChance(price, it); return `${chanceLabel(p)}（約 ${Math.round(p * 100)}%）`; };
   // 議價：買家出價、還價成功率、向賣家出價成功率（表在 config.js 的 HAGGLE_*）
@@ -137,7 +145,7 @@
   const totalCount = () => S.wardrobe.length + (S.closet || []).length;   // 待售加私人，共用容量
   const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...(S.closet || []).map((i) => i.id), ...S.listings.map((l) => l.item.id));
   function endTutorial() {   // 教學結束：開放社群、開始第一季流行、開始新手任務
-    S.tutorial = "done"; S.quest = 0; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "tutReward" };
+    S.tutorial = "done"; S.quest = 0; S.questV = 2; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "tutReward" };
   }
   // 新手任務：依序一個個出現；S.quest 是目前第幾個（沒有這個欄位＝沒有任務，舊存檔就是這樣）
   let questGuide = false;
@@ -145,6 +153,7 @@
     listAll: () => S.wardrobe.every((i) => i.reward),   // 教學獎勵的衣服不要求上架
     nextDay: () => S.day >= 2,
     ship: () => ((S.stats && S.stats.shipped) || 0) >= 1,
+    review: () => ((S.stats && S.stats.goodReviews) || 0) >= 1,
     buy: () => ((S.stats && S.stats.bought) || 0) >= 1,
     bargain: () => ((S.stats && S.stats.bargained) || 0) >= 1,
     repair: () => ((S.stats && S.stats.repaired) || 0) >= 1,
@@ -232,7 +241,7 @@
     S.day += 1;
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
-    const sell = (l) => { addShipping(l.item, l.price); sales.push({ name: l.item.name, price: l.price, item: l.item }); };
+    const sell = (l) => { addShipping(l.item, l.price); sales.push({ name: l.item.name, price: l.price, item: l.item, buyer: S.shipping[S.shipping.length - 1].buyer }); };
     S.haggles = [];
     S.listings = S.listings.filter((l) => {
       if (Math.random() < saleChance(l.price, l.item)) {   // 每件各抽一次
@@ -252,13 +261,18 @@
 
   // 包貨出貨：成交後商品進「待出貨」，玩家包貨後才收到款項
   const shippingList = () => (S && S.shipping) || [];
-  function addShipping(item, price) { S.shipping = shippingList(); S.shipping.push({ item, price }); }
+  function addShipping(item, price) { S.shipping = shippingList(); S.shipping.push({ item, price, buyer: rnd(C.SOCIAL_HANDLES) }); }
   function packOne(idx) {
     const s = shippingList()[idx];
     if (!s) return;
     S.shipping.splice(idx, 1); S.money += s.price; flashMoney = true;
     S.stats = S.stats || { sold: 0 }; S.stats.shipped = (S.stats.shipped || 0) + 1;
+    const r = s.price / marketPrice(s.item), delta = C.REVIEW_RULE.find(([m]) => r <= m)[1];   // 賣價越接近（低於）市場價，評價越好
+    const kind = delta >= 2 ? "good" : delta > 0 ? "ok" : "bad";
+    S.review = { score: Math.min(C.REVIEW_MAX, Math.max(0, reviewScore() + delta)) };
+    if (kind === "good") S.stats.goodReviews = (S.stats.goodReviews || 0) + 1;
     save();
+    return { buyer: s.buyer || "買家", kind, text: rnd(C.BUYER_COMMENTS[kind]) };
   }
   function completeSale(l, price) {   // 議價成交：商品進待出貨、下架、計入賣出件數
     addShipping(l.item, price); S.listings = S.listings.filter((x) => x !== l);
@@ -390,7 +404,7 @@
       if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」。", quest: true };
       return piece(q.id === "repair" ? ".piece.flawed" : ".piece:not(.rewarditem)", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
     }
-    if (q.id === "ship") {
+    if (q.id === "ship" || q.id === "review") {
       if (modal && modal.type === "pack") return { sel: "[data-pack]", text: "按「包貨」，包好就收到錢。", quest: true };
       if (modal) return null;
       if (view !== "home") return go("home", "回首頁。");
@@ -668,6 +682,7 @@
     }).join("");
     const empty = S.listings.length ? "這個分頁沒有商品。" : "還沒有上架的衣服。到衣櫃挑一件「賣」。";
     return `<div class="banner"><div>${esc(S.player.name)}的賣場</div><small>掛賣 ${S.listings.length} 件</small></div>
+      <div class="rating" aria-label="賣場評價 ${reviewStars()} 顆星">${[1, 2, 3, 4, 5].map((n) => `<span class="star${n <= reviewStars() ? " on" : ""}"></span>`).join("")}<span class="muted">評價 ${reviewScore()} 分，影響每天的成交機率</span></div>
       <div class="mtabs">${tabs}</div>
       <div class="pgrid">${cards || `<p class="muted empty" style="grid-column:1/-1">${empty}</p>`}</div>`;
   }
@@ -727,7 +742,7 @@
     if (modal.type === "summary") {
       const sales = modal.sales;
       const body = sales.length
-        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">$${s.price}</span></div>`).join("") + `<p class="muted">成交的商品要包貨出貨才會收到錢，到首頁按「去包貨」。</p>`
+        ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}<small class="muted">（${esc(s.buyer || "買家")}）</small>${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">$${s.price}</span></div>`).join("") + `<p class="muted">成交的商品要包貨出貨才會收到錢，到首頁按「去包貨」。</p>`
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         ${modal.haggles ? `<p>有 ${modal.haggles} 位買家想殺價，按「好」之後逐一處理。</p>` : ""}
@@ -784,9 +799,9 @@
     }
     if (modal.type === "pack") {
       const list = shippingList();
-      const rows = list.length ? list.map((s, i) => `<div class="kv"><span>${esc(s.item.name)}　$${s.price}</span><button class="btn small" data-pack="${i}">包貨</button></div>`).join("") : `<p class="muted">沒有待出貨的商品了。</p>`;
+      const rows = list.length ? list.map((s, i) => `<div class="kv"><span>${esc(s.item.name)}　$${s.price}<br><small class="muted">${esc(s.buyer || "買家")}</small></span><button class="btn small" data-pack="${i}">包貨</button></div>`).join("") : `<p class="muted">沒有待出貨的商品了。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="包貨" tabindex="-1"><img class="room night" src="art/包貨角落.png" alt="" width="832" height="768"><h3>包貨出貨</h3>
-        <p class="muted">包好出貨，款項就入帳。</p>${rows}
+        <p class="muted">包好出貨，款項就入帳。</p>${modal.last ? `<div class="tip"><b>${esc(modal.last.buyer)}</b>　${modal.last.kind === "good" ? "好評" : modal.last.kind === "ok" ? "普通" : "差評"}<br>「${esc(modal.last.text)}」</div>` : ""}${rows}
         <div class="kv"><span>目前金錢</span><span>$${fmtMoney(S.money)}</span></div>
         <div class="btns"><button class="btn main" id="pack-close">${list.length ? "先離開" : "好"}</button></div></div></div>`;
     }
@@ -1031,9 +1046,9 @@
     }
     const po = $("#pack-open"); if (po) po.onclick = () => { modal = { type: "pack" }; render(); };
     const pc = $("#pack-close"); if (pc) pc.onclick = () => { modal = null; render(); };
-    all("[data-pack]", (b) => b.onclick = () => { packOne(+b.dataset.pack); questCheck(); render(); });
+    all("[data-pack]", (b) => b.onclick = () => { const r = packOne(+b.dataset.pack); if (modal && modal.type === "pack") modal.last = r; questCheck(); render(); });
     const skc = $("#skip-cancel"); if (skc) skc.onclick = () => { modal = null; render(); };
-    const so2 = $("#skip-ok"); if (so2) so2.onclick = () => { S.tutorial = "done"; S.quest = 0; modal = null; save(); render(); };
+    const so2 = $("#skip-ok"); if (so2) so2.onclick = () => { S.tutorial = "done"; S.quest = 0; S.questV = 2; modal = null; save(); render(); };
     const rc = $("#reward-claim");
     if (rc) rc.onclick = () => {
       if (!S.rewardGot) { S.rewardGot = true; S.wardrobe.push({ ...C.TUTORIAL_REWARD, id: nextItemId(), condition: "良好", cost: 0, kept: false, reward: true }); }
