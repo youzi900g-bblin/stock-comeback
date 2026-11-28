@@ -139,6 +139,44 @@
     const gl = q.glasses === "none" ? "" : F.geo.glasses[q.glasses].map(cell).join("");
     return `<svg class="sprite" viewBox="0 0 27 53" role="img" aria-label="${esc(q.name || "你的角色")}">${body}${face}${gl}</svg>`;
   };
+  // 衣物縮圖：取用角色圖層中該件衣物的格子（略過皮膚），依衣物顏色套色，裁到該件的範圍。找不到圖層就退回色塊。
+  const LAYER_KEY = (() => {
+    const m = {};
+    C.TOPS.forEach((o) => { m[o.name] = "top:" + o.id; });
+    C.BOTTOMS.forEach((o) => { m[o.name] = "bottom:" + o.id; });
+    C.JACKETS.forEach((o) => { if (o.id !== "none") m[o.name] = "jacket:" + o.id; });
+    C.SHOES.forEach((o) => { m[o.name] = `shoes:${o.id}:pants`; });
+    C.BAGS.forEach((o) => { if (o.id !== "none") m[o.name] = "bag:" + o.id; });
+    return m;
+  })();
+  const hiOf = (c) => c.map((v) => Math.min(255, Math.floor(v * 1.28) + 8)), loOf = (c) => c.map((v) => Math.floor(v * 0.72));
+  const thumbCache = {};
+  function thumb(i) {
+    const F = window.PLAYER_FACE, key = LAYER_KEY[i.name], ls = key && F && F.layers[key];
+    if (!ls) return `<div class="swatch-item" style="background:${i.color}"></div>`;
+    const ck = key + i.color;
+    if (!thumbCache[ck]) {
+      const base = rgb(i.color), pal = { shoe: i.color, shoe_lo: toHex(loOf(base)), bag: i.color, bag_hi: toHex(hiOf(base)), bag_lo: toHex(loOf(base)) };
+      const resolve = (spec) => {
+        if (spec[0] === "#") return spec;
+        if (spec.startsWith("skin")) return null;
+        const [role, op] = spec.split(":"), c = rgb(pal[role]);
+        return toHex(op === "dk" ? dk(c) : c);
+      };
+      let x0 = 99, x1 = -1, y0 = 99, y1 = -1, cells = "";
+      for (const l of ls) {
+        const cols = l.cols.map(resolve);
+        for (const [x, y, w, ci] of l.runs) {
+          if (!cols[ci]) continue;
+          cells += rect(x, y, w, cols[ci]);
+          x0 = Math.min(x0, x); x1 = Math.max(x1, x + w); y0 = Math.min(y0, y); y1 = Math.max(y1, y + 1);
+        }
+      }
+      const s = Math.max(x1 - x0, y1 - y0) + 2, vx = x0 - (s - (x1 - x0)) / 2, vy = y0 - (s - (y1 - y0)) / 2;
+      thumbCache[ck] = `<svg class="sprite" viewBox="${vx} ${vy} ${s} ${s}" role="img" aria-label="${esc(i.name)}">${cells}</svg>`;
+    }
+    return `<div class="swatch-item thumb">${thumbCache[ck]}</div>`;
+  }
   const staleListings = () => S.listings.filter((l) => S.day - l.listedDay > C.STALE_DAYS);
 
   // ---------- 畫面 ----------
@@ -263,10 +301,10 @@
       <button class="btn small alt" data-keep="${i.id}" aria-pressed="${i.kept}">${i.kept ? "不留" : "留"}</button>`;
     const name = `${esc(i.name)}${i.kept ? ' <span class="badge">留</span>' : ""}`;
     if (layout === "grid") {
-      return `<div class="card"><div class="swatch-item" style="background:${i.color}"></div>
+      return `<div class="card">${thumb(i)}
         <div>${name}</div><div class="muted">${meta}</div>${val}<div class="btns2">${acts}</div></div>`;
     }
-    return `<div class="item"><div class="swatch-item" style="background:${i.color}"></div>
+    return `<div class="item">${thumb(i)}
       <div class="info"><div>${name}</div><div class="muted">${meta}・${esc(i.condition)}</div>${val}</div>
       <div class="acts">${acts}</div></div>`;
   }
@@ -291,7 +329,7 @@
       const d = S.day - l.listedDay;
       const stale = d > C.STALE_DAYS;
       return `<div class="item">
-        <div class="swatch-item" style="background:${l.item.color}"></div>
+        ${thumb(l.item)}
         <div class="info"><div>${esc(l.item.name)}</div>
           <div>標價 $${l.price}・已掛 ${d} 天</div>
           ${tutDone() ? `<div class="muted">市場價 $${marketPrice(l.item)}・約 ${Math.max(1, l.waitDays - d)} 天後成交</div>` : ""}
@@ -316,7 +354,7 @@
            <div class="kv"><span>預計等待</span><span id="eta">${p > 0 ? waitDays(p, it) + " 天" : "—"}</span></div>
            <div class="warn" id="high" ${p > mk * C.HIGH_PRICE_RATIO ? "" : "hidden"}>標價遠高於市場價，會等很久。</div>`
         : `<p class="muted">先隨意標一個價格。標得越高，通常等得越久。</p>`;
-      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><h3>${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3>
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="${modal.edit ? "改價" : "上架"}" tabindex="-1"><div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(it)}<h3 style="margin:0">${modal.edit ? "改價" : "上架"}：${esc(it.name)}</h3></div>
         ${prices}
         <div class="stepper">
           <button class="btn alt" data-step="-${C.PRICE_STEP_LARGE}">-${C.PRICE_STEP_LARGE}</button>
