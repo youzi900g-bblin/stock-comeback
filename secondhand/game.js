@@ -45,6 +45,15 @@
   const saleChance = (price, it) => { const r = price / marketPrice(it); return (C.SALE_CHANCE.find(([max]) => r <= max) || [0, 0.03])[1]; };
   const chanceLabel = (p) => (p >= 0.75 ? "很高" : p >= 0.5 ? "高" : p >= 0.25 ? "中" : p >= 0.1 ? "低" : "很低");
   const chanceText = (price, it) => { const p = saleChance(price, it); return `${chanceLabel(p)}（約 ${Math.round(p * 100)}%）`; };
+  // 議價：買家出價、還價成功率、向賣家出價成功率（表在 config.js 的 HAGGLE_*）
+  const haggleOffer = (l) => { const r = l.price / marketPrice(l.item), f = C.HAGGLE_OFFER.find(([m]) => r <= m)[1]; return Math.max(C.PRICE_MIN, Math.round(l.price * f)); };
+  const counterChance = (offer, ask, p) => {
+    const t = ask > offer ? Math.min(1, Math.max(0, (p - offer) / (ask - offer))) : 1, T = C.HAGGLE_COUNTER;
+    for (let k = 1; k < T.length; k++) if (t <= T[k][0]) return T[k - 1][1] + (T[k][1] - T[k - 1][1]) * (t - T[k - 1][0]) / (T[k][0] - T[k - 1][0]);
+    return T[T.length - 1][1];
+  };
+  const buyChance = (price, ask) => (C.HAGGLE_BUY.find(([m]) => price / ask >= m) || [0, 0])[1];
+  const pct = (p) => Math.round(p * 100) + "%";
   const tutDone = () => S.tutorial === "done";
   const socialOpen = () => tutDone();
   const findItem = (id) => S.wardrobe.find((i) => i.id === id);
@@ -134,6 +143,7 @@
     listAll: () => S.wardrobe.length === 0,
     nextDay: () => S.day >= 2,
     buy: () => ((S.stats && S.stats.bought) || 0) >= 1,
+    bargain: () => ((S.stats && S.stats.bargained) || 0) >= 1,
     repair: () => ((S.stats && S.stats.repaired) || 0) >= 1,
   };
   const curQuest = () => (S && tutDone() && typeof S.quest === "number" ? C.QUESTS[S.quest] : null);
@@ -151,15 +161,16 @@
     return `<div class="tip quest"><b>新手任務　${S.quest + 1}/${C.QUESTS.length}</b>　${esc(q.title)}<br><span class="muted">${esc(q.desc)}</span><br>
       <button class="btn small" id="quest-go">帶我去</button></div>`;
   }
-  function buyOffer(oid) {
+  function buyOffer(oid, price, silent) {
     const so = socialState(), o = so.offers.find((x) => x.oid === oid);
-    if (!o || S.money < o.ask || totalCount() >= C.WARDROBE_CAPACITY) return;
-    S.money -= o.ask; flashMoney = true;
-    const bought = { ...o.item, id: nextItemId(), cost: o.ask };
+    if (price === undefined) price = o && o.ask;
+    if (!o || S.money < price || totalCount() >= C.WARDROBE_CAPACITY) return;
+    S.money -= price; flashMoney = true;
+    const bought = { ...o.item, id: nextItemId(), cost: price };
     S.wardrobe.push(bought);
     so.offers = so.offers.filter((x) => x.oid !== oid);
     S.stats = S.stats || { sold: 0 }; S.stats.bought = (S.stats.bought || 0) + 1;
-    save(); showToast(`已買下「${o.item.name}」$${o.ask}`);
+    save(); if (!silent) showToast(`已買下「${o.item.name}」$${price}`);
   }
 
   // 新遊戲：創角穿的衣物自動放進私人衣櫃並穿在身上；待售衣櫃是隨機的基本款
@@ -213,19 +224,36 @@
     S.social = { left: C.SOCIAL_REFRESHES, offers: [], seq: (S.social && S.social.seq) || 0 };
     const sales = [];
     const sell = (l) => { S.money += l.price; sales.push({ name: l.item.name, price: l.price, item: l.item }); };
+    S.haggles = [];
     S.listings = S.listings.filter((l) => {
-      if (Math.random() < saleChance(l.price, l.item)) { sell(l); return false; }   // 每件各抽一次
+      if (Math.random() < saleChance(l.price, l.item)) {   // 每件各抽一次
+        const offer = haggleOffer(l);
+        if (offer < l.price && Math.random() < C.HAGGLE_CHANCE) { S.haggles.push({ id: l.item.id, offer }); return true; }   // 買家殺價：商品留著，等玩家回應
+        sell(l); return false;
+      }
       return true;
     });
     S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     const fixed = S.wardrobe.filter((i) => i.fixing);   // 整理中的衣服，隔天完成：提升一級（有瑕疵 → 良好）
     fixed.forEach((i) => { i.condition = "良好"; i.fixing = false; delete i.flaw; });
-    modal = { type: "summary", sales, fixed: fixed.map((i) => i.name) };
+    modal = { type: "summary", sales, fixed: fixed.map((i) => i.name), haggles: S.haggles.length };
     if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
 
+  function completeSale(l, price) {   // 議價成交：收款、下架、計入賣出件數
+    S.money += price; flashMoney = true; S.listings = S.listings.filter((x) => x !== l);
+    S.stats = S.stats || { sold: 0 }; S.stats.sold += 1;
+  }
+  function openHaggle() {   // 依序處理待回應的買家殺價
+    while (S.haggles && S.haggles.length) {
+      const h = S.haggles[0], l = S.listings.find((x) => x.item.id === h.id);
+      if (l) return { type: "haggle", item: l.item, offer: h.offer, ask: l.price, counter: Math.round((h.offer + l.price) / 2), result: null };
+      S.haggles.shift();
+    }
+    return null;
+  }
   function showToast(msg) {
     toast = msg; render();
     setTimeout(() => { if (toast === msg) { toast = ""; render(); } }, 1800);
@@ -345,6 +373,13 @@
       return piece(q.id === "repair" ? ".piece.flawed" : ".piece", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
     }
     if (q.id === "nextDay") return view !== "home" ? go("home", "回首頁。") : { sel: "#nextday", text: "按「進入下一天」。", quest: true };
+    if (q.id === "bargain") {
+      if (modal && modal.type === "bargain" && !modal.result) return { sel: "#bargain-go", text: "按「出價」。出價越接近開價，成功機率越高。", quest: true };
+      if (modal) return null;
+      if (view !== "social") return go("social", "點下方的「社群」。");
+      const so = socialState();
+      return so.offers.length ? { sel: "[data-haggle]:not([disabled])", text: "挑一則，按「還價」。", quest: true } : { sel: "#refresh", text: "按「刷新看看」。", quest: true };
+    }
     if (q.id === "buy") {
       if (modal) return null;
       if (view !== "social") return go("social", "點下方的「社群」。");
@@ -414,6 +449,7 @@
     ensureCloset();
     if (S && S.tutorial === "done" && !S.season) rollSeason();
     questCheck();
+    if (S && view !== "create" && S.haggles && S.haggles.length && !modal) modal = openHaggle();
     const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
@@ -572,6 +608,7 @@
       const note = o.item.condition === "有瑕疵" && o.item.flaw ? `<div class="warn">瑕疵：${esc(o.item.flaw)}</div>` : "";
       const chips = flaw + o.item.tags.map((t) => `<span class="chip">${esc(t)}${tagCoef(t) > 0 ? " ▲" : tagCoef(t) < 0 ? " ▼" : ""}</span>`).join("");
       const can = S.money >= o.ask && !full;
+      const minBid = Math.ceil(o.ask * C.HAGGLE_BUY_MIN), canBid = !full && o.ask >= 2 && S.money >= minBid;
       return `<article class="post"><div class="hd"><div class="av" style="background:${o.color}" aria-hidden="true">${esc(o.who[1].toUpperCase())}</div>
           <div class="nm">${esc(o.who)}<small>${o.mins} 分鐘前</small></div></div>
         <div>${esc(o.text)}</div>
@@ -579,6 +616,7 @@
         <div><b>${esc(o.item.name)}</b>　<span class="muted">${esc(o.item.type)}</span></div>${note}
         <div class="price"><b>開價 $${o.ask}</b><span class="muted">市場價 $${mk}</span>${diff}</div>
         <div class="ft">${HEART}<span>${o.likes}</span>${CHAT}<span>${o.cm}</span>${chips}<span class="sp"></span>
+          <button class="btn small alt" data-haggle="${o.oid}" ${canBid ? "" : "disabled"}>還價</button>
           <button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></article>`;
     }).join("");
     const empty = !so.offers.length ? "還沒有貨。按「刷新看看」。" : "這個分頁目前沒有貨。";
@@ -630,12 +668,41 @@
         <div class="btns"><button class="btn alt" id="cancel">取消</button><button class="btn main" id="confirm-price">${modal.edit ? "確定" : "上架"}</button></div>
       </div></div>`;
     }
+    if (modal.type === "haggle") {
+      const m = modal, mk = marketPrice(m.item);
+      if (m.result) return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="殺價結果" tabindex="-1"><h3>買家殺價：${esc(m.item.name)}</h3>
+        <p class="${m.result.ok ? "money-up" : "muted"}">${esc(m.result.text)}</p>
+        <div class="btns"><button class="btn main" id="haggle-ok">好</button></div></div></div>`;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="買家殺價" tabindex="-1">
+        <div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(m.item)}<h3 style="margin:0">買家殺價：${esc(m.item.name)}</h3></div>
+        <div class="prices"><div class="p-base"><small>你的標價</small>$${m.ask}</div><div class="p-mkt"><small>市場價</small>$${mk}</div><div class="p-you"><small>買家出價</small>$${m.offer}</div></div>
+        <p class="muted" style="margin:6px 0">還價只有一次機會，越接近買家出價越容易成功。</p>
+        <div class="kv"><span>你的還價 <b id="hc-p">$${m.counter}</b></span><span>成功機率 <b id="hc-c">${pct(counterChance(m.offer, m.ask, m.counter))}</b></span></div>
+        <input id="hc-rng" type="range" min="${m.offer}" max="${m.ask}" value="${m.counter}" aria-label="還價">
+        <div class="btns"><button class="btn alt" id="haggle-refuse">拒絕</button><button class="btn alt" id="haggle-counter">還價</button><button class="btn main" id="haggle-accept">接受 $${m.offer}</button></div>
+      </div></div>`;
+    }
+    if (modal.type === "bargain") {
+      const m = modal, mk = marketPrice(m.item), lo = Math.ceil(m.ask * C.HAGGLE_BUY_MIN);
+      if (m.result) return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="議價結果" tabindex="-1"><h3>議價：${esc(m.item.name)}</h3>
+        <p class="${m.result.ok ? "money-up" : "warn"}">${esc(m.result.text)}</p>
+        <div class="btns"><button class="btn main" id="bargain-ok">好</button></div></div></div>`;
+      return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="向賣家出價" tabindex="-1">
+        <div class="kv" style="align-items:center;justify-content:flex-start;gap:10px">${thumb(m.item)}<h3 style="margin:0">議價：${esc(m.item.name)}</h3></div>
+        <div class="prices"><div class="p-base"><small>開價</small>$${m.ask}</div><div class="p-mkt"><small>市場價</small>$${mk}</div><div class="p-you"><small>你的出價</small><span id="bg-p">$${m.price}</span></div></div>
+        <p class="muted" style="margin:6px 0">只有一次機會。失敗的話，賣家就不理你了。</p>
+        <div class="kv"><span>成功機率</span><b id="bg-c">${pct(buyChance(m.price, m.ask))}</b></div>
+        <input id="bg-rng" type="range" min="${lo}" max="${m.ask - 1}" value="${m.price}" aria-label="出價">
+        <div class="btns"><button class="btn alt" id="bargain-cancel">取消</button><button class="btn main" id="bargain-go"${S.money >= m.price ? "" : " disabled"}>出價</button></div>
+      </div></div>`;
+    }
     if (modal.type === "summary") {
       const sales = modal.sales;
       const body = sales.length
         ? sales.map((s) => `<div class="kv"><span>${esc(s.name)}${s.item.cost ? `<small class="muted">（成本 $${s.item.cost}）</small>` : ""}</span><span class="money-up">+$${s.price}</span></div>`).join("")
         : `<p class="muted">今天沒有成交。</p>`;
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
+        ${modal.haggles ? `<p>有 ${modal.haggles} 位買家想殺價，按「好」之後逐一處理。</p>` : ""}
         ${(modal.fixed || []).map((n) => `<div class="kv"><span>整理完成：${esc(n)}</span><span class="money-up">良好</span></div>`).join("")}
         ${modal.season ? `<p>換季了：流行 <b>${esc(modal.season.up)}</b> ▲，退燒 <b>${esc(modal.season.down)}</b> ▼。</p>` : ""}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
@@ -811,6 +878,44 @@
     };
     const lx = $("#lin-close"); if (lx) lx.onclick = () => { modal = null; render(); };
     const rf = $("#refresh"); if (rf) rf.onclick = refreshSocial;
+    // 買家殺價
+    const hl = () => S.listings.find((x) => x.item.id === modal.item.id);
+    const hdone = (ok, text) => { S.haggles.shift(); modal.result = { ok, text }; save(); render(); };
+    const hr = $("#hc-rng");
+    if (hr) hr.addEventListener("input", () => { modal.counter = +hr.value; $("#hc-p").textContent = "$" + modal.counter; $("#hc-c").textContent = pct(counterChance(modal.offer, modal.ask, modal.counter)); });
+    const ha = $("#haggle-accept"); if (ha) ha.onclick = () => { const l = hl(); if (l) completeSale(l, modal.offer); hdone(true, `以 $${modal.offer} 成交。`); };
+    const hc2 = $("#haggle-counter");
+    if (hc2) hc2.onclick = () => {
+      const l = hl(), p = modal.counter;
+      if (l && Math.random() < counterChance(modal.offer, modal.ask, p)) { completeSale(l, p); hdone(true, `買家答應了，以 $${p} 成交。`); }
+      else hdone(false, "買家不接受，這次沒有成交。商品繼續掛在賣場。");
+    };
+    const hf = $("#haggle-refuse"); if (hf) hf.onclick = () => hdone(false, "你拒絕了，商品繼續掛在賣場。");
+    const hk = $("#haggle-ok"); if (hk) hk.onclick = () => { modal = null; render(); };
+    // 向社群賣家出價
+    all("[data-haggle]", (b) => b.onclick = () => {
+      const o = socialState().offers.find((x) => x.oid === +b.dataset.haggle);
+      if (!o) return;
+      const lo = Math.ceil(o.ask * C.HAGGLE_BUY_MIN), price = Math.min(o.ask - 1, Math.max(lo, Math.round(o.ask * C.HAGGLE_BUY_DEFAULT)));
+      modal = { type: "bargain", oid: o.oid, item: o.item, ask: o.ask, price, result: null }; render();
+    });
+    const br = $("#bg-rng");
+    if (br) br.addEventListener("input", () => { modal.price = +br.value; $("#bg-p").textContent = "$" + modal.price; $("#bg-c").textContent = pct(buyChance(modal.price, modal.ask)); $("#bargain-go").disabled = S.money < modal.price; });
+    const bc = $("#bargain-cancel"); if (bc) bc.onclick = () => { modal = null; render(); };
+    const bgo = $("#bargain-go");
+    if (bgo) bgo.onclick = () => {
+      const m = modal;
+      if (S.money < m.price) return;
+      if (Math.random() < buyChance(m.price, m.ask)) {
+        buyOffer(m.oid, m.price, true); S.stats.bargained = (S.stats.bargained || 0) + 1;
+        modal.result = { ok: true, text: `賣家答應了，以 $${m.price} 買下「${m.item.name}」。` };
+      } else {
+        const so = socialState(); so.offers = so.offers.filter((x) => x.oid !== m.oid);
+        modal.result = { ok: false, text: "賣家不接受，這則貼文就不能買了。" };
+      }
+      save(); render();
+    };
+    const bk = $("#bargain-ok"); if (bk) bk.onclick = () => { modal = null; render(); };
     all("[data-buy]", (b) => b.onclick = () => buyOffer(+b.dataset.buy));
     const ch = $("#close-hint"); if (ch) ch.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
