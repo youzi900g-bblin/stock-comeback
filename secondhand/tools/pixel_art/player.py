@@ -81,8 +81,8 @@ def _hoodie_extra(cv, t):
     # 領口依使用者手繪稿：帽緣兩側改回帽色，第 19 列領口線與兩個角落改成邊線色
     o = dk(t['base'])
     for x in (CX-4, CX-3, CX+3, CX+4): cv.px(x, 18, t['base'])
-    for x in (CX-4, CX-3, CX-2, CX+3, CX+4): cv.px(x, 19, o)
-    cv.px(CX-2, 20, o); cv.px(CX+3, 20, o)
+    for x in (CX-4, CX-3, CX+3, CX+4): cv.px(x, 19, o)
+    cv.px(CX-3, 20, o); cv.px(CX+3, 20, o)
 
 def _tank(skin, shade):
     """白色吊嘎（背心）：細肩帶、方領帶圓角，無袖。回傳 _top 同樣格式的設定。"""

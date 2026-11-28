@@ -342,18 +342,15 @@ def build(P,want_log=False):
         cv.L='hood_over'
         snap={(x,y):cv.c[y][x] for y in range(19,23) for x in range(W)}
         cv.paint(mask_poly('ell',[CX-nw-4,15,CX+nw+4,21]),P['hood'])
-        # 依使用者手繪稿：帽緣只留到第 20 列（外加 (CX-2,21) 一格），其下露出外套，第 21 列外套整排壓成外套邊線色
+        # 依使用者手繪稿：帽緣只留到第 20 列（左右對稱），其下露出外套，第 21 列外套整排壓成外套邊線色
         hd=P['hood']; ho=dk(hd); hl=P['hood_lo']; log=cv.log['hood_over']
         for (x,y) in [k for k in log if k[1]>=21]:
             cv.c[y][x]=snap[(x,y)]; del log[(x,y)]
         jo=dk(jk['base'])
-        for x in range(CX-4,CX+5):
-            if x!=CX-2: cv.px(x,21,jo)   # 外套第 21 列的邊線色
+        for x in range(CX-4,CX+5): cv.px(x,21,jo)   # 外套第 21 列的邊線色
         cv.px(CX,22,jo)
-        cv.px(CX-2,21,ho)
-        cv.px(CX-5,19,ho)
-        for x in range(CX-4,CX-2): cv.px(x,20,ho)
-        for x in range(CX-2,CX+2): cv.px(x,20,hl)
+        for x in range(CX-4,CX-1): cv.px(x,20,ho)
+        for x in range(CX-1,CX+2): cv.px(x,20,hl)
         for x in range(CX+2,CX+5): cv.px(x,20,ho)
     cv.L='bag_front'
     if bg:
