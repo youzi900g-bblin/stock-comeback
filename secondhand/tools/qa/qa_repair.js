@@ -7,6 +7,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   p.on('pageerror', (e) => errs.push(String(e))); p.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
   await p.goto('file://' + path.resolve(__dirname, '../../index.html')); await p.evaluate(() => localStorage.clear()); await p.reload();
   await p.fill('#nm', '小雨'); await p.click('#start');
+  const clearHaggle = async () => { while (await p.locator('#haggle-refuse').count()) { await p.click('#haggle-refuse'); await p.click('#haggle-ok'); } };
   const st = () => p.evaluate(() => { const s = window.__game.state; return { t: s.tutorial, quest: s.quest, money: s.money, day: s.day, stock: s.wardrobe.map((i) => [i.name, i.condition, !!i.fixing]) }; });
   // 教學
   await p.click('[data-nav="wardrobe"]'); await p.click('.piece.tutfirst'); await p.click('[data-sell]');
@@ -22,7 +23,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.click('[data-nav="social"]'); await p.click('#close-hint'); await p.click('[data-nav="home"]');
   console.log('任務 1 後', JSON.stringify(await st()));
   // 任務 2：下一天
-  await p.click('#quest-go'); await p.click('#nextday'); await p.click('#close-summary');
+  await p.click('#quest-go'); await p.click('#nextday'); await p.click('#close-summary'); await clearHaggle();
   console.log('任務 2 後', JSON.stringify(await st()));
   // 任務 3：買貨（保證第一則是有瑕疵、買得起）
   await p.evaluate(() => { window.__game.state.money = 300; });
@@ -34,7 +35,7 @@ const { chromium } = require('playwright'); const path = require('path'); const 
   await p.click('[data-nav="wardrobe"]'); await p.click('[data-wseg="stock"]'); await p.click('.piece.flawed'); await p.screenshot({ path: path.join(SP, 'quest_fix.png') });
   await p.click('[data-fix]');
   console.log('任務 4 後', JSON.stringify(await st()));
-  await p.click('[data-nav="home"]'); await p.click('#nextday'); await p.click('#close-summary');
+  await p.click('[data-nav="home"]'); await p.click('#nextday'); await p.click('#close-summary'); await clearHaggle();
   console.log('隔天', JSON.stringify(await st()));
   console.log('errors', errs); await b.close();
 })();
