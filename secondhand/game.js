@@ -21,6 +21,7 @@
       const s = raw ? JSON.parse(raw) : null;
       if (s && s.tutorial === "market") s.tutorial = "done"; // 舊版卡住的狀態
       if (s && s.tutorial === "sell") s.tutorial = "pick";   // 舊版教學狀態對應新版
+      if (s && ["backStock", "rest", "wait", "social", "refresh", "read", "buy", "fixGo", "fixPick", "fixDo"].includes(s.tutorial)) { s.tutorial = "done"; s.quest = 0; }   // 這些步驟已改成任務
       return s;
     } catch (e) { return null; }
   }
@@ -45,7 +46,7 @@
   const chanceLabel = (p) => (p >= 0.75 ? "很高" : p >= 0.5 ? "高" : p >= 0.25 ? "中" : p >= 0.1 ? "低" : "很低");
   const chanceText = (price, it) => { const p = saleChance(price, it); return `${chanceLabel(p)}（約 ${Math.round(p * 100)}%）`; };
   const tutDone = () => S.tutorial === "done";
-  const socialOpen = () => tutDone() || ["social", "refresh", "read", "buy"].includes(S.tutorial);   // 教學接到社群的步驟中，社群分頁就開放
+  const socialOpen = () => tutDone();
   const findItem = (id) => S.wardrobe.find((i) => i.id === id);
 
   // ---------- 林的任務鏈（內容為佔位，見 config.js）----------
@@ -101,28 +102,54 @@
     const pool = socialPool(), offers = [];
     for (let k = 0; k < C.SOCIAL_BATCH; k++) {
       const item = rnd(pool)();
-      if (Math.random() < C.FLAW_CHANCE) item.condition = "有瑕疵";
+      if (Math.random() < C.FLAW_CHANCE) { item.condition = "有瑕疵"; item.flaw = rnd(C.FLAW_NOTES); }
       const f = C.SOCIAL_PRICE_MIN + Math.random() * (C.SOCIAL_PRICE_MAX - C.SOCIAL_PRICE_MIN);
       const ask = Math.max(C.SOCIAL_PRICE_ROUND, Math.round(marketPrice(item) * f / C.SOCIAL_PRICE_ROUND) * C.SOCIAL_PRICE_ROUND);
       offers.push({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1 + Math.floor(Math.random() * 55),
-        text: rnd(C.SOCIAL_LINES), likes: Math.floor(Math.random() * 16), cm: Math.floor(Math.random() * 5) });
+        text: lineFor(item), likes: Math.floor(Math.random() * 16), cm: Math.floor(Math.random() * 5) });
     }
-    if (S.tutorial === "refresh") {   // 教學：第一則保證是低於市場價、而且買得起的貨
+    const q = curQuest();
+    if (q && (q.id === "buy" || q.id === "repair") && !S.wardrobe.some((i) => i.condition === "有瑕疵")) {   // 任務要修補：保證有一則有瑕疵、便宜、買得起的貨
       const R = C.SOCIAL_PRICE_ROUND, item = pool.map((f) => f()).sort((a, b) => marketPrice(a) - marketPrice(b))[0];
-      item.condition = "有瑕疵";   // 教學要教修補：第一則保證是有瑕疵的貨
+      item.condition = "有瑕疵"; item.flaw = rnd(C.FLAW_NOTES);
       const mk = marketPrice(item);
       const ask = Math.min(Math.max(R, Math.round(mk * 0.7 / R) * R), Math.max(R, Math.floor(Math.max(0, S.money - repairCost(item)) / R) * R));
-      offers.unshift({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1, text: rnd(C.SOCIAL_LINES), likes: 8, cm: 1 });
-      offers.length = C.SOCIAL_BATCH; S.tutorial = "read";
+      offers.unshift({ oid: ++so.seq, item, ask, who: rnd(C.SOCIAL_HANDLES), color: rnd(C.SOCIAL_COLORS), mins: 1, text: lineFor(item), likes: 8, cm: 1 });
+      offers.length = C.SOCIAL_BATCH;
     }
     offers.sort((x, y) => x.mins - y.mins);
     so.offers = offers; // 沒買的貨隨刷新消失
     save(); render();
   }
+  // 貼文文案：有瑕疵的貨不能寫「狀況良好」「沒穿過幾次」
+  const lineFor = (item) => rnd(item.condition === "有瑕疵" ? C.SOCIAL_LINES.filter((s) => !/良好|沒穿過/.test(s)) : C.SOCIAL_LINES);
   const totalCount = () => S.wardrobe.length + (S.closet || []).length;   // 待售加私人，共用容量
   const nextItemId = () => 1 + Math.max(0, ...S.wardrobe.map((i) => i.id), ...(S.closet || []).map((i) => i.id), ...S.listings.map((l) => l.item.id));
-  function endTutorial() {   // 教學結束，開始第一季流行
-    S.tutorial = "done"; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "seasonHint", tutEnd: true };
+  function endTutorial() {   // 教學結束：開放社群、開始第一季流行、開始新手任務
+    S.tutorial = "done"; S.quest = 0; questGuide = false; rollSeason(); S.seen = { ...(S.seen || {}), season: true }; modal = { type: "seasonHint", tutEnd: true };
+  }
+  // 新手任務：依序一個個出現；S.quest 是目前第幾個（沒有這個欄位＝沒有任務，舊存檔就是這樣）
+  let questGuide = false;
+  const QUEST_DONE = {
+    listAll: () => S.wardrobe.length === 0,
+    nextDay: () => S.day >= 2,
+    buy: () => ((S.stats && S.stats.bought) || 0) >= 1,
+    repair: () => ((S.stats && S.stats.repaired) || 0) >= 1,
+  };
+  const curQuest = () => (S && tutDone() && typeof S.quest === "number" ? C.QUESTS[S.quest] : null);
+  function questCheck() {
+    if (!curQuest()) return;
+    while (curQuest() && QUEST_DONE[curQuest().id]()) {
+      const q = curQuest(); S.quest += 1; questGuide = false;
+      toast = `任務完成：${q.title}`; setTimeout(() => { if (toast.startsWith("任務完成")) { toast = ""; render(); } }, 2400);
+    }
+    if (!curQuest()) S.quest = C.QUESTS.length;
+  }
+  function questCard() {
+    const q = curQuest();
+    if (!q) return "";
+    return `<div class="tip quest"><b>新手任務　${S.quest + 1}/${C.QUESTS.length}</b>　${esc(q.title)}<br><span class="muted">${esc(q.desc)}</span><br>
+      <button class="btn small" id="quest-go">帶我去</button></div>`;
   }
   function buyOffer(oid) {
     const so = socialState(), o = so.offers.find((x) => x.oid === oid);
@@ -131,10 +158,7 @@
     const bought = { ...o.item, id: nextItemId(), cost: o.ask };
     S.wardrobe.push(bought);
     so.offers = so.offers.filter((x) => x.oid !== oid);
-    if (S.tutorial === "buy") {   // 買下的是有瑕疵的貨：接著教修補；錢不夠修補就直接結束教學
-      if (bought.condition === "有瑕疵" && S.money >= repairCost(bought)) { S.tutorial = "fixGo"; S.tutFix = bought.id; wardView = "stock"; cat = "全部"; }
-      else endTutorial();
-    }
+    S.stats = S.stats || { sold: 0 }; S.stats.bought = (S.stats.bought || 0) + 1;
     save(); showToast(`已買下「${o.item.name}」$${o.ask}`);
   }
 
@@ -193,16 +217,11 @@
       if (Math.random() < saleChance(l.price, l.item)) { sell(l); return false; }   // 每件各抽一次
       return true;
     });
-    if (S.tutorial === "wait" && !sales.length && S.listings.length) {   // 教學保底：第一次結算至少成交 1 件（挑成交機會最高的）
-      const best = S.listings.reduce((a, b) => (saleChance(b.price, b.item) > saleChance(a.price, a.item) ? b : a));
-      sell(best); S.listings = S.listings.filter((l) => l !== best);
-    }
     S.stats = S.stats || { sold: 0 }; S.stats.sold += sales.length;
     const fixed = S.wardrobe.filter((i) => i.fixing);   // 整理中的衣服，隔天完成：提升一級（有瑕疵 → 良好）
-    fixed.forEach((i) => { i.condition = "良好"; i.fixing = false; });
+    fixed.forEach((i) => { i.condition = "良好"; i.fixing = false; delete i.flaw; });
     modal = { type: "summary", sales, fixed: fixed.map((i) => i.name) };
-    if (S.tutorial === "wait") { S.tutorial = "social"; modal.tutSocial = true; }
-    else if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
+    if (S.season && S.day - S.season.start >= C.SEASON_DAYS) { rollSeason(); modal.season = S.season; }
     if (sales.length) flashMoney = true;
     save(); render();
   }
@@ -314,47 +333,47 @@
   }
   // ---------- 教學聚光燈：只亮要點的地方，其餘壓暗且點不到 ----------
   let tutSub = 0, spotKey = "", spotT = null, placeSpot = null;
+  function questSpec() {   // 按「帶我去」之後的指路（只亮要按的地方，可隨時按「不用帶路」離開）
+    const q = curQuest(), go = (id, text) => ({ sel: `[data-nav="${id}"]`, text, quest: true });
+    if (!q || !questGuide) return null;
+    const piece = (sel, text) => ({ sel, text, quest: true });
+    if (q.id === "listAll" || q.id === "repair") {
+      if (modal && modal.type === "price") return { sel: "#confirm-price", text: "按「上架」。", quest: true };
+      if (modal && modal.type === "item") return q.id === "repair" ? { sel: ".sheet [data-fix]", text: "按「修補」，付費整理，隔天完成。", quest: true } : { sel: ".sheet [data-sell]", text: "按「賣」。", quest: true };
+      if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
+      if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」。", quest: true };
+      return piece(q.id === "repair" ? ".piece.flawed" : ".piece", q.id === "repair" ? "點這件有瑕疵的衣服。" : "點一件衣服。");
+    }
+    if (q.id === "nextDay") return view !== "home" ? go("home", "回首頁。") : { sel: "#nextday", text: "按「進入下一天」。", quest: true };
+    if (q.id === "buy") {
+      if (modal) return null;
+      if (view !== "social") return go("social", "點下方的「社群」。");
+      const so = socialState();
+      return so.offers.length ? { sel: "[data-buy]:not([disabled])", text: "挑一件，按「買下」。", quest: true } : { sel: "#refresh", text: "按「刷新看看」。", quest: true };
+    }
+    return null;
+  }
   function tutSpec() {
     const t = S.tutorial, go = (id, text) => ({ sel: `[data-nav="${id}"]`, text });
-    if (t === "goWardrobe") return go("wardrobe", "第 1 步　點下方的「衣櫃」，打開你的衣櫃。");
+    if (t === "done") return questSpec();
+    if (t === "goWardrobe") return go("wardrobe", "點下方的「衣櫃」，打開你的衣櫃。");
     if (t === "pick" || t === "keep") {
       if (modal && modal.type === "item") return t === "pick"
-        ? { sel: ".sheet [data-sell]", text: "第 3 步　按「賣」，把這件衣服拿去賣。" }
-        : { sel: ".sheet [data-keepit]", text: "第 6 步　按「留」，把它放進你的私人衣櫃。" };
+        ? { sel: ".sheet [data-sell]", text: "按「賣」，把這件衣服拿去賣。" }
+        : { sel: ".sheet [data-keepit]", text: "按「留」，把它放進你的私人衣櫃。" };
       if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
       if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」，回到要賣的衣服。" };
-      return { sel: ".piece.tutfirst", text: t === "pick" ? "第 2 步　點這件衣服。" : "第 5 步　這件不賣，留著自己穿。點這件衣服。" };
-    }
-    if (t === "backStock") {
-      if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
-      return { sel: '[data-wseg="stock"]', text: "第 9 步　穿好了。點「待售」，回到要賣的衣服。" };
+      return { sel: ".piece.tutfirst", text: t === "pick" ? "點這件衣服。" : "這件不賣，留著自己穿。點這件衣服。" };
     }
     if (t === "dress") {
       if (view !== "wardrobe") return go("wardrobe", "點下方的「衣櫃」。");
-      if (wardView !== "closet") return { sel: '[data-wseg="closet"]', text: "第 7 步　點「私人」，打開你的私人衣櫃。" };
-      return { sel: `[data-wear="${S.tutKept}"]`, text: "第 8 步　點這件衣服，穿到角色身上。" };
+      if (wardView !== "closet") return { sel: '[data-wseg="closet"]', text: "點「私人」，打開你的私人衣櫃。" };
+      return { sel: `[data-wear="${S.tutKept}"]`, text: "點這件衣服，穿到角色身上。" };
     }
     if (t === "price" && modal && modal.type === "price") {
-      if (tutSub === 0) return { sel: ".prices", text: "第 4 步　這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越容易賣掉。", next: "我知道了" };
+      if (tutSub === 0) return { sel: ".prices", text: "這是這件衣服的「基礎價值」和現在的「市場價」。標價越接近市場價，越容易賣掉。", next: "我知道了" };
       if (tutSub === 1) return { sel: '[data-pct="10"]', text: "標價越高，成交機會越低。按一下「+10%」試試看。" };
       return { sel: "#confirm-price", text: "「每天成交機會」變低了。這樣就可以了，按「上架」。" };
-    }
-    if (["social", "refresh", "read", "buy"].includes(t)) {
-      if (modal) return null;   // 結算視窗開著時不壓暗
-      if (view !== "social") return go("social", t === "social" ? "第 11 步　點「社群」，看看別人在賣什麼。" : "點下方的「社群」。");
-      if (t === "refresh") return { sel: "#refresh", text: "第 12 步　按「刷新看看」，看今天有什麼貨。" };
-      if (t === "read") return { sel: ".post .price", text: "第 13 步　這是「開價」和「市場價」。開價比市場價低，買來再賣，就有價差可賺。", next: "我知道了", onNext: () => { S.tutorial = "buy"; save(); render(); } };
-      if (t === "buy") return { sel: "[data-buy]:not([disabled])", text: "第 14 步　按「買下」，買這一件。" };
-    }
-    if (t === "fixGo" || t === "fixPick" || t === "fixDo") {
-      if (modal && modal.type === "item") return { sel: ".sheet [data-fix]", text: "第 16 步　按「修補」，付費整理。整理需要一天，隔天結算時完成，修好之後基礎價值會變高。" };
-      if (view !== "wardrobe") return go("wardrobe", "第 15 步　這件有瑕疵，所以開價比較低。點下方的「衣櫃」，把它修好再賣。");
-      if (wardView !== "stock") return { sel: '[data-wseg="stock"]', text: "先點「待售」，回到要賣的衣服。" };
-      return { sel: `.piece[data-item="${S.tutFix}"]`, text: "第 15 步　點這件有瑕疵的衣服。" };
-    }
-    if (t === "wait") {
-      if (view !== "home") return go("home", "第 6 步　回首頁，準備進入下一天。");
-      return { sel: "#nextday", text: "第 6 步　按「進入下一天」，看買家有沒有成交。" };
     }
     return null;
   }
@@ -363,8 +382,6 @@
     spotT = null; placeSpot = null;
     if (!S || view === "create") return;
     if (S.tutorial === "price" && !(modal && modal.type === "price")) S.tutorial = "pick";
-    if (S.tutorial === "fixDo" && !(modal && modal.type === "item")) S.tutorial = "fixPick";
-    if (S.tutorial === "backStock" && view === "wardrobe" && wardView === "stock") S.tutorial = "rest";
     const sp = tutSpec(), t = sp && app.querySelector(sp.sel);
     if (!t) return;
     spotT = t;
@@ -372,7 +389,7 @@
     if (key !== spotKey) { spotKey = key; t.scrollIntoView({ block: "center" }); }
     const hole = document.createElement("div"), cap = document.createElement("div");
     hole.className = "spot-hole"; cap.className = "spot-cap"; cap.setAttribute("role", "status");
-    cap.innerHTML = `<div>${esc(sp.text)}</div><div class="spot-btns">${sp.next ? `<button class="btn small" id="spot-next">${sp.next}</button>` : ""}<button class="skip" id="spot-skip">跳過教學</button></div>`;
+    cap.innerHTML = `<div>${esc(sp.text)}</div><div class="spot-btns">${sp.next ? `<button class="btn small" id="spot-next">${sp.next}</button>` : ""}<button class="skip" id="spot-skip">${sp.quest ? "不用帶路" : "跳過教學"}</button></div>`;
     document.body.append(hole, cap);
     placeSpot = () => {
       const r = t.getBoundingClientRect();
@@ -382,7 +399,7 @@
       else if (r.top > innerHeight / 2) { cap.style.top = "auto"; cap.style.bottom = innerHeight - r.top + 14 + "px"; } else { cap.style.bottom = "auto"; cap.style.top = r.bottom + 14 + "px"; }
     };
     placeSpot();
-    cap.querySelector("#spot-skip").onclick = () => { S.tutorial = "done"; save(); render(); };
+    cap.querySelector("#spot-skip").onclick = () => { if (sp.quest) questGuide = false; else { S.tutorial = "done"; S.quest = 0; } save(); render(); };
     const nx = cap.querySelector("#spot-next");
     if (nx) nx.onclick = sp.onNext || (() => { tutSub += 1; render(); });
   }
@@ -396,6 +413,7 @@
   function render() {
     ensureCloset();
     if (S && S.tutorial === "done" && !S.season) rollSeason();
+    questCheck();
     const cur = selOf(document.activeElement);
     applyContrast();
     app.innerHTML = view === "create" ? createView() : shell();
@@ -430,16 +448,9 @@
     flashMoney = false;
     return `<div class="status"><span>第 ${S.day} 天</span><span class="money${f}">$ ${S.money}</span>
         <button class="gear" id="open-settings" aria-label="設定">設定</button></div>
-      ${tipView()}${body}${primary}
+      ${body}${primary}
       <nav class="nav">${nav("home", "首頁")}${nav("wardrobe", "衣櫃")}${socialOpen() ? nav("social", "社群") : ""}${nav("market", "賣場")}</nav>
       ${modalView()}${toast && !modal ? `<div class="toast" role="status">${esc(toast)}</div>` : ""}`;
-  }
-
-  // 教學：主要步驟用聚光燈（見 applySpot），只有「自己試試看」這一步用頂部提示
-  function tipView() {
-    if (!S || S.tutorial !== "rest") return "";
-    const n = S.wardrobe.length;
-    return `<div class="tip"><b>新手教學</b>　第 10 步　待售衣櫃剩下 ${n} 件，自己試試看：點衣服 → 賣 → 標價 → 上架，一件一件來，全部上架後再進行下一步。<br><button class="skip" id="skip-tut">跳過教學</button></div>`;
   }
 
   // 創角分頁：每頁列出的欄位（key、顯示名、選項清單、是否用色塊）
@@ -489,7 +500,7 @@
     const lq = linVisible() ? linQuest() : null;
     const mark = lq && (linState().phase === "offer" || linProgress(lq)[0] >= linProgress(lq)[1]) ? '<span class="mark" aria-hidden="true">!</span>' : "";
     const roomHtml = lq ? `<div class="roomwrap">${roomImg}<button class="lin" data-lin aria-label="林">${mark}<img src="art/林_透明.png" alt="" width="216" height="424"></button></div>` : roomImg;
-    return `${roomHtml}
+    return `${questCard()}${roomHtml}
       ${trendBar()}
       <div class="win"><h2>${esc(S.player.name)}</h2><div class="body me">
         ${sprite(playerLook())}
@@ -502,7 +513,7 @@
   const RACK = [["上衣與外套", ["上衣", "外套"], "rail"], ["下身", ["下身"], "rail"], ["鞋子", ["鞋子"], "shelf"], ["包包", ["包包"], "shelf"]];
   function piece(i, hl) {
     const svg = thumbSvg(i) || `<div class="swatch-item" style="background:${i.color};width:48px;height:48px"></div>`;
-    return `<button class="piece${hl ? " tutfirst" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
+    return `<button class="piece${hl ? " tutfirst" : ""}${i.condition === "有瑕疵" && !i.fixing ? " flawed" : ""}" data-item="${i.id}" aria-label="${esc(i.name)}">
       <span class="pic">${svg}</span><span class="pname">${esc(i.name)}</span>${i.fixing ? '<span class="chip flaw">整理中</span>' : i.condition === "有瑕疵" ? '<span class="chip flaw">有瑕疵</span>' : ""}</button>`;
   }
   let wardView = "stock", ccat = "全部";
@@ -558,13 +569,14 @@
       const mk = marketPrice(o.item), d = o.ask - mk;
       const diff = d < 0 ? `<span class="money-up">低於市場價 $${-d}</span>` : d > 0 ? `<span class="warn">高於市場價 $${d}</span>` : `<span class="muted">與市場價相同</span>`;
       const flaw = o.item.condition === "有瑕疵" ? '<span class="chip flaw">有瑕疵</span>' : "";
+      const note = o.item.condition === "有瑕疵" && o.item.flaw ? `<div class="warn">瑕疵：${esc(o.item.flaw)}</div>` : "";
       const chips = flaw + o.item.tags.map((t) => `<span class="chip">${esc(t)}${tagCoef(t) > 0 ? " ▲" : tagCoef(t) < 0 ? " ▼" : ""}</span>`).join("");
       const can = S.money >= o.ask && !full;
       return `<article class="post"><div class="hd"><div class="av" style="background:${o.color}" aria-hidden="true">${esc(o.who[1].toUpperCase())}</div>
           <div class="nm">${esc(o.who)}<small>${o.mins} 分鐘前</small></div></div>
         <div>${esc(o.text)}</div>
         <div class="pimg">${thumbSvg(o.item) || ""}</div>
-        <div><b>${esc(o.item.name)}</b>　<span class="muted">${esc(o.item.type)}</span></div>
+        <div><b>${esc(o.item.name)}</b>　<span class="muted">${esc(o.item.type)}</span></div>${note}
         <div class="price"><b>開價 $${o.ask}</b><span class="muted">市場價 $${mk}</span>${diff}</div>
         <div class="ft">${HEART}<span>${o.likes}</span>${CHAT}<span>${o.cm}</span>${chips}<span class="sp"></span>
           <button class="btn small" data-buy="${o.oid}" ${can ? "" : "disabled"}>${full ? "衣櫃滿" : S.money < o.ask ? "錢不夠" : "買下"}</button></div></article>`;
@@ -626,7 +638,6 @@
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="當日結算" tabindex="-1"><img class="room night" src="art/小套房_夜晚.png" alt="" width="832" height="768"><h3>第 ${S.day} 天・結算</h3>${body}
         ${(modal.fixed || []).map((n) => `<div class="kv"><span>整理完成：${esc(n)}</span><span class="money-up">良好</span></div>`).join("")}
         ${modal.season ? `<p>換季了：流行 <b>${esc(modal.season.up)}</b> ▲，退燒 <b>${esc(modal.season.down)}</b> ▼。</p>` : ""}
-        ${modal.tutSocial ? '<p class="muted">買家來看過了。每天結算時，標價越低、越容易成交。接下來認識社群，看看別人在賣什麼。</p>' : ""}
         <div class="kv"><span>目前金錢</span><span>$${S.money}</span></div>
         <div class="btns"><button class="btn main" id="close-summary">好</button></div></div></div>`;
     }
@@ -660,6 +671,7 @@
         <div class="kv" style="justify-content:flex-start;gap:12px;align-items:center"><div class="swatch-item thumb" style="width:88px;height:88px">${thumbSvg(i) || ""}</div>
           <div><h3 style="margin:0">${esc(i.name)}</h3><div class="muted">${meta}・${esc(i.condition)}</div></div></div>
         <div class="kv"><span>基礎價值</span><span>$${valueOf(i)}</span></div>
+        ${i.condition === "有瑕疵" && i.flaw ? `<div class="kv"><span>瑕疵</span><span>${esc(i.flaw)}</span></div>` : ""}
         ${i.condition === "有瑕疵" && !i.fixing ? `<div class="kv"><span>修補後</span><span>$${i.base}</span></div><p class="muted">修補要付費，並花一天時間。</p>` : ""}
         ${i.fixing ? `<p class="muted">整理中，隔天結算時完成。完成前不能賣或留。</p>` : ""}
         ${i.cost > 0 && tutDone() ? `<div class="kv"><span>成本</span><span>$${i.cost}</span></div>` : ""}
@@ -672,7 +684,7 @@
     }
     if (modal.type === "seasonHint") {
       return `<div class="mask"><div class="sheet" role="dialog" aria-modal="true" aria-label="流行說明" tabindex="-1"><h3>流行與退燒</h3>
-        ${modal.tutEnd ? '<p><b>教學完成。</b>之後每天結算一次，買家會依你的標價陸續成交。</p>' : ""}
+        ${modal.tutEnd ? '<p><b>教學完成。</b>社群開放了。首頁有「新手任務」，照著做就能學會收貨、結算與修補。</p>' : ""}
         ${S.season ? `<p>這一季：流行 <b>${esc(S.season.up)}</b> ▲，退燒 <b>${esc(S.season.down)}</b> ▼。</p>` : ""}
         <p>每隔幾天會換季。<b>流行</b>（▲）的風格，市場價會變高；<b>退燒</b>（▼）的風格，市場價會變低。</p>
         <p class="muted" style="margin-top:0">一件衣服有多個風格時，影響會互相平均。收貨與標價前，先看看這一季流行什麼。</p>
@@ -730,25 +742,23 @@
 
     all("[data-nav]", (b) => b.onclick = () => {
       view = b.dataset.nav;
-      if (view === "social" && S.tutorial === "social") { S.tutorial = "refresh"; S.seen = { ...(S.seen || {}), social: true }; }   // 教學中不跳說明卡
       if (view === "social" && !(S.seen && S.seen.social)) { S.seen = { ...(S.seen || {}), social: true }; modal = { type: "socialHint" }; }
       if (view === "wardrobe" && S.tutorial === "goWardrobe") S.tutorial = "pick";
-      if (view === "wardrobe" && S.tutorial === "fixGo") S.tutorial = "fixPick";
       save(); render();
     });
     all("[data-cat]", (b) => b.onclick = () => { cat = b.dataset.cat; render(); });
-    all("[data-item]", (b) => b.onclick = () => { modal = { type: "item", id: +b.dataset.item }; if (S.tutorial === "fixPick" && +b.dataset.item === S.tutFix) S.tutorial = "fixDo"; render(); });
+    all("[data-item]", (b) => b.onclick = () => { modal = { type: "item", id: +b.dataset.item }; render(); });
     all("[data-fix]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.fix);
       if (!it || it.condition !== "有瑕疵" || it.fixing || S.money < repairCost(it) || fixingCount() >= C.REPAIR_SLOTS) return;
       S.money -= repairCost(it); it.fixing = true; flashMoney = true;
-      if (S.tutorial === "fixDo") { endTutorial(); save(); render(); return; }
+      S.stats = S.stats || { sold: 0 }; S.stats.repaired = (S.stats.repaired || 0) + 1;
       modal = null; save(); showToast(`「${it.name}」整理中，隔天完成`);
     });
     const ic = $("#item-close"); if (ic) ic.onclick = () => { modal = null; render(); };
     all("[data-stab]", (b) => b.onclick = () => { socialTab = b.dataset.stab; render(); });
     all("[data-mtab]", (b) => b.onclick = () => { marketTab = b.dataset.mtab; render(); });
-    all("[data-wseg]", (b) => b.onclick = () => { wardView = b.dataset.wseg; if (S.tutorial === "backStock" && wardView === "stock") S.tutorial = "rest"; save(); render(); });
+    all("[data-wseg]", (b) => b.onclick = () => { wardView = b.dataset.wseg; save(); render(); });
     all("[data-ccat]", (b) => b.onclick = () => { ccat = b.dataset.ccat; render(); });
     all("[data-keepit]", (b) => b.onclick = () => {
       const it = findItem(+b.dataset.keepit);
@@ -762,7 +772,7 @@
       if (!it) return;
       const slot = SLOT_OF[it.type]; S.worn = S.worn || {};
       S.worn[slot] = S.worn[slot] === id ? null : id;
-      if (S.tutorial === "dress" && S.worn[slot] === id) S.tutorial = S.wardrobe.length ? "backStock" : "wait";
+      if (S.tutorial === "dress" && S.worn[slot] === id) { endTutorial(); save(); render(); return; }
       save(); render();
     });
     all("[data-strip]", (b) => b.onclick = () => { S.worn = {}; save(); render(); });
@@ -804,14 +814,14 @@
     all("[data-buy]", (b) => b.onclick = () => buyOffer(+b.dataset.buy));
     const ch = $("#close-hint"); if (ch) ch.onclick = () => { modal = null; render(); };
     const nd = $("#nextday"); if (nd) nd.onclick = nextDay;
-    const sk = $("#skip-tut"); if (sk) sk.onclick = () => { S.tutorial = "done"; save(); render(); };
+    const qg = $("#quest-go"); if (qg) qg.onclick = () => { questGuide = true; render(); };
     const gear = $("#open-settings"); if (gear) gear.onclick = () => { modal = { type: "settings" }; render(); };
 
     // 設定
     const sc = $("#set-contrast");
     if (sc) sc.onclick = () => { S.settings = S.settings || {}; S.settings.contrast = !S.settings.contrast; save(); render(); };
     const rt = $("#replay-tut");
-    if (rt) rt.onclick = () => { S.tutorial = "goWardrobe"; modal = null; view = "home"; save(); render(); };
+    if (rt) rt.onclick = () => { S.tutorial = "goWardrobe"; delete S.quest; modal = null; view = "home"; save(); render(); };
     const rs = $("#reset-save");
     if (rs) rs.onclick = () => { modal.confirmReset = true; render(); };
     const ry = $("#reset-yes");
@@ -856,8 +866,7 @@
         } else {
           S.wardrobe = S.wardrobe.filter((x) => x.id !== it.id);
           S.listings.push({ item: it, price, listedDay: S.day });
-          if (S.tutorial === "price") S.tutorial = S.wardrobe.length ? "keep" : "wait";
-          else if (S.tutorial === "rest") S.tutorial = S.wardrobe.length ? "rest" : "wait";
+          if (S.tutorial === "price") { if (S.wardrobe.length) S.tutorial = "keep"; else endTutorial(); }
         }
         modal = null; save(); showToast(wasEdit ? "已改價" : `已上架「${it.name}」`);
       };
